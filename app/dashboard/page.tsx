@@ -81,17 +81,18 @@ function Sidebar({
       <div className="db-sidebar__logo">
         <div className="db-sidebar__logo-icon">
           <Image
-            src="/Asr-White-gold.png"
+            src="/Groups Finalized.png"
             alt="ASR Groups"
             width={34}
             height={34}
             style={{ objectFit: "contain" }}
             priority
+            unoptimized
           />
         </div>
         {!collapsed && (
           <div>
-            <div className="db-sidebar__logo-name">ASR Family</div>
+            <div className="db-sidebar__logo-name">ASR Groups</div>
             <div className="db-sidebar__logo-sub">FINANCE ERP</div>
           </div>
         )}
@@ -178,12 +179,13 @@ function Header({
       {/* Logo + breadcrumb */}
       <div className="db-header__brand">
         <Image
-          src="/Asr-White-gold.png"
+          src="/Groups Finalized.png"
           alt="ASR Groups"
           width={32}
           height={32}
           style={{ objectFit: "contain" }}
           priority
+          unoptimized
         />
         <ChevronRight size={12} className="db-header__chevron" />
         <span className="db-header__page">{PAGE_LABELS[activePage]}</span>

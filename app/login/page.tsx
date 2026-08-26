@@ -140,20 +140,18 @@ export default function LoginPage() {
           <div className="asr-bg-overlay" />
         </div>
 
-        {/* Brand Logo in Top-Left Corner */}
+        {/* Brand Logo in Top-Left Corner — No Box, Clean Float */}
         <header className="asr-header-left">
           <div className="asr-brand-badge">
-            <div className="asr-logo-square">
-              <Image
-                src="/Groups Finalized.png"
-                alt="ASR Groups Logo"
-                width={76}
-                height={76}
-                className="asr-logo-img"
-                priority
-                unoptimized
-              />
-            </div>
+            <Image
+              src="/Groups Finalized.png"
+              alt="ASR Groups Logo"
+              width={70}
+              height={70}
+              className="asr-logo-img"
+              priority
+              unoptimized
+            />
             <span className="asr-brand-title">ASR GROUPS</span>
           </div>
         </header>
@@ -272,9 +270,9 @@ export default function LoginPage() {
                 ) : (
                   <>
                     <span className="asr-btn-text">Sign In</span>
-
-                    <ArrowRight size={16} />
-
+                    <span className="asr-btn-icon-wrap">
+                      <ArrowRight size={16} />
+                    </span>
                   </>
                 )}
               </button>
