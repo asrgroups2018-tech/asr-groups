@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "ASR Groups — Finance ERP",
+  title: "ASR Groups",
   description:
     "Enterprise loan management & financial intelligence platform for ASR Family Finance.",
 };

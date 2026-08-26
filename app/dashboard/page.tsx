@@ -21,18 +21,18 @@ type PageKey =
 
 // ─── Nav config ──────────────────────────────────────────────────────────────
 const NAV_ITEMS: { id: PageKey; label: string; icon: any; badge?: number }[] = [
-  { id: "dashboard",  label: "Dashboard",          icon: LayoutDashboard },
-  { id: "loans",      label: "Loans",              icon: CreditCard },
-  { id: "customers",  label: "Customers",          icon: Users },
-  { id: "collections",label: "Collections",        icon: HandCoins },
-  { id: "income",     label: "Income",             icon: TrendingUp },
-  { id: "expenses",   label: "Expenses",           icon: TrendingDown },
-  { id: "salary",     label: "Salary & Payroll",   icon: Wallet },
-  { id: "agents",     label: "Agents",             icon: UserCheck },
-  { id: "reports",    label: "Reports",            icon: BarChart3 },
-  { id: "schedule",   label: "Schedule",           icon: Calendar },
-  { id: "approvals",  label: "Requests & Approvals", icon: ClipboardCheck, badge: 5 },
-  { id: "settings",   label: "Settings",           icon: Settings },
+  { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { id: "loans", label: "Loans", icon: CreditCard },
+  { id: "customers", label: "Customers", icon: Users },
+  { id: "collections", label: "Collections", icon: HandCoins },
+  { id: "income", label: "Income", icon: TrendingUp },
+  { id: "expenses", label: "Expenses", icon: TrendingDown },
+  { id: "salary", label: "Salary & Payroll", icon: Wallet },
+  { id: "agents", label: "Agents", icon: UserCheck },
+  { id: "reports", label: "Reports", icon: BarChart3 },
+  { id: "schedule", label: "Schedule", icon: Calendar },
+  { id: "approvals", label: "Requests & Approvals", icon: ClipboardCheck, badge: 5 },
+  { id: "settings", label: "Settings", icon: Settings },
 ];
 
 const PAGE_LABELS: Record<PageKey, string> = {
@@ -43,18 +43,18 @@ const PAGE_LABELS: Record<PageKey, string> = {
 };
 
 const PAGE_DESC: Record<PageKey, string> = {
-  dashboard:   "Financial overview and key metrics",
-  loans:       "Manage all loan accounts and disbursements",
-  customers:   "Customer profiles and financial history",
+  dashboard: "",
+  loans: "Manage all loan accounts and disbursements",
+  customers: "Customer profiles and financial history",
   collections: "Daily collections and recovery management",
-  income:      "Income tracking and ledger",
-  expenses:    "Expense management and approvals",
-  salary:      "Payroll processing and salary management",
-  agents:      "Agent management and performance",
-  reports:     "Financial reports and analytics",
-  schedule:    "Collection schedule and tasks",
-  approvals:   "Review and approve pending requests",
-  settings:    "System configuration and user management",
+  income: "Income tracking and ledger",
+  expenses: "Expense management and approvals",
+  salary: "Payroll processing and salary management",
+  agents: "Agent management and performance",
+  reports: "Financial reports and analytics",
+  schedule: "Collection schedule and tasks",
+  approvals: "Review and approve pending requests",
+  settings: "System configuration and user management",
 };
 
 // ─── Sidebar ─────────────────────────────────────────────────────────────────
@@ -93,7 +93,7 @@ function Sidebar({
         {!collapsed && (
           <div>
             <div className="db-sidebar__logo-name">ASR Groups</div>
-            <div className="db-sidebar__logo-sub">FINANCE ERP</div>
+            <div className="db-sidebar__logo-sub"></div>
           </div>
         )}
       </div>
