@@ -30,12 +30,19 @@ const authService = {
   },
 };
 
+const BG_IMAGES = [
+  "/login-bg-1.jpg",
+  "/login-bg-2.jpg",
+  "/login-bg-3.jpg"
+];
+
 export default function LoginPage() {
   const router = useRouter();
-  
-  // Animation state phases: 'centered' -> 'splitting' -> 'complete'
-  const [animPhase, setAnimPhase] = useState<"centered" | "splitting" | "complete">("centered");
-  
+
+  // Animation state phase: 'intro' (logo coming and going) -> 'reveal'
+  const [animPhase, setAnimPhase] = useState<"intro" | "reveal">("intro");
+  const [currentBgIndex, setCurrentBgIndex] = useState(0);
+
   const [form, setForm] = useState<LoginCredentials>({
     username: "",
     password: "",
@@ -47,22 +54,22 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [focusedField, setFocusedField] = useState<"username" | "password" | null>(null);
 
+  // Smooth logo intro timing (1.6s coming and going)
   useEffect(() => {
-    // Hold big centered splash logo for 1.2s
-    const t1 = setTimeout(() => {
-      setAnimPhase("splitting");
-    }, 1200);
-
-    // Complete smooth entrance at 2.1s
-    const t2 = setTimeout(() => {
-      setAnimPhase("complete");
-    }, 2100);
-
-    return () => {
-      clearTimeout(t1);
-      clearTimeout(t2);
-    };
+    const timer = setTimeout(() => {
+      setAnimPhase("reveal");
+    }, 1600);
+    return () => clearTimeout(timer);
   }, []);
+
+  // Background image slideshow rotation every 5 seconds
+  useEffect(() => {
+    if (animPhase !== "reveal") return;
+    const bgTimer = setInterval(() => {
+      setCurrentBgIndex((prev) => (prev + 1) % BG_IMAGES.length);
+    }, 5000);
+    return () => clearInterval(bgTimer);
+  }, [animPhase]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
@@ -92,7 +99,7 @@ export default function LoginPage() {
       setSuccess(true);
       setTimeout(() => {
         router.push("/dashboard");
-      }, 500);
+      }, 600);
     } catch (err: any) {
       setError(err.message || "Authentication failed.");
       setLoading(false);
@@ -101,88 +108,73 @@ export default function LoginPage() {
 
   return (
     <div className={`asr-login-root asr-phase-${animPhase}`}>
-      {/* Huge HD Center Splash Intro Overlay */}
-      <div className="asr-center-intro">
-        <div className="asr-center-badge">
-          <Image
-            src="/Groups Finalized.png"
-            alt="ASR Groups Logo"
-            width={190}
-            height={190}
-            className="asr-center-logo-img"
-            priority
-            unoptimized
-          />
-        </div>
-        <h1 className="asr-center-title">ASR GROUPS</h1>
-        <p className="asr-center-sub">FINANCE</p>
-      </div>
-
-      {/* Main 50/50 Split View Layout */}
-      <div className="asr-split-layout">
-        {/* Left Half: Building Visual Hero */}
-        <div className="asr-left-half">
-          <Image
-            src="/login-bg.png"
-            alt="ASR Headquarters Building"
-            fill
-            className="asr-visual-bg"
-            priority
-          />
-          <div className="asr-visual-overlay" />
-
-          <div className="asr-left-content">
-            {/* BIG BOLD SQUARE LOGO in Top Left Corner */}
-            <div className="asr-left-brand">
-              <div className="asr-left-logo-square">
-                <Image
-                  src="/Groups Finalized.png"
-                  alt="ASR Groups Logo"
-                  width={104}
-                  height={104}
-                  className="asr-left-logo-img"
-                  priority
-                  unoptimized
-                />
-              </div>
-              <div className="asr-left-brand-text">
-                <span className="asr-left-title">ASR GROUPS</span>
-                <span className="asr-left-subtitle">FINANCE</span>
-              </div>
-            </div>
-
-            {/* Middle Title */}
-            <div className="asr-left-hero-text">
-              <h1 className="asr-hero-title">
-                Precision & Excellence in Financial Operations
-              </h1>
-            </div>
-
-            {/* Left Footer Copyright */}
-            <div className="asr-left-footer">
-              <span>© 2026 ASR Groups. All Rights Reserved.</span>
-            </div>
+      {/* ── Step 1: Smooth Logo Intro Animation (Coming and Going, Crisp & Blur-Free) ── */}
+      {animPhase === "intro" && (
+        <div className="asr-intro-screen">
+          <div className="asr-intro-badge">
+            <Image
+              src="/Groups Finalized.png"
+              alt="ASR Groups Logo"
+              width={160}
+              height={160}
+              className="asr-intro-logo-img"
+              priority
+              unoptimized
+            />
           </div>
+          <h1 className="asr-intro-title">ASR GROUPS</h1>
+        </div>
+      )}
+
+      {/* ── Step 2: Main Full View — 3-Image Slideshow, Top-Left Logo, Centered Compact Card ── */}
+      <div className="asr-full-page">
+        {/* Full Screen 3-Image Rotating Background Slideshow */}
+        <div className="asr-bg-container">
+          {BG_IMAGES.map((imgSrc, idx) => (
+            <div
+              key={imgSrc}
+              className={`asr-bg-slide ${idx === currentBgIndex ? "asr-bg-slide--active" : ""}`}
+              style={{ backgroundImage: `url('${imgSrc}')` }}
+            />
+          ))}
+          <div className="asr-bg-overlay" />
         </div>
 
-        {/* Right Half: Sign In Form Panel */}
-        <div className="asr-right-half">
-          <div className="asr-card">
+        {/* Brand Logo in Top-Left Corner */}
+        <header className="asr-header-left">
+          <div className="asr-brand-badge">
+            <div className="asr-logo-square">
+              <Image
+                src="/Groups Finalized.png"
+                alt="ASR Groups Logo"
+                width={76}
+                height={76}
+                className="asr-logo-img"
+                priority
+                unoptimized
+              />
+            </div>
+            <span className="asr-brand-title">ASR GROUPS</span>
+          </div>
+        </header>
+
+        {/* Centered Compact Login Card */}
+        <main className="asr-center-container">
+          <div className="asr-login-card">
             {/* Card Header */}
             <div className="asr-card-header">
               <h2 className="asr-card-title">Sign In</h2>
               <p className="asr-card-subtitle">
-                Enter your credentials to access your account
+                Enter your credentials to access the ASR portal
               </p>
             </div>
 
             {/* Form */}
             <form onSubmit={handleSubmit} className="asr-form" noValidate>
-              {/* Username Input */}
+              {/* Username Field */}
               <div
-                className={`asr-field ${
-                  focusedField === "username" ? "asr-field--focused" : ""
-                } ${error && !form.username ? "asr-field--error" : ""}`}
+                className={`asr-field ${focusedField === "username" ? "asr-field--focused" : ""
+                  } ${error && !form.username ? "asr-field--error" : ""}`}
               >
                 <label htmlFor="asr-username" className="asr-label">
                   Username
@@ -193,7 +185,7 @@ export default function LoginPage() {
                     id="asr-username"
                     name="username"
                     type="text"
-                    placeholder="Enter your username"
+                    placeholder="Enter username"
                     value={form.username}
                     onChange={handleChange}
                     onFocus={() => setFocusedField("username")}
@@ -205,11 +197,10 @@ export default function LoginPage() {
                 </div>
               </div>
 
-              {/* Password Input */}
+              {/* Password Field */}
               <div
-                className={`asr-field ${
-                  focusedField === "password" ? "asr-field--focused" : ""
-                } ${error && !form.password ? "asr-field--error" : ""}`}
+                className={`asr-field ${focusedField === "password" ? "asr-field--focused" : ""
+                  } ${error && !form.password ? "asr-field--error" : ""}`}
               >
                 <label htmlFor="asr-password" className="asr-label">
                   Password
@@ -220,7 +211,7 @@ export default function LoginPage() {
                     id="asr-password"
                     name="password"
                     type={showPassword ? "text" : "password"}
-                    placeholder="Enter your password"
+                    placeholder="Enter password"
                     value={form.password}
                     onChange={handleChange}
                     onFocus={() => setFocusedField("password")}
@@ -241,7 +232,7 @@ export default function LoginPage() {
                 </div>
               </div>
 
-              {/* Keep Me Signed In Checkbox */}
+              {/* Remember Me */}
               <div className="asr-checkbox-row">
                 <label className="asr-checkbox-label">
                   <input
@@ -256,24 +247,23 @@ export default function LoginPage() {
                 </label>
               </div>
 
-              {/* Error Banner */}
+              {/* Error Message */}
               {error && (
                 <div className="asr-error-alert" role="alert">
                   <span>{error}</span>
                 </div>
               )}
 
-              {/* Creative Gold Shimmer Submit Button */}
+              {/* Submit Button */}
               <button
                 type="submit"
-                className={`asr-submit-btn ${
-                  loading ? "asr-submit-btn--loading" : ""
-                } ${success ? "asr-submit-btn--success" : ""}`}
+                className={`asr-submit-btn ${loading ? "asr-submit-btn--loading" : ""
+                  } ${success ? "asr-submit-btn--success" : ""}`}
                 disabled={loading || success}
               >
                 <span className="asr-btn-shine" />
                 {success ? (
-                  <span>Access Granted — Launching...</span>
+                  <span>Access Granted...</span>
                 ) : loading ? (
                   <>
                     <span className="asr-btn-spinner" />
@@ -281,16 +271,21 @@ export default function LoginPage() {
                   </>
                 ) : (
                   <>
-                    <span className="asr-btn-text">Access Dashboard</span>
-                    <span className="asr-btn-icon-wrap">
-                      <ArrowRight size={16} />
-                    </span>
+                    <span className="asr-btn-text">Sign In</span>
+
+                    <ArrowRight size={16} />
+
                   </>
                 )}
               </button>
             </form>
           </div>
-        </div>
+        </main>
+
+        {/* Footer */}
+        <footer className="asr-footer">
+          <span>© 2026 ASR Groups. All Rights Reserved.</span>
+        </footer>
       </div>
     </div>
   );
