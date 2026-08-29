@@ -54,64 +54,46 @@ export const CustomersListView: React.FC = () => {
     },
     {
       key: 'fullName',
-      header: 'Investor / Company Name',
+      header: 'Customer Name',
       sortable: true,
+      align: 'left',
       accessor: (c) => c.fullName,
       render: (c) => (
-        <div className="min-w-0">
-          <button
-            onClick={() => setSelectedCustomerId(c.id)}
-            className="font-bold text-[#701A35] hover:underline text-xs block text-left cursor-pointer transition-colors"
-          >
-            {c.fullName}
-          </button>
-          {c.companyName ? (
-            <span className="text-[10px] text-slate-500 font-medium block mt-0.5">
-              {c.companyName}
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-full bg-[#FAF8F5] border border-[#E6E1D6] flex items-center justify-center font-bold text-xs text-[#701A35]">
+            {c.fullName.slice(0, 2).toUpperCase()}
+          </div>
+          <div>
+            <button
+              onClick={() => setSelectedCustomerId(c.id)}
+              className="font-bold text-slate-900 text-xs hover:text-[#701A35] hover:underline block text-left cursor-pointer"
+            >
+              {c.fullName}
+            </button>
+            <span className="text-[10px] text-slate-400 font-mono block">
+              {c.id} {c.companyName ? `• ${c.companyName}` : ''}
             </span>
-          ) : (
-            <span className="text-[10px] text-slate-400 block mt-0.5">
-              Individual Financier
-            </span>
-          )}
+          </div>
         </div>
       ),
-      exportValue: (c) => `${c.fullName} ${c.companyName ? `(${c.companyName})` : ''}`,
+      exportValue: (c) => c.fullName,
     },
     {
       key: 'phone',
-      header: 'Phone Number',
+      header: 'Phone',
       sortable: true,
       accessor: (c) => c.phone,
       render: (c) => (
-        <span className="font-mono text-xs text-slate-700">
-          {c.phone}
-        </span>
+        <span className="font-mono text-xs text-slate-700">{c.phone}</span>
       ),
-      exportValue: (c) => c.phone,
     },
     {
       key: 'email',
-      header: 'Email Address',
+      header: 'Email',
       sortable: true,
-      accessor: (c) => c.email,
+      accessor: (c) => c.email || '—',
       render: (c) => (
-        <span className="text-xs text-slate-600 truncate max-w-xs block">
-          {c.email}
-        </span>
-      ),
-      exportValue: (c) => c.email,
-    },
-    {
-      key: 'activeLoansCount',
-      header: 'Active Deals',
-      sortable: true,
-      align: 'center',
-      accessor: (c) => c.activeLoansCount,
-      render: (c) => (
-        <span className="font-mono text-xs font-bold text-slate-800">
-          {c.activeLoansCount}
-        </span>
+        <span className="text-xs text-slate-600 truncate block max-w-xs">{c.email || '—'}</span>
       ),
     },
     {
@@ -125,16 +107,30 @@ export const CustomersListView: React.FC = () => {
           ₹{c.totalInvested.toLocaleString('en-IN')}
         </span>
       ),
+      exportValue: (c) => c.totalInvested,
     },
     {
       key: 'totalReturns',
-      header: 'Total Returns (₹)',
+      header: 'Profit Earned (₹)',
       sortable: true,
       align: 'right',
       accessor: (c) => c.totalReturns,
       render: (c) => (
         <span className="font-mono text-xs font-bold text-emerald-700">
           ₹{c.totalReturns.toLocaleString('en-IN')}
+        </span>
+      ),
+      exportValue: (c) => c.totalReturns,
+    },
+    {
+      key: 'activeLoansCount',
+      header: 'Active Loans',
+      sortable: true,
+      align: 'center',
+      accessor: (c) => c.activeLoansCount,
+      render: (c) => (
+        <span className="font-mono text-xs px-2 py-0.5 rounded bg-slate-100 text-slate-800 font-bold">
+          {c.activeLoansCount}
         </span>
       ),
     },
@@ -157,13 +153,13 @@ export const CustomersListView: React.FC = () => {
           <button
             onClick={() => setSelectedCustomerId(c.id)}
             className="p-1.5 rounded-lg text-slate-500 hover:text-[#701A35] hover:bg-[#FAF8F5] transition-colors cursor-pointer"
-            title="View Investor Profile"
+            title="View Details"
           >
             <Eye className="w-3.5 h-3.5" />
           </button>
           <button
             onClick={() => {
-              if (confirm(`Remove customer record ${c.fullName}?`)) {
+              if (confirm(`Delete customer ${c.fullName}?`)) {
                 deleteCustomer(c.id);
               }
             }}
@@ -178,20 +174,17 @@ export const CustomersListView: React.FC = () => {
   ];
 
   return (
-    <div className="space-y-5 animate-in fade-in duration-200">
-      {/* ─── Top Header Card with Summary Metrics ─── */}
+    <div className="space-y-6 animate-in fade-in duration-200">
+      {/* ─── Top Control Bar ─── */}
       <div className="bg-white p-5 rounded-2xl border border-[#E6E1D6] shadow-[0_1px_3px_rgba(0,0,0,0.02)] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-xl font-bold text-slate-900 font-serif">
-              Customers (Investors & Financiers)
+              Customers
             </h1>
-            <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
-              {customers.length} Registered
-            </span>
           </div>
           <p className="text-xs text-slate-500 mt-1">
-            Capital providers who finance loan tranches and receive principal with net profit returns
+            Manage customer investors and their loan investments
           </p>
         </div>
 
@@ -201,7 +194,7 @@ export const CustomersListView: React.FC = () => {
             className="px-4 py-2 text-xs font-bold text-white bg-[#701A35] hover:bg-[#5C142B] active:scale-98 rounded-xl transition-all shadow-xs flex items-center gap-1.5 cursor-pointer shrink-0"
           >
             <Plus className="w-4 h-4 text-amber-200" />
-            <span>+ Add Customer (Investor)</span>
+            <span>+ New Customer</span>
           </button>
         </div>
       </div>
@@ -210,32 +203,32 @@ export const CustomersListView: React.FC = () => {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div className="bg-white p-4 rounded-xl border border-[#E6E1D6] shadow-2xs">
           <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider font-mono">
-            Total Capital Supplied
+            Total Invested
           </span>
           <span className="text-xl font-bold text-slate-900 font-mono block mt-1">
             ₹{totalInvestedSum.toLocaleString('en-IN')}
           </span>
-          <span className="text-[10px] text-slate-400 mt-0.5 block">Capital provided across all syndicated loans</span>
+          <span className="text-[10px] text-slate-400 mt-0.5 block">Capital provided across all loans</span>
         </div>
 
         <div className="bg-white p-4 rounded-xl border border-[#E6E1D6] shadow-2xs">
           <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider font-mono">
-            Total Net Profit Returns
+            Profit Earned
           </span>
           <span className="text-xl font-bold text-emerald-700 font-mono block mt-1">
             ₹{totalReturnsSum.toLocaleString('en-IN')}
           </span>
-          <span className="text-[10px] text-slate-400 mt-0.5 block">Disbursed profit earnings returned to investors</span>
+          <span className="text-[10px] text-slate-400 mt-0.5 block">Total profit returned to investors</span>
         </div>
 
         <div className="bg-white p-4 rounded-xl border border-[#E6E1D6] shadow-2xs">
           <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider font-mono">
-            Registered Investors
+            Total Investors
           </span>
           <span className="text-xl font-bold text-slate-900 font-mono block mt-1">
             {customers.length} Accounts
           </span>
-          <span className="text-[10px] text-slate-400 mt-0.5 block">Active individual & corporate financiers</span>
+          <span className="text-[10px] text-slate-400 mt-0.5 block">Active registered customers</span>
         </div>
       </div>
 
@@ -246,9 +239,9 @@ export const CustomersListView: React.FC = () => {
             <Users className="w-6 h-6" />
           </div>
           <div>
-            <h3 className="text-base font-bold text-slate-900">No Customer Investors Registered</h3>
+            <h3 className="text-base font-bold text-slate-900">No Customers Registered</h3>
             <p className="text-xs text-slate-500 max-w-md mx-auto mt-1">
-              Customers provide the investment capital for loans. You can register an investor here or quick-add directly inside the + New Loan Wizard.
+              Customers provide the investment capital for loans.
             </p>
           </div>
           <button
@@ -256,7 +249,7 @@ export const CustomersListView: React.FC = () => {
             className="px-4 py-2 text-xs font-bold text-white bg-[#701A35] hover:bg-[#5C142B] rounded-xl shadow-xs cursor-pointer inline-flex items-center gap-1.5"
           >
             <Plus className="w-4 h-4 text-amber-200" />
-            <span>+ Register First Customer (Investor)</span>
+            <span>+ Add First Customer</span>
           </button>
         </div>
       ) : (

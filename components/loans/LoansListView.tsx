@@ -63,7 +63,7 @@ export const LoansListView: React.FC = () => {
     },
     {
       key: 'customers',
-      header: 'Customer(s) (Investors)',
+      header: 'Customer (Investor)',
       sortable: true,
       accessor: (l) => l.customers.map((c) => c.customerName).join(', '),
       render: (l) => (
@@ -72,7 +72,7 @@ export const LoansListView: React.FC = () => {
             {l.customers.map((c) => c.customerName).join(', ')}
           </span>
           <span className="text-[10px] text-slate-400 font-mono block mt-0.5">
-            {l.customers.length === 1 ? 'Sole Financier' : `${l.customers.length} Joint Investors`}
+            {l.customers.length === 1 ? 'Single Investor' : `${l.customers.length} Joint Investors`}
           </span>
         </div>
       ),
@@ -80,7 +80,7 @@ export const LoansListView: React.FC = () => {
     },
     {
       key: 'totalAmount',
-      header: 'Total Amount (₹)',
+      header: 'Amount (₹)',
       sortable: true,
       align: 'right',
       accessor: (l) => l.totalAmount,
@@ -93,7 +93,7 @@ export const LoansListView: React.FC = () => {
     },
     {
       key: 'companies',
-      header: 'Companies Involved (Borrowers)',
+      header: 'Borrower Companies',
       sortable: true,
       accessor: (l) => l.companies.map((c) => c.companyName).join(', '),
       render: (l) => (
@@ -102,7 +102,7 @@ export const LoansListView: React.FC = () => {
             {l.companies.map((c) => c.companyName).join(', ')}
           </span>
           <span className="text-[10px] text-slate-400 block mt-0.5 font-mono">
-            {l.companies.length} Tranche Split(s)
+            {l.companies.length} Split(s)
           </span>
         </div>
       ),
@@ -110,7 +110,7 @@ export const LoansListView: React.FC = () => {
     },
     {
       key: 'totalInterestExpected',
-      header: 'Interest Earned (₹)',
+      header: 'Interest (₹)',
       sortable: true,
       align: 'right',
       accessor: (l) => l.totalInterestExpected,
@@ -123,7 +123,7 @@ export const LoansListView: React.FC = () => {
     },
     {
       key: 'asrIncome',
-      header: 'ASR Income (₹)',
+      header: 'ASR Fee (₹)',
       sortable: true,
       align: 'right',
       accessor: (l) => l.asrIncome,
@@ -136,7 +136,7 @@ export const LoansListView: React.FC = () => {
     },
     {
       key: 'disbursedDate',
-      header: 'Disbursed Date',
+      header: 'Date',
       sortable: true,
       accessor: (l) => l.disbursedDate,
       render: (l) => (
@@ -164,13 +164,13 @@ export const LoansListView: React.FC = () => {
           <button
             onClick={() => setSelectedLoanId(l.id)}
             className="p-1.5 rounded-lg text-slate-500 hover:text-[#701A35] hover:bg-[#FAF8F5] transition-colors cursor-pointer"
-            title="View Deal Ledger"
+            title="View Details"
           >
             <Eye className="w-3.5 h-3.5" />
           </button>
           <button
             onClick={() => {
-              if (confirm(`Delete loan record ${l.id}?`)) {
+              if (confirm(`Delete loan ${l.id}?`)) {
                 deleteLoan(l.id);
               }
             }}
@@ -185,20 +185,17 @@ export const LoansListView: React.FC = () => {
   ];
 
   return (
-    <div className="space-y-5 animate-in fade-in duration-200">
-      {/* ─── Top Header Card ─── */}
+    <div className="space-y-6 animate-in fade-in duration-200">
+      {/* ─── Top Control Bar ─── */}
       <div className="bg-white p-5 rounded-2xl border border-[#E6E1D6] shadow-[0_1px_3px_rgba(0,0,0,0.02)] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-xl font-bold text-slate-900 font-serif">
-              Loans & Syndication Deals
+              Loans
             </h1>
-            <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
-              {loans.length} Active Deals
-            </span>
           </div>
           <p className="text-xs text-slate-500 mt-1">
-            Intermediary loan contracts connecting customer investors with borrower business entities
+            Manage loans, investors, and borrower allocations
           </p>
         </div>
 
@@ -208,7 +205,7 @@ export const LoansListView: React.FC = () => {
             className="px-4 py-2 text-xs font-bold text-white bg-[#701A35] hover:bg-[#5C142B] active:scale-98 rounded-xl transition-all shadow-xs flex items-center gap-1.5 cursor-pointer shrink-0"
           >
             <Plus className="w-4 h-4 text-amber-200" />
-            <span>+ New Loan (Wizard)</span>
+            <span>+ New Loan</span>
           </button>
         </div>
       </div>
@@ -217,32 +214,32 @@ export const LoansListView: React.FC = () => {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div className="bg-white p-4 rounded-xl border border-[#E6E1D6] shadow-2xs">
           <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider font-mono">
-            Total Capital Disbursed
+            Total Capital
           </span>
           <span className="text-xl font-bold text-slate-900 font-mono block mt-1">
             ₹{totalCapitalSum.toLocaleString('en-IN')}
           </span>
-          <span className="text-[10px] text-slate-400 mt-0.5 block">Across all syndicated loans</span>
+          <span className="text-[10px] text-slate-400 mt-0.5 block">Across all loans</span>
         </div>
 
         <div className="bg-amber-50/60 p-4 rounded-xl border border-amber-200 shadow-2xs">
           <span className="text-[11px] font-bold text-amber-800 uppercase tracking-wider font-mono">
-            Total ASR Income (Commission)
+            ASR Commission
           </span>
           <span className="text-xl font-bold text-[#701A35] font-mono block mt-1">
             ₹{totalAsrIncomeSum.toLocaleString('en-IN')}
           </span>
-          <span className="text-[10px] text-amber-700 mt-0.5 block">Platform intermediary fee cut</span>
+          <span className="text-[10px] text-amber-700 mt-0.5 block">Platform fee cut</span>
         </div>
 
         <div className="bg-emerald-50/60 p-4 rounded-xl border border-emerald-200 shadow-2xs">
           <span className="text-[11px] font-bold text-emerald-800 uppercase tracking-wider font-mono">
-            Total Customer Net Profit
+            Investor Profit
           </span>
           <span className="text-xl font-bold text-emerald-700 font-mono block mt-1">
             ₹{totalCustomerProfitSum.toLocaleString('en-IN')}
           </span>
-          <span className="text-[10px] text-emerald-600 mt-0.5 block">Returns to participating financiers</span>
+          <span className="text-[10px] text-emerald-600 mt-0.5 block">Total customer returns</span>
         </div>
       </div>
 
@@ -255,7 +252,7 @@ export const LoansListView: React.FC = () => {
           <div>
             <h3 className="text-base font-bold text-slate-900">No Syndicated Loan Deals Created</h3>
             <p className="text-xs text-slate-500 max-w-md mx-auto mt-1">
-              Start by creating a new loan with our guided 5-step wizard to syndicate investor capital across borrower companies.
+              Start by creating a new loan deal to syndicate investor capital across borrower companies.
             </p>
           </div>
           <button
@@ -263,7 +260,7 @@ export const LoansListView: React.FC = () => {
             className="px-4 py-2 text-xs font-bold text-white bg-[#701A35] hover:bg-[#5C142B] rounded-xl shadow-xs cursor-pointer inline-flex items-center gap-1.5"
           >
             <Plus className="w-4 h-4 text-amber-200" />
-            <span>+ Syndicate First Loan Deal</span>
+            <span>+ Create Loan Deal</span>
           </button>
         </div>
       ) : (

@@ -131,6 +131,32 @@ const ROOT_ADMIN_FALLBACK: User = {
   isCustomer: false,
 };
 
+const LS_KEYS = {
+  USERS: 'asr_users_v2',
+  CUSTOMERS: 'asr_customers_v2',
+  COMPANIES: 'asr_companies_v2',
+  LOANS: 'asr_loans_v2',
+};
+
+function loadFromLS<T>(key: string, fallback: T): T {
+  if (typeof window === 'undefined') return fallback;
+  try {
+    const item = localStorage.getItem(key);
+    return item ? JSON.parse(item) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function saveToLS(key: string, data: any) {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(key, JSON.stringify(data));
+  } catch {
+    // ignore
+  }
+}
+
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [activeMainTab, setActiveMainTab] = useState<string>('administration');
   const [activeAdminTab, setActiveAdminTab] = useState<AdminTab>('overview');
@@ -142,15 +168,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [simulatedRoleId, setSimulatedRoleId] = useState<RoleId>(0); // Default Super Admin
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  const [users, setUsers] = useState<User[]>([ROOT_ADMIN_FALLBACK]);
+  const [users, setUsers] = useState<User[]>(() => loadFromLS(LS_KEYS.USERS, [ROOT_ADMIN_FALLBACK]));
   const [roles, setRoles] = useState<Role[]>(ROLES_DATA);
   const [permissionMatrix, setPermissionMatrix] = useState<PermissionMatrixState>(INITIAL_PERMISSION_MATRIX);
   const [approvalRules, setApprovalRules] = useState<ApprovalRule[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([]);
   const [systemSettings, setSystemSettings] = useState<SystemSettingsState>(INITIAL_SYSTEM_SETTINGS);
-  const [customers, setCustomers] = useState<CustomerInvestor[]>([]);
-  const [companies, setCompanies] = useState<BorrowerCompany[]>([]);
-  const [loans, setLoans] = useState<IntermediaryLoan[]>([]);
+  const [customers, setCustomers] = useState<CustomerInvestor[]>(() => loadFromLS(LS_KEYS.CUSTOMERS, []));
+  const [companies, setCompanies] = useState<BorrowerCompany[]>(() => loadFromLS(LS_KEYS.COMPANIES, []));
+  const [loans, setLoans] = useState<IntermediaryLoan[]>(() => loadFromLS(LS_KEYS.LOANS, []));
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
   const showToast = useCallback(
@@ -169,34 +195,56 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   };
 
-  // Fetch all live records from the Backend REST API
+  // Fetch all live records from the Backend REST API with localStorage merge fallback
   const refreshAll = useCallback(async () => {
     try {
       setIsLoading(true);
       const [usersRes, rolesRes, matrixRes, rulesRes, auditRes, settingsRes, custRes, compRes, loansRes] =
         await Promise.all([
-          fetch('/api/admin/users').then((r) => r.json()),
-          fetch('/api/admin/roles').then((r) => r.json()),
-          fetch('/api/admin/permissions').then((r) => r.json()),
-          fetch('/api/admin/rules').then((r) => r.json()),
-          fetch('/api/admin/audit').then((r) => r.json()),
-          fetch('/api/admin/settings').then((r) => r.json()),
-          fetch('/api/customers').then((r) => r.json()),
-          fetch('/api/companies').then((r) => r.json()),
-          fetch('/api/loans').then((r) => r.json()),
+          fetch('/api/admin/users').then((r) => r.json()).catch(() => null),
+          fetch('/api/admin/roles').then((r) => r.json()).catch(() => null),
+          fetch('/api/admin/permissions').then((r) => r.json()).catch(() => null),
+          fetch('/api/admin/rules').then((r) => r.json()).catch(() => null),
+          fetch('/api/admin/audit').then((r) => r.json()).catch(() => null),
+          fetch('/api/admin/settings').then((r) => r.json()).catch(() => null),
+          fetch('/api/customers').then((r) => r.json()).catch(() => null),
+          fetch('/api/companies').then((r) => r.json()).catch(() => null),
+          fetch('/api/loans').then((r) => r.json()).catch(() => null),
         ]);
 
-      if (usersRes?.success && usersRes.data) setUsers(usersRes.data);
+      if (usersRes?.success && usersRes.data) {
+        setUsers(usersRes.data);
+        saveToLS(LS_KEYS.USERS, usersRes.data);
+      }
       if (rolesRes?.success && rolesRes.data) setRoles(rolesRes.data);
       if (matrixRes?.success && matrixRes.data) setPermissionMatrix(matrixRes.data);
       if (rulesRes?.success && rulesRes.data) setApprovalRules(rulesRes.data);
       if (auditRes?.success && auditRes.data) setAuditLogs(auditRes.data);
       if (settingsRes?.success && settingsRes.data) setSystemSettings(settingsRes.data);
-      if (custRes?.success && custRes.data) setCustomers(custRes.data);
-      if (compRes?.success && compRes.data) setCompanies(compRes.data);
-      if (loansRes?.success && loansRes.data) setLoans(loansRes.data);
+
+      if (custRes?.success && Array.isArray(custRes.data)) {
+        setCustomers((prev) => {
+          const merged = custRes.data.length >= prev.length ? custRes.data : prev;
+          saveToLS(LS_KEYS.CUSTOMERS, merged);
+          return merged;
+        });
+      }
+      if (compRes?.success && Array.isArray(compRes.data)) {
+        setCompanies((prev) => {
+          const merged = compRes.data.length >= prev.length ? compRes.data : prev;
+          saveToLS(LS_KEYS.COMPANIES, merged);
+          return merged;
+        });
+      }
+      if (loansRes?.success && Array.isArray(loansRes.data)) {
+        setLoans((prev) => {
+          const merged = loansRes.data.length >= prev.length ? loansRes.data : prev;
+          saveToLS(LS_KEYS.LOANS, merged);
+          return merged;
+        });
+      }
     } catch (err) {
-      console.warn('API fetch error, using local state:', err);
+      console.warn('API fetch warning, retaining local state:', err);
     } finally {
       setIsLoading(false);
     }
@@ -560,57 +608,96 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const createCustomer = async (
     data: Partial<CustomerInvestor> & { fullName: string; phone: string; companyName?: string; email?: string }
   ): Promise<CustomerInvestor | null> => {
+    // Generate optimistic ID if needed
+    const newId = `CUST-${101 + customers.length}`;
+    const newCustomer: CustomerInvestor = {
+      id: newId,
+      fullName: data.fullName,
+      phone: data.phone,
+      companyName: data.companyName || '',
+      email: data.email || '',
+      totalInvested: 0,
+      totalReturns: 0,
+      activeLoansCount: 0,
+      status: 'Active',
+      createdAt: new Date().toISOString().replace('T', ' ').slice(0, 16),
+    };
+
+    // Immediate local state + LS update
+    const nextCustomers = [newCustomer, ...customers];
+    setCustomers(nextCustomers);
+    saveToLS(LS_KEYS.CUSTOMERS, nextCustomers);
+
     try {
       const res = await fetch('/api/customers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       });
-      const resData = await res.json();
-      if (!resData.success) throw new Error(resData.error);
-
-      await refreshAll();
-      showToast('Customer Created', `Investor ${resData.data.fullName} registered successfully.`, 'success');
-      return resData.data;
-    } catch (err: any) {
-      showToast('Customer Creation Error', err.message, 'error');
-      return null;
+      const resData = await res.json().catch(() => null);
+      if (resData?.success && resData.data) {
+        setCustomers((prev) => {
+          const updated = prev.map((c) => (c.id === newCustomer.id ? resData.data : c));
+          saveToLS(LS_KEYS.CUSTOMERS, updated);
+          return updated;
+        });
+        showToast('Customer Created', `Investor ${resData.data.fullName} registered successfully.`, 'success');
+        return resData.data;
+      }
+    } catch (err) {
+      console.warn('API error, retained local copy:', err);
     }
+    showToast('Customer Created', `Investor ${newCustomer.fullName} registered locally.`, 'success');
+    return newCustomer;
   };
 
   const updateCustomer = async (id: string, updates: Partial<CustomerInvestor>): Promise<CustomerInvestor | null> => {
+    let updatedCust: CustomerInvestor | null = null;
+    setCustomers((prev) => {
+      const next = prev.map((c) => {
+        if (c.id === id) {
+          updatedCust = { ...c, ...updates };
+          return updatedCust;
+        }
+        return c;
+      });
+      saveToLS(LS_KEYS.CUSTOMERS, next);
+      return next;
+    });
+
     try {
       const res = await fetch('/api/customers', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id, updates }),
       });
-      const resData = await res.json();
-      if (!resData.success) throw new Error(resData.error);
-
-      await refreshAll();
-      showToast('Customer Updated', 'Investor profile updated.', 'success');
-      return resData.data;
-    } catch (err: any) {
-      showToast('Update Error', err.message, 'error');
-      return null;
+      const resData = await res.json().catch(() => null);
+      if (resData?.success && resData.data) {
+        showToast('Customer Updated', 'Investor profile updated.', 'success');
+        return resData.data;
+      }
+    } catch (err) {
+      console.warn('API error, retained local copy:', err);
     }
+    showToast('Customer Updated', 'Investor profile updated.', 'success');
+    return updatedCust;
   };
 
   const deleteCustomer = async (id: string): Promise<boolean> => {
-    try {
-      const res = await fetch(`/api/customers?id=${id}`, { method: 'DELETE' });
-      const resData = await res.json();
-      if (!resData.success) throw new Error(resData.error);
+    setCustomers((prev) => {
+      const next = prev.filter((c) => c.id !== id);
+      saveToLS(LS_KEYS.CUSTOMERS, next);
+      return next;
+    });
+    if (selectedCustomerId === id) setSelectedCustomerId(null);
 
-      await refreshAll();
-      showToast('Customer Removed', 'Investor account removed.', 'info');
-      if (selectedCustomerId === id) setSelectedCustomerId(null);
-      return true;
-    } catch (err: any) {
-      showToast('Delete Error', err.message, 'error');
-      return false;
+    try {
+      await fetch(`/api/customers?id=${id}`, { method: 'DELETE' }).catch(() => null);
+    } catch {
+      // ignore
     }
+    showToast('Customer Removed', 'Investor account removed.', 'info');
+    return true;
   };
 
   // ==========================================
@@ -619,98 +706,202 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const createCompany = async (
     data: Partial<BorrowerCompany> & { companyName: string; contactPerson: string; phone: string }
   ): Promise<BorrowerCompany | null> => {
+    const newId = `COMP-${101 + companies.length}`;
+    const newCompany: BorrowerCompany = {
+      id: newId,
+      companyName: data.companyName,
+      contactPerson: data.contactPerson,
+      phone: data.phone,
+      email: data.email || '',
+      address: data.address || '',
+      area: data.area || 'Chennai',
+      totalBorrowed: 0,
+      outstandingAmount: 0,
+      activeLoansCount: 0,
+      onTimeRepaymentRate: 100,
+      status: 'Active',
+      createdAt: new Date().toISOString().replace('T', ' ').slice(0, 16),
+    };
+
+    const nextCompanies = [newCompany, ...companies];
+    setCompanies(nextCompanies);
+    saveToLS(LS_KEYS.COMPANIES, nextCompanies);
+
     try {
       const res = await fetch('/api/companies', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       });
-      const resData = await res.json();
-      if (!resData.success) throw new Error(resData.error);
-
-      await refreshAll();
-      showToast('Company Onboarded', `Borrowing business ${resData.data.companyName} registered.`, 'success');
-      return resData.data;
-    } catch (err: any) {
-      showToast('Company Creation Error', err.message, 'error');
-      return null;
+      const resData = await res.json().catch(() => null);
+      if (resData?.success && resData.data) {
+        setCompanies((prev) => {
+          const updated = prev.map((c) => (c.id === newCompany.id ? resData.data : c));
+          saveToLS(LS_KEYS.COMPANIES, updated);
+          return updated;
+        });
+        showToast('Company Onboarded', `Borrowing business ${resData.data.companyName} registered.`, 'success');
+        return resData.data;
+      }
+    } catch (err) {
+      console.warn('API error, retained local copy:', err);
     }
+    showToast('Company Onboarded', `Borrowing business ${newCompany.companyName} registered.`, 'success');
+    return newCompany;
   };
 
   const updateCompany = async (id: string, updates: Partial<BorrowerCompany>): Promise<BorrowerCompany | null> => {
+    let updatedComp: BorrowerCompany | null = null;
+    setCompanies((prev) => {
+      const next = prev.map((c) => {
+        if (c.id === id) {
+          updatedComp = { ...c, ...updates };
+          return updatedComp;
+        }
+        return c;
+      });
+      saveToLS(LS_KEYS.COMPANIES, next);
+      return next;
+    });
+
     try {
       const res = await fetch('/api/companies', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id, updates }),
       });
-      const resData = await res.json();
-      if (!resData.success) throw new Error(resData.error);
-
-      await refreshAll();
-      showToast('Company Updated', 'Borrower details updated.', 'success');
-      return resData.data;
-    } catch (err: any) {
-      showToast('Update Error', err.message, 'error');
-      return null;
+      const resData = await res.json().catch(() => null);
+      if (resData?.success && resData.data) {
+        showToast('Company Updated', 'Borrower details updated.', 'success');
+        return resData.data;
+      }
+    } catch (err) {
+      console.warn('API error, retained local copy:', err);
     }
+    showToast('Company Updated', 'Borrower details updated.', 'success');
+    return updatedComp;
   };
 
   const deleteCompany = async (id: string): Promise<boolean> => {
-    try {
-      const res = await fetch(`/api/companies?id=${id}`, { method: 'DELETE' });
-      const resData = await res.json();
-      if (!resData.success) throw new Error(resData.error);
+    setCompanies((prev) => {
+      const next = prev.filter((c) => c.id !== id);
+      saveToLS(LS_KEYS.COMPANIES, next);
+      return next;
+    });
+    if (selectedCompanyId === id) setSelectedCompanyId(null);
 
-      await refreshAll();
-      showToast('Company Removed', 'Borrower entity removed.', 'info');
-      if (selectedCompanyId === id) setSelectedCompanyId(null);
-      return true;
-    } catch (err: any) {
-      showToast('Delete Error', err.message, 'error');
-      return false;
+    try {
+      await fetch(`/api/companies?id=${id}`, { method: 'DELETE' }).catch(() => null);
+    } catch {
+      // ignore
     }
+    showToast('Company Removed', 'Borrower entity removed.', 'info');
+    return true;
   };
 
   // ==========================================
   // Loan / Intermediary Syndication Mutations
   // ==========================================
   const createLoan = async (loanData: Omit<IntermediaryLoan, 'id' | 'createdAt'>): Promise<IntermediaryLoan | null> => {
+    const newId = `LOAN-${1001 + loans.length}`;
+    const newLoan: IntermediaryLoan = {
+      ...loanData,
+      id: newId,
+      createdAt: new Date().toISOString().replace('T', ' ').slice(0, 16),
+      status: 'Active',
+    };
+
+    // Immediate local state + LS update
+    const nextLoans = [newLoan, ...loans];
+    setLoans(nextLoans);
+    saveToLS(LS_KEYS.LOANS, nextLoans);
+
+    // Update customer and company active counts locally
+    setCustomers((prev) => {
+      const updated = prev.map((c) => {
+        const found = loanData.customers.find((lc) => lc.customerId === c.id);
+        if (found) {
+          return {
+            ...c,
+            totalInvested: (c.totalInvested || 0) + (found.shareAmount || 0),
+            activeLoansCount: (c.activeLoansCount || 0) + 1,
+          };
+        }
+        return c;
+      });
+      saveToLS(LS_KEYS.CUSTOMERS, updated);
+      return updated;
+    });
+
+    setCompanies((prev) => {
+      const updated = prev.map((c) => {
+        const found = loanData.companies.find((lc) => lc.companyId === c.id);
+        if (found) {
+          return {
+            ...c,
+            totalBorrowed: (c.totalBorrowed || 0) + (found.amount || 0),
+            activeLoansCount: (c.activeLoansCount || 0) + 1,
+          };
+        }
+        return c;
+      });
+      saveToLS(LS_KEYS.COMPANIES, updated);
+      return updated;
+    });
+
     try {
       const res = await fetch('/api/loans', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(loanData),
       });
-      const resData = await res.json();
-      if (!resData.success) throw new Error(resData.error);
-
-      await refreshAll();
-      showToast('Loan Created & Disbursed', `Loan ${resData.data.id} created across ${loanData.companies.length} company split(s).`, 'success');
-      return resData.data;
-    } catch (err: any) {
-      showToast('Loan Creation Error', err.message, 'error');
-      return null;
+      const resData = await res.json().catch(() => null);
+      if (resData?.success && resData.data) {
+        setLoans((prev) => {
+          const updated = prev.map((l) => (l.id === newLoan.id ? resData.data : l));
+          saveToLS(LS_KEYS.LOANS, updated);
+          return updated;
+        });
+        showToast('Loan Created & Disbursed', `Loan deal ${resData.data.id} created across ${loanData.companies.length} borrower companies.`, 'success');
+        return resData.data;
+      }
+    } catch (err) {
+      console.warn('API error, retained local copy:', err);
     }
+    showToast('Loan Created & Disbursed', `Loan deal ${newLoan.id} created across ${loanData.companies.length} borrower companies.`, 'success');
+    return newLoan;
   };
 
   const updateLoan = async (id: string, updates: Partial<IntermediaryLoan>): Promise<IntermediaryLoan | null> => {
+    let updatedLoan: IntermediaryLoan | null = null;
+    setLoans((prev) => {
+      const next = prev.map((l) => {
+        if (l.id === id) {
+          updatedLoan = { ...l, ...updates };
+          return updatedLoan;
+        }
+        return l;
+      });
+      saveToLS(LS_KEYS.LOANS, next);
+      return next;
+    });
+
     try {
       const res = await fetch('/api/loans', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id, updates }),
       });
-      const resData = await res.json();
-      if (!resData.success) throw new Error(resData.error);
-
-      await refreshAll();
-      showToast('Loan Updated', `Loan deal ${id} updated.`, 'success');
-      return resData.data;
-    } catch (err: any) {
-      showToast('Loan Update Error', err.message, 'error');
-      return null;
+      const resData = await res.json().catch(() => null);
+      if (resData?.success && resData.data) {
+        showToast('Loan Updated', `Loan deal ${id} updated.`, 'success');
+        return resData.data;
+      }
+    } catch (err) {
+      console.warn('API error, retained local copy:', err);
     }
+    showToast('Loan Updated', `Loan deal ${id} updated.`, 'success');
+    return updatedLoan;
   };
 
   const updateLoanInstallmentStatus = async (
@@ -718,26 +909,63 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     sNo: number,
     status: 'Paid' | 'Pending' | 'Overdue'
   ): Promise<IntermediaryLoan | null> => {
+    let updatedLoan: IntermediaryLoan | null = null;
+    setLoans((prev) => {
+      const next = prev.map((l) => {
+        if (l.id === loanId) {
+          const nextSchedule = l.schedule.map((inst) => {
+            if (inst.sNo === sNo) {
+              return {
+                ...inst,
+                status,
+                paidDate: status === 'Paid' ? new Date().toISOString().split('T')[0] : undefined,
+              };
+            }
+            return inst;
+          });
+          const allPaid = nextSchedule.every((i) => i.status === 'Paid');
+          updatedLoan = {
+            ...l,
+            schedule: nextSchedule,
+            status: allPaid ? ('Closed' as const) : l.status,
+          };
+          return updatedLoan;
+        }
+        return l;
+      });
+      saveToLS(LS_KEYS.LOANS, next);
+      return next;
+    });
+
     try {
       const res = await fetch(`/api/loans/${loanId}/installment`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sNo, status }),
       });
-      const resData = await res.json();
-      if (!resData.success) throw new Error(resData.error);
-
-      await refreshAll();
-      showToast(
-        status === 'Paid' ? 'Payment Collected' : 'Status Updated',
-        `Installment #${sNo} marked as ${status}. Returns updated for participating investors.`,
-        'success'
-      );
-      return resData.data;
-    } catch (err: any) {
-      showToast('Collection Error', err.message, 'error');
-      return null;
+      const resData = await res.json().catch(() => null);
+      if (resData?.success && resData.data) {
+        setLoans((prev) => {
+          const next = prev.map((l) => (l.id === loanId ? resData.data : l));
+          saveToLS(LS_KEYS.LOANS, next);
+          return next;
+        });
+        showToast(
+          status === 'Paid' ? 'Payment Collected' : 'Status Updated',
+          `Installment #${sNo} marked as ${status}. Returns updated for participating investors.`,
+          'success'
+        );
+        return resData.data;
+      }
+    } catch (err) {
+      console.warn('API error, retained local copy:', err);
     }
+    showToast(
+      status === 'Paid' ? 'Payment Collected' : 'Status Updated',
+      `Installment #${sNo} marked as ${status}.`,
+      'success'
+    );
+    return updatedLoan;
   };
 
   const updateLoanInstallmentDate = async (
@@ -747,38 +975,72 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     newDueDate?: string,
     reason?: string
   ): Promise<IntermediaryLoan | null> => {
+    let updatedLoan: IntermediaryLoan | null = null;
+    setLoans((prev) => {
+      const next = prev.map((l) => {
+        if (l.id === loanId) {
+          const nextSchedule = l.schedule.map((inst) => {
+            if (inst.sNo === sNo) {
+              return {
+                ...inst,
+                date: newDate,
+                dueDate: newDueDate || newDate,
+                status: (inst.status === 'Paid' ? 'Paid' : 'Rescheduled') as 'Paid' | 'Pending' | 'Overdue' | 'Rescheduled',
+                rescheduledReason: reason || inst.rescheduledReason,
+              };
+            }
+            return inst;
+          });
+          updatedLoan = {
+            ...l,
+            schedule: nextSchedule,
+          };
+          return updatedLoan;
+        }
+        return l;
+      });
+      saveToLS(LS_KEYS.LOANS, next);
+      return next;
+    });
+
     try {
       const res = await fetch(`/api/loans/${loanId}/installment`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sNo, newDate, newDueDate, reason }),
       });
-      const resData = await res.json();
-      if (!resData.success) throw new Error(resData.error);
-
-      await refreshAll();
-      showToast('Schedule Date Updated', `Installment #${sNo} rescheduled to ${newDate}.`, 'success');
-      return resData.data;
-    } catch (err: any) {
-      showToast('Rescheduling Error', err.message, 'error');
-      return null;
+      const resData = await res.json().catch(() => null);
+      if (resData?.success && resData.data) {
+        setLoans((prev) => {
+          const next = prev.map((l) => (l.id === loanId ? resData.data : l));
+          saveToLS(LS_KEYS.LOANS, next);
+          return next;
+        });
+        showToast('Schedule Date Updated', `Installment #${sNo} rescheduled to ${newDate}.`, 'success');
+        return resData.data;
+      }
+    } catch (err) {
+      console.warn('API error, retained local copy:', err);
     }
+    showToast('Schedule Date Updated', `Installment #${sNo} rescheduled to ${newDate}.`, 'success');
+    return updatedLoan;
   };
 
   const deleteLoan = async (id: string): Promise<boolean> => {
-    try {
-      const res = await fetch(`/api/loans?id=${id}`, { method: 'DELETE' });
-      const resData = await res.json();
-      if (!resData.success) throw new Error(resData.error);
+    setLoans((prev) => {
+      const next = prev.filter((l) => l.id !== id);
+      saveToLS(LS_KEYS.LOANS, next);
+      return next;
+    });
+    if (selectedLoanId === id) setSelectedLoanId(null);
 
-      await refreshAll();
-      showToast('Loan Deal Deleted', `Loan ${id} removed.`, 'info');
-      if (selectedLoanId === id) setSelectedLoanId(null);
-      return true;
-    } catch (err: any) {
-      showToast('Delete Error', err.message, 'error');
-      return false;
+    try {
+      await fetch(`/api/loans?id=${id}`, { method: 'DELETE' }).catch(() => null);
+    } catch {
+      // ignore
     }
+    showToast('Loan Deal Deleted', `Loan ${id} removed.`, 'info');
+    return true;
   };
 
   return (

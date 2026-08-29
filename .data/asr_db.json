@@ -914,6 +914,20 @@
   "approvalRules": [],
   "auditLogs": [
     {
+      "id": "AUD-6087",
+      "timestamp": "2026-08-29 21:01",
+      "actorId": "ADM-1001",
+      "actorName": "System Administrator",
+      "actorRoleId": 0,
+      "action": "Created User",
+      "target": "New Loan Syndication (LOAN-2026-001)",
+      "beforeVal": "-",
+      "afterVal": "Amount: ₹2,00,00,000, Borrowers: 1",
+      "ipAddress": "127.0.0.1",
+      "device": "Admin Web Console",
+      "isSensitive": true
+    },
+    {
       "id": "AUD-4847",
       "timestamp": "2026-08-29 20:28",
       "actorId": "ADM-1001",
@@ -1020,9 +1034,9 @@
       "email": "3234@ffh.com",
       "address": "dfs",
       "status": "Active",
-      "totalInvested": 0,
-      "totalReturns": 0,
-      "activeLoansCount": 0,
+      "totalInvested": 20000000,
+      "totalReturns": 305556,
+      "activeLoansCount": 1,
       "createdAt": "2026-08-29"
     }
   ],
@@ -1041,15 +1055,110 @@
         "accountNumber": "502000999580",
         "ifsc": "HDFC0001234"
       },
-      "totalBorrowed": 0,
-      "outstandingAmount": 0,
-      "activeLoansCount": 0,
+      "totalBorrowed": 20000000,
+      "outstandingAmount": 20550000,
+      "activeLoansCount": 1,
       "onTimeRepaymentRate": 100,
       "status": "Active",
       "createdAt": "2026-08-29"
     }
   ],
-  "loans": [],
+  "loans": [
+    {
+      "totalAmount": 20000000,
+      "disbursedDate": "2026-08-29",
+      "tenureMonths": 3,
+      "frequency": "Monthly",
+      "defaultInterestRate": 24,
+      "asrCommissionRate": 4,
+      "customers": [
+        {
+          "customerId": "CUST-101",
+          "customerName": "Naresh",
+          "sharePercentage": 100,
+          "shareAmount": 20000000
+        }
+      ],
+      "companies": [
+        {
+          "companyId": "COMP-101",
+          "companyName": "AZURE",
+          "percentage": 100,
+          "amount": 20000000,
+          "interestRate": 11,
+          "monthlyInterest": 183333,
+          "totalDuePerMonth": 20183333,
+          "monthlyEmi": 20183333
+        }
+      ],
+      "totalInterestExpected": 550000,
+      "asrIncome": 91667,
+      "customerNetProfit": 458333,
+      "status": "Active",
+      "schedule": [
+        {
+          "sNo": 1,
+          "date": "29-Sep-2026",
+          "dueDate": "2026-09-29",
+          "particulars": "Month #1 Revolving Cycle (Full Principal + Interest)",
+          "principalAmount": 20000000,
+          "interestAmount": 183333,
+          "totalAmount": 20183333,
+          "companyShares": {
+            "COMP-101": 20183333
+          },
+          "companyPrincipalShares": {
+            "COMP-101": 20000000
+          },
+          "companyInterestShares": {
+            "COMP-101": 183333
+          },
+          "status": "Paid",
+          "paidDate": "2026-08-29"
+        },
+        {
+          "sNo": 2,
+          "date": "29-Oct-2026",
+          "dueDate": "2026-10-29",
+          "particulars": "Month #2 Revolving Cycle (Full Principal + Interest)",
+          "principalAmount": 20000000,
+          "interestAmount": 183333,
+          "totalAmount": 20183333,
+          "companyShares": {
+            "COMP-101": 20183333
+          },
+          "companyPrincipalShares": {
+            "COMP-101": 20000000
+          },
+          "companyInterestShares": {
+            "COMP-101": 183333
+          },
+          "status": "Pending"
+        },
+        {
+          "sNo": 3,
+          "date": "29-Nov-2026",
+          "dueDate": "2026-11-29",
+          "particulars": "Month #3 Revolving Cycle (Full Principal + Interest)",
+          "principalAmount": 20000000,
+          "interestAmount": 183333,
+          "totalAmount": 20183333,
+          "companyShares": {
+            "COMP-101": 20183333
+          },
+          "companyPrincipalShares": {
+            "COMP-101": 20000000
+          },
+          "companyInterestShares": {
+            "COMP-101": 183333
+          },
+          "status": "Pending"
+        }
+      ],
+      "id": "LOAN-2026-001",
+      "createdAt": "2026-08-29"
+    }
+  ],
   "systemSettings": {
     "companyProfile": {
       "companyName": "ASR Groups Financial Services Pvt Ltd",

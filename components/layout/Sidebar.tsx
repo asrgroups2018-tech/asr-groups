@@ -142,9 +142,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpenMobile, onCloseMobile })
           {/* Navigation Section */}
           <div className="py-4 px-3 space-y-6 overflow-y-auto max-h-[calc(100vh-140px)]">
             <div>
-              <p className="px-3 text-[10px] font-bold uppercase tracking-wider text-[#A3824E] font-mono mb-2">
-                MAIN NAVIGATION
-              </p>
               <nav className="space-y-1">
                 {navItems.map((item) => {
                   const isActive = activeMainTab === item.id;

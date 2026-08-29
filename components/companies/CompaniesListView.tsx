@@ -201,19 +201,16 @@ export const CompaniesListView: React.FC = () => {
 
   return (
     <div className="space-y-5 animate-in fade-in duration-200">
-      {/* ─── Top Header Card with Summary Metrics ─── */}
+      {/* ─── Top Control Bar ─── */}
       <div className="bg-white p-5 rounded-2xl border border-[#E6E1D6] shadow-[0_1px_3px_rgba(0,0,0,0.02)] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-xl font-bold text-slate-900 font-serif">
-              Borrowing Companies
+              Companies
             </h1>
-            <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
-              {companies.length} Registered
-            </span>
           </div>
           <p className="text-xs text-slate-500 mt-1">
-            Verified businesses that receive syndicated loan disbursements and owe interest repayments
+            Manage borrowing companies and their loan balances
           </p>
         </div>
 
@@ -223,7 +220,7 @@ export const CompaniesListView: React.FC = () => {
             className="px-4 py-2 text-xs font-bold text-white bg-[#701A35] hover:bg-[#5C142B] active:scale-98 rounded-xl transition-all shadow-xs flex items-center gap-1.5 cursor-pointer shrink-0"
           >
             <Plus className="w-4 h-4 text-amber-200" />
-            <span>+ Add Company</span>
+            <span>+ New Company</span>
           </button>
         </div>
       </div>
@@ -232,32 +229,32 @@ export const CompaniesListView: React.FC = () => {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div className="bg-white p-4 rounded-xl border border-[#E6E1D6] shadow-2xs">
           <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider font-mono">
-            Total Disbursed Capital
+            Total Borrowed
           </span>
           <span className="text-xl font-bold text-slate-900 font-mono block mt-1">
             ₹{totalBorrowedSum.toLocaleString('en-IN')}
           </span>
-          <span className="text-[10px] text-slate-400 mt-0.5 block">Across all borrower companies</span>
+          <span className="text-[10px] text-slate-400 mt-0.5 block">Across all loans</span>
         </div>
 
         <div className="bg-white p-4 rounded-xl border border-[#E6E1D6] shadow-2xs">
           <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider font-mono">
-            Total Outstanding Dues
+            Outstanding Balance
           </span>
           <span className="text-xl font-bold text-rose-700 font-mono block mt-1">
             ₹{totalOutstandingSum.toLocaleString('en-IN')}
           </span>
-          <span className="text-[10px] text-slate-400 mt-0.5 block">Principal + uncollected interest</span>
+          <span className="text-[10px] text-slate-400 mt-0.5 block">Principal + pending interest</span>
         </div>
 
         <div className="bg-white p-4 rounded-xl border border-[#E6E1D6] shadow-2xs">
           <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider font-mono">
-            Borrower Entities
+            Total Companies
           </span>
           <span className="text-xl font-bold text-slate-900 font-mono block mt-1">
             {companies.length} Companies
           </span>
-          <span className="text-[10px] text-slate-400 mt-0.5 block">Must be onboarded prior to loan creation</span>
+          <span className="text-[10px] text-slate-400 mt-0.5 block">Active registered businesses</span>
         </div>
       </div>
 
@@ -290,10 +287,9 @@ export const CompaniesListView: React.FC = () => {
             <Building2 className="w-6 h-6" />
           </div>
           <div>
-            <h3 className="text-base font-bold text-slate-900">No Borrowing Companies Onboarded</h3>
+            <h3 className="text-base font-bold text-slate-900">No Companies Registered</h3>
             <p className="text-xs text-slate-500 max-w-md mx-auto mt-1">
-              Borrowing companies are the businesses that receive loan capital disbursements and repay with interest.
-              Onboard the first company to begin syndicating loans.
+              Add borrower companies before creating loan allocations.
             </p>
           </div>
           <button
@@ -301,7 +297,7 @@ export const CompaniesListView: React.FC = () => {
             className="px-4 py-2 text-xs font-bold text-white bg-[#701A35] hover:bg-[#5C142B] rounded-xl shadow-xs cursor-pointer inline-flex items-center gap-1.5"
           >
             <Plus className="w-4 h-4 text-amber-200" />
-            <span>+ Onboard First Company</span>
+            <span>+ Add First Company</span>
           </button>
         </div>
       ) : (

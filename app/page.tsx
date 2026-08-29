@@ -55,7 +55,11 @@ function ERPContent() {
               {selectedCompanyId ? <CompanyDetailsView /> : <CompaniesListView />}
             </main>
           )}
-          {activeMainTab === 'schedule' && <ScheduleView />}
+          {activeMainTab === 'schedule' && (
+            <main className="p-4 sm:p-8 max-w-7xl w-full mx-auto space-y-6">
+              <ScheduleView />
+            </main>
+          )}
           {!['administration', 'loans', 'customers', 'companies', 'schedule'].includes(activeMainTab) && (
             <UnderDevelopmentView moduleName={activeMainTab} />
           )}

@@ -210,7 +210,7 @@ export const CustomerDetailsView: React.FC = () => {
               <TrendingUp className="w-8 h-8 mx-auto mb-2 text-slate-300" />
               <p>No funded loan deals yet for this investor.</p>
               <p className="text-[11px] text-slate-400 mt-1">
-                Select this customer in Step 1 of the + New Loan Wizard to fund a deal.
+                Select this customer in Step 1 of + Create New Loan to fund a deal.
               </p>
             </div>
           ) : (

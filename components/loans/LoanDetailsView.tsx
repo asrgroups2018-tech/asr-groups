@@ -405,10 +405,19 @@ export const LoanDetailsView: React.FC = () => {
                       </td>
                       <td className="p-2.5 text-right">
                         {row.status === 'Paid' ? (
-                          <span className="text-[11px] font-bold text-emerald-700 flex items-center justify-end gap-1">
-                            <CheckCircle2 className="w-3.5 h-3.5" />
-                            <span>Collected</span>
-                          </span>
+                          <div className="flex items-center justify-end gap-1.5">
+                            <span className="text-[11px] font-bold text-emerald-700 flex items-center gap-1">
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                              <span>Collected</span>
+                            </span>
+                            <button
+                              onClick={() => updateLoanInstallmentStatus(loan.id, row.sNo, 'Pending')}
+                              className="px-2 py-0.5 text-[10px] font-bold text-slate-500 hover:text-rose-700 bg-slate-100 hover:bg-rose-50 border border-slate-200 hover:border-rose-200 rounded-md transition-colors cursor-pointer"
+                              title="Mistakenly marked? Click to Undo and revert back to Pending"
+                            >
+                              Undo
+                            </button>
+                          </div>
                         ) : (
                           <div className="flex items-center justify-end gap-1.5">
                             <button
@@ -429,7 +438,7 @@ export const LoanDetailsView: React.FC = () => {
                               onClick={() => updateLoanInstallmentStatus(loan.id, row.sNo, 'Paid')}
                               className="px-2.5 py-1 text-xs font-bold text-white bg-emerald-700 hover:bg-emerald-800 rounded-lg shadow-2xs cursor-pointer"
                             >
-                              Collect
+                              Collected
                             </button>
                           </div>
                         )}

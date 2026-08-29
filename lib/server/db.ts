@@ -77,24 +77,45 @@ interface DatabaseSchema {
   loans: IntermediaryLoan[];
 }
 
-const DATA_DIR = path.join(process.cwd(), '.data');
-const DB_FILE = path.join(DATA_DIR, 'asr_db.json');
+// Paths for local development and Vercel serverless environment
+const LOCAL_DATA_DIR = path.join(process.cwd(), '.data');
+const TMP_DATA_DIR = '/tmp';
 
-// In-memory cache
-let memoryDb: DatabaseSchema | null = null;
+// Check if running on Vercel or read-only filesystem
+function getDbFilePath(): string {
+  if (process.env.VERCEL || process.env.NODE_ENV === 'production') {
+    try {
+      if (fs.existsSync(TMP_DATA_DIR)) {
+        return path.join(TMP_DATA_DIR, 'asr_db.json');
+      }
+    } catch {
+      // fallback
+    }
+  }
+  return path.join(LOCAL_DATA_DIR, 'asr_db.json');
+}
+
+// In-memory global cache across warm lambda invocations
+declare global {
+  // eslint-disable-next-line no-var
+  var __asr_db_memory: DatabaseSchema | undefined;
+}
 
 function ensureDataFile(): DatabaseSchema {
-  if (memoryDb) return memoryDb;
+  if (globalThis.__asr_db_memory) return globalThis.__asr_db_memory;
+
+  const dbFile = getDbFilePath();
+  const dataDir = path.dirname(dbFile);
 
   try {
-    if (!fs.existsSync(DATA_DIR)) {
-      fs.mkdirSync(DATA_DIR, { recursive: true });
+    if (!fs.existsSync(dataDir)) {
+      fs.mkdirSync(dataDir, { recursive: true });
     }
 
-    if (fs.existsSync(DB_FILE)) {
-      const content = fs.readFileSync(DB_FILE, 'utf-8');
+    if (fs.existsSync(dbFile)) {
+      const content = fs.readFileSync(dbFile, 'utf-8');
       const loaded = JSON.parse(content);
-      memoryDb = {
+      const parsed: DatabaseSchema = {
         users: loaded.users || [BASELINE_ROOT_ADMIN],
         roles: loaded.roles || ROLES_DATA,
         permissionMatrix: loaded.permissionMatrix || INITIAL_PERMISSION_MATRIX,
@@ -122,10 +143,11 @@ function ensureDataFile(): DatabaseSchema {
           shareholders: loaded.systemSettings?.shareholders || INITIAL_SYSTEM_SETTINGS.shareholders,
         },
       };
-      return memoryDb!;
+      globalThis.__asr_db_memory = parsed;
+      return parsed;
     }
   } catch (err) {
-    console.warn('File system DB error, using in-memory database:', err);
+    console.warn('File system DB read warning, initializing fresh DB:', err);
   }
 
   // Initialize clean baseline
@@ -145,19 +167,21 @@ function ensureDataFile(): DatabaseSchema {
   };
 
   saveDb(initialDb);
-  memoryDb = initialDb;
+  globalThis.__asr_db_memory = initialDb;
   return initialDb;
 }
 
 function saveDb(data: DatabaseSchema) {
-  memoryDb = data;
+  globalThis.__asr_db_memory = data;
   try {
-    if (!fs.existsSync(DATA_DIR)) {
-      fs.mkdirSync(DATA_DIR, { recursive: true });
+    const dbFile = getDbFilePath();
+    const dataDir = path.dirname(dbFile);
+    if (!fs.existsSync(dataDir)) {
+      fs.mkdirSync(dataDir, { recursive: true });
     }
-    fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), 'utf-8');
+    fs.writeFileSync(dbFile, JSON.stringify(data, null, 2), 'utf-8');
   } catch (err) {
-    console.warn('Failed to write db file:', err);
+    console.warn('File write warning (running in memory):', err);
   }
 }
 
