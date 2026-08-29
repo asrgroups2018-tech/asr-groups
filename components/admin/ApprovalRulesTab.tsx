@@ -42,12 +42,12 @@ export const ApprovalRulesTab: React.FC = () => {
   const columns: ColumnDef<ApprovalRule>[] = [
     {
       key: 'changeType',
-      header: 'Change / Workflow Type',
+      header: 'Workflow',
       sortable: true,
       accessor: (r) => r.changeType,
       render: (r) => (
         <div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             <span className="font-bold text-slate-900 text-xs">{r.changeType}</span>
             <span className="text-[10px] font-mono text-slate-400">({r.id})</span>
           </div>
@@ -58,7 +58,7 @@ export const ApprovalRulesTab: React.FC = () => {
     },
     {
       key: 'whoCanRaise',
-      header: 'Who Can Raise',
+      header: 'Raised By',
       sortable: false,
       render: (r) => (
         <div className="flex items-center gap-1 flex-wrap max-w-xs">
@@ -74,14 +74,11 @@ export const ApprovalRulesTab: React.FC = () => {
     },
     {
       key: 'whoMustApprove',
-      header: 'Who Must Approve',
+      header: 'Approver',
       sortable: true,
       accessor: (r) => r.whoMustApprove,
       render: (r) => (
-        <div className="space-y-0.5">
-          <RoleBadge roleId={r.whoMustApprove} size="xs" />
-          <p className="text-[10px] text-slate-400 font-mono">Minimum role level</p>
-        </div>
+        <RoleBadge roleId={r.whoMustApprove} size="xs" />
       ),
       exportValue: (r) =>
         roles.find((role) => role.id === r.whoMustApprove)?.name || `Role ${r.whoMustApprove}`,
@@ -98,22 +95,22 @@ export const ApprovalRulesTab: React.FC = () => {
               ₹{r.amountThreshold.toLocaleString('en-IN')}
             </span>
           ) : (
-            <span className="text-slate-400 italic">No monetary cap</span>
+            <span className="text-slate-400 italic">No cap</span>
           )}
         </div>
       ),
       exportValue: (r) =>
-        r.amountThreshold > 0 ? `₹${r.amountThreshold}` : 'No monetary cap',
+        r.amountThreshold > 0 ? `₹${r.amountThreshold}` : 'No cap',
     },
     {
       key: 'autoApprove',
-      header: 'Auto-Approve Below',
+      header: 'Auto-Approve',
       align: 'center',
       sortable: false,
       render: (r) => (
         <button
           onClick={() => handleToggleAutoApprove(r)}
-          className={`px-2.5 py-1 rounded-xl text-xs font-semibold border transition-all flex items-center gap-1.5 mx-auto ${
+          className={`px-2.5 py-1 rounded-xl text-xs font-semibold border transition-all flex items-center gap-1.5 mx-auto cursor-pointer ${
             r.autoApproveBelow
               ? 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100'
               : 'bg-slate-100 text-slate-500 border-slate-200 hover:bg-slate-200'
@@ -126,7 +123,7 @@ export const ApprovalRulesTab: React.FC = () => {
     },
     {
       key: 'status',
-      header: 'Rule Status',
+      header: 'Status',
       align: 'center',
       sortable: false,
       render: (r) => (

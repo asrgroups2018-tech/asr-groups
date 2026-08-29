@@ -9,7 +9,6 @@ import {
   Search,
   Filter,
   FileSpreadsheet,
-  Printer,
   ShieldAlert,
   ArrowRight,
   Sparkles,
@@ -52,7 +51,7 @@ export const AuditLogTab: React.FC = () => {
   const columns: ColumnDef<AuditLogEntry>[] = [
     {
       key: 'timestamp',
-      header: 'Timestamp (IST)',
+      header: 'Time',
       sortable: true,
       accessor: (l) => l.timestamp,
       render: (l) => (
@@ -65,23 +64,23 @@ export const AuditLogTab: React.FC = () => {
     },
     {
       key: 'actor',
-      header: 'Actor / Performed By',
+      header: 'Actor',
       sortable: true,
       accessor: (l) => l.actorName,
       render: (l) => (
-        <div className="space-y-1">
+        <div className="space-y-0.5">
           <div className="flex items-center gap-1.5">
             <span className="font-bold text-slate-900 text-xs">{l.actorName}</span>
             <RoleBadge roleId={l.actorRoleId} size="xs" />
           </div>
-          <p className="text-[10px] font-mono text-slate-400">ID: {l.actorId}</p>
+          <p className="text-[10px] font-mono text-slate-400">{l.actorId}</p>
         </div>
       ),
       exportValue: (l) => `${l.actorName} (Role ${l.actorRoleId})`,
     },
     {
       key: 'action',
-      header: 'Action Event',
+      header: 'Action',
       sortable: true,
       accessor: (l) => l.action,
       render: (l) => (
@@ -106,7 +105,7 @@ export const AuditLogTab: React.FC = () => {
     },
     {
       key: 'target',
-      header: 'Target Entity',
+      header: 'Target',
       sortable: true,
       accessor: (l) => l.target,
       render: (l) => (
@@ -117,7 +116,7 @@ export const AuditLogTab: React.FC = () => {
     },
     {
       key: 'diff',
-      header: 'Audit Diff (Before → After)',
+      header: 'Details',
       sortable: false,
       render: (l) => (
         <div className="text-[11px] space-y-1 max-w-sm">

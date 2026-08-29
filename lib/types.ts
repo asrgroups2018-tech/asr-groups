@@ -30,8 +30,11 @@ export interface UserSession {
 export interface User {
   id: string; // e.g., "USR-1001"
   name: string;
-  email: string;
+  username?: string; // Login username for non-admin users (e.g., "rubesh.k", "agent.ravi")
+  email: string; // Login identifier for Admin users; notification email for others
   phone: string;
+  tempPassword?: string; // Initial or reset password provided to user
+  loginMethod?: 'email' | 'username'; // 'email' for Admin (Role 0, 1), 'username' for all others
   avatar?: string;
   initials: string;
   assignedRoleIds: RoleId[]; // Multi-role support!
@@ -177,8 +180,6 @@ export type AdminTab =
   | 'overview'
   | 'users'
   | 'roles'
-  | 'matrix'
-  | 'rules'
   | 'audit'
   | 'settings';
 
@@ -188,3 +189,103 @@ export type UserDetailsTab =
   | 'permissions'
   | 'activity'
   | 'security';
+
+// ==========================================
+// ASR Intermediary Business Domain Models
+// ==========================================
+
+// 1. Customer = The Investor / Financier
+export interface CustomerInvestor {
+  id: string; // e.g., "CUST-101"
+  companyName?: string; // Optional enterprise name
+  fullName: string; // Required investor name
+  phone: string;
+  email: string;
+  address?: string;
+  status: 'Active' | 'Pending' | 'Inactive';
+  totalInvested: number; // Total ₹ capital provided across all loans
+  totalReturns: number; // Total ₹ profit received to date
+  activeLoansCount: number;
+  createdAt: string;
+}
+
+// 2. Company = The Borrowing Business
+export interface BorrowerCompany {
+  id: string; // e.g., "COMP-101"
+  companyName: string; // Required business name
+  contactPerson: string;
+  phone: string;
+  email?: string;
+  address: string;
+  area: string; // e.g. "Ambattur Industrial Estate", "Guindy"
+  defaultInterestRate?: number; // Optional; interest configured per loan
+  bankDetails?: {
+    bankName: string;
+    accountNumber: string;
+    ifsc: string;
+  };
+  totalBorrowed: number; // Cumulative ₹ borrowed
+  outstandingAmount: number; // Current principal + interest due
+  activeLoansCount: number;
+  onTimeRepaymentRate: number; // % (e.g. 96%)
+  status: 'Active' | 'Under Review' | 'Blacklisted';
+  createdAt: string;
+}
+
+// 3. Loans & Syndicated Multi-Party Tranches
+export interface LoanCustomerShare {
+  customerId: string;
+  customerName: string;
+  sharePercentage: number; // e.g. 100% or 60%
+  shareAmount: number; // e.g. ₹1,20,00,000
+}
+
+export interface LoanCompanySplit {
+  companyId: string;
+  companyName: string;
+  percentage: number; // e.g. 40%
+  amount: number; // e.g. ₹80,00,000 (Full Principal)
+  interestRate: number; // e.g. 24% p.a. (2% per month)
+  monthlyInterest: number; // Monthly interest cut (e.g. ₹1,60,000)
+  totalDuePerMonth: number; // Principal + Monthly Interest (e.g. ₹81,60,000)
+  monthlyEmi?: number;
+}
+
+export interface RepaymentInstallment {
+  sNo: number;
+  date: string; // Formatted date e.g. "10-Oct-2026" (editable)
+  dueDate?: string; // Standard ISO "YYYY-MM-DD" for date inputs
+  particulars: string; // "Month #1 Cycle (Full Principal + Interest)"
+  principalAmount: number; // Full principal amount (e.g. ₹2,00,000)
+  interestAmount: number; // Month interest amount (e.g. ₹4,000)
+  totalAmount: number; // Principal + Month Interest (e.g. ₹2,04,000)
+  companyShares: Record<string, number>; // companyId -> total cycle payment (Principal + Interest)
+  companyPrincipalShares?: Record<string, number>;
+  companyInterestShares?: Record<string, number>;
+  status: 'Paid' | 'Pending' | 'Overdue' | 'Rescheduled';
+  paidDate?: string;
+  rescheduledReason?: string;
+}
+
+export interface IntermediaryLoan {
+  id: string; // e.g., "LOAN-2026-001"
+  totalAmount: number; // e.g. ₹2,00,00,000
+  disbursedDate: string;
+  tenureMonths: number; // e.g. 12
+  frequency: 'Monthly' | 'Weekly';
+  defaultInterestRate: number; // e.g. 24%
+  asrCommissionRate: number; // e.g. 4% (ASR Income)
+
+  // Multi-party details
+  customers: LoanCustomerShare[]; // Investors who provided capital
+  companies: LoanCompanySplit[]; // Borrowers who received tranches
+
+  // Live financial calculations
+  totalInterestExpected: number;
+  asrIncome: number; // ASR platform commission cut
+  customerNetProfit: number; // Profit returned to investors
+
+  status: 'Active' | 'Disbursed' | 'Closed' | 'Draft';
+  schedule: RepaymentInstallment[];
+  createdAt: string;
+}

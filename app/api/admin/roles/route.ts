@@ -40,3 +40,25 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
+
+// PUT /api/admin/roles
+export async function PUT(request: NextRequest) {
+  try {
+    const body = await request.json();
+    if (body.id === undefined) {
+      return NextResponse.json(
+        { success: false, error: 'Role id is required.' },
+        { status: 400 }
+      );
+    }
+
+    const updated = db.updateRole(Number(body.id), body);
+    if (!updated) {
+      return NextResponse.json({ success: false, error: 'Role not found.' }, { status: 404 });
+    }
+
+    return NextResponse.json({ success: true, data: updated });
+  } catch (error: any) {
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  }
+}

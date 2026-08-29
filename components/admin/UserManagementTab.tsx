@@ -98,7 +98,7 @@ export const UserManagementTab: React.FC = () => {
 
   const handleBulkDelete = () => {
     if (selectedUserKeys.size === 0) return;
-    const targetIds = Array.from(selectedUserKeys).filter((id) => id !== 'ADM-1001');
+    const targetIds = Array.from(selectedUserKeys);
     targetIds.forEach((id) => {
       deleteUser(id);
     });
@@ -108,70 +108,28 @@ export const UserManagementTab: React.FC = () => {
 
   const columns: ColumnDef<User>[] = [
     {
-      key: 'user',
-      header: 'Identity & User ID',
+      key: 'name',
+      header: 'User Name',
       sortable: true,
       accessor: (u) => u.name,
-      render: (u) => (
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-[#1A0A13] text-[#EED8A1] flex items-center justify-center font-bold text-xs shrink-0 border border-[#C5A059]/40 shadow-2xs font-mono">
-            {u.initials}
-          </div>
+      render: (u) => {
+        const isAdmin = u.assignedRoleIds.includes(0) || u.assignedRoleIds.includes(1);
+
+        return (
           <div className="min-w-0">
-            <p className="font-bold text-slate-900 hover:text-[#701A35] transition-colors leading-tight text-xs">
+            <button
+              onClick={() => handleRowClick(u)}
+              className="font-bold text-[#701A35] hover:underline text-xs block text-left cursor-pointer transition-colors"
+            >
               {u.name}
-            </p>
-            <p className="text-[11px] text-slate-400 font-mono mt-0.5">{u.id}</p>
+            </button>
+            <span className="text-[10px] text-slate-400 font-mono block mt-0.5">
+              {isAdmin ? `(${u.id} · Admin)` : `@${u.username || u.id.toLowerCase()}`}
+            </span>
           </div>
-        </div>
-      ),
-      exportValue: (u) => `${u.name} (${u.id})`,
-    },
-    {
-      key: 'email',
-      header: 'Contact Details',
-      sortable: true,
-      accessor: (u) => u.email,
-      render: (u) => (
-        <div className="space-y-0.5">
-          <p className="text-slate-800 text-xs font-medium">{u.email}</p>
-          <p className="text-slate-400 text-[11px] font-mono">{u.phone}</p>
-        </div>
-      ),
-      exportValue: (u) => `${u.email} | ${u.phone}`,
-    },
-    {
-      key: 'department',
-      header: 'Department & Title',
-      sortable: true,
-      accessor: (u) => u.department,
-      render: (u) => (
-        <div>
-          <p className="text-slate-800 font-medium text-xs">{u.department}</p>
-          <p className="text-slate-400 text-[11px]">{u.designation}</p>
-        </div>
-      ),
-    },
-    {
-      key: 'roles',
-      header: 'Assigned Security Roles',
-      sortable: false,
-      render: (u) => (
-        <div className="flex items-center gap-1.5 flex-wrap max-w-xs">
-          {u.assignedRoleIds.map((rId) => (
-            <RoleBadge
-              key={rId}
-              roleId={rId}
-              size="xs"
-              isPrimary={u.primaryRoleId === rId}
-            />
-          ))}
-        </div>
-      ),
-      exportValue: (u) =>
-        u.assignedRoleIds
-          .map((rId) => roles.find((r) => r.id === rId)?.name || `Role ${rId}`)
-          .join('; '),
+        );
+      },
+      exportValue: (u) => `${u.name} (${u.username ? `@${u.username}` : u.id})`,
     },
     {
       key: 'status',
@@ -182,15 +140,91 @@ export const UserManagementTab: React.FC = () => {
       render: (u) => <StatusPill status={u.status} size="sm" />,
     },
     {
+      key: 'masterAccount',
+      header: 'Master Account',
+      sortable: true,
+      accessor: () => 'ASR Groups Enterprise',
+      render: () => (
+        <span className="text-xs text-slate-700 font-medium">
+          ASR Groups Enterprise
+        </span>
+      ),
+      exportValue: () => 'ASR Groups Enterprise',
+    },
+    {
+      key: 'email',
+      header: 'Login ID / Email',
+      sortable: true,
+      accessor: (u) => (u.assignedRoleIds.includes(0) || u.assignedRoleIds.includes(1) ? u.email : u.username || u.email),
+      render: (u) => {
+        const isAdmin = u.assignedRoleIds.includes(0) || u.assignedRoleIds.includes(1);
+
+        return (
+          <div className="text-xs">
+            {isAdmin ? (
+              <div>
+                <span className="text-slate-900 font-medium font-mono">{u.email}</span>
+                <span className="text-[10px] text-purple-700 bg-purple-50 px-1.5 py-0.2 rounded border border-purple-200 block w-fit mt-0.5 font-bold">
+                  Email Login
+                </span>
+              </div>
+            ) : (
+              <div>
+                <span className="text-slate-900 font-bold font-mono">@{u.username || u.name.toLowerCase().replace(/[^a-z0-9]/g, '.')}</span>
+                <span className="text-[10px] text-slate-400 block truncate mt-0.5">
+                  {u.email}
+                </span>
+              </div>
+            )}
+          </div>
+        );
+      },
+      exportValue: (u) => u.email,
+    },
+    {
+      key: 'accountType',
+      header: 'Account Type',
+      sortable: true,
+      accessor: (u) => (u.isCustomer ? 'Customer' : 'Internal Staff'),
+      render: (u) => (
+        <span className="text-xs text-slate-700">
+          {u.isCustomer ? 'Customer' : 'Internal Staff'}
+        </span>
+      ),
+      exportValue: (u) => (u.isCustomer ? 'Customer' : 'Internal Staff'),
+    },
+    {
+      key: 'jobTitle',
+      header: 'Job Title/Dept',
+      sortable: true,
+      accessor: (u) => `${u.designation} (${u.department})`,
+      render: (u) => (
+        <span className="text-xs text-slate-700">
+          {u.designation || u.department}
+        </span>
+      ),
+      exportValue: (u) => `${u.designation || ''} - ${u.department || ''}`,
+    },
+    {
+      key: 'createdAt',
+      header: 'Create Date (IST)',
+      sortable: true,
+      accessor: (u) => u.createdAt,
+      render: (u) => (
+        <span className="text-[11px] font-mono text-slate-600">
+          {u.createdAt} IST
+        </span>
+      ),
+    },
+    {
       key: 'lastLogin',
-      header: 'Activity',
+      header: 'Last Login (IST)',
       sortable: true,
       accessor: (u) => u.lastLogin,
       render: (u) => (
-        <div className="font-mono text-[11px] text-slate-600">
-          <p className="font-medium text-slate-800">{u.lastLogin}</p>
-          <p className="text-[10px] text-slate-400">Joined: {u.createdAt.slice(0, 10)}</p>
-        </div>
+        <span className="text-[11px] font-mono text-slate-600">
+          {u.lastLogin} IST
+        </span>
       ),
     },
     {
@@ -206,21 +240,21 @@ export const UserManagementTab: React.FC = () => {
         >
           <button
             onClick={() => handleRowClick(u)}
-            className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors"
-            title="Inspect Account & Roles"
+            className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
+            title="Inspect User Details"
           >
-            <Eye className="w-4 h-4" />
+            <Eye className="w-3.5 h-3.5" />
           </button>
           <button
             onClick={() => resetUserPassword(u.id)}
-            className="p-1.5 rounded-lg text-slate-500 hover:text-amber-700 hover:bg-amber-50 transition-colors"
+            className="p-1.5 rounded-lg text-slate-500 hover:text-amber-700 hover:bg-amber-50 transition-colors cursor-pointer"
             title="Reset Password"
           >
-            <KeyRound className="w-4 h-4" />
+            <KeyRound className="w-3.5 h-3.5" />
           </button>
           <button
             onClick={() => setSuspendModalUser(u)}
-            className={`p-1.5 rounded-lg transition-colors ${
+            className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
               u.status === 'Suspended'
                 ? 'text-emerald-600 hover:bg-emerald-50'
                 : 'text-amber-600 hover:bg-amber-50'
@@ -228,22 +262,18 @@ export const UserManagementTab: React.FC = () => {
             title={u.status === 'Suspended' ? 'Reactivate User' : 'Suspend User'}
           >
             {u.status === 'Suspended' ? (
-              <CheckCircle2 className="w-4 h-4" />
+              <CheckCircle2 className="w-3.5 h-3.5" />
             ) : (
-              <Ban className="w-4 h-4" />
+              <Ban className="w-3.5 h-3.5" />
             )}
           </button>
-
-          {/* Direct Delete Button */}
-          {u.id !== 'ADM-1001' && (
-            <button
-              onClick={() => setDeleteModalUser(u)}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
-              title="Delete Account (Super Admin)"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
-          )}
+          <button
+            onClick={() => setDeleteModalUser(u)}
+            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+            title="Delete Account"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
         </div>
       ),
     },
@@ -350,7 +380,7 @@ export const UserManagementTab: React.FC = () => {
         keyExtractor={(u) => u.id}
         title="Directory Accounts"
         exportFileName="asr_users_directory"
-        searchPlaceholder="Search by name, email, phone, user ID, or department..."
+        searchPlaceholder="Search users..."
         onRowClick={handleRowClick}
         selectedKeys={selectedUserKeys}
         onToggleSelect={(key) => {
@@ -360,11 +390,11 @@ export const UserManagementTab: React.FC = () => {
           setSelectedUserKeys(next);
         }}
         onSelectAll={(keys) => setSelectedUserKeys(new Set(keys))}
-        emptyStateMessage="No users found matching the selected filter criteria. Click '+ Create User' to register new staff or customer accounts."
+        emptyStateMessage="No users found. Click '+ Create User' to add an account."
         footerTotals={
           <>
             <td colSpan={3} className="px-4 py-2.5 text-xs text-slate-600">
-              Total Filtered Accounts: <strong className="text-slate-900">{filteredUsers.length}</strong>
+              Total: <strong className="text-slate-900">{filteredUsers.length}</strong>
             </td>
             <td colSpan={4} className="px-4 py-2.5 text-xs text-right text-slate-500 font-mono">
               Active: {filteredUsers.filter((u) => u.status === 'Active').length} · Suspended: {filteredUsers.filter((u) => u.status === 'Suspended').length} · Pending: {filteredUsers.filter((u) => u.status === 'Pending').length}

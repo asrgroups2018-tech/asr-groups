@@ -317,12 +317,13 @@ const createSessions = (name: string): any[] => [
 ];
 
 export const INITIAL_USERS: User[] = [
-  // 1. Super Admin
+  // 1. Super Admin (Logs in with Email)
   {
     id: 'ADM-1001',
     name: 'System Administrator',
     email: 'admin@asrgroups.in',
     phone: '+91 98401 22345',
+    loginMethod: 'email',
     initials: 'SA',
     assignedRoleIds: [0],
     primaryRoleId: 0,
@@ -338,12 +339,13 @@ export const INITIAL_USERS: User[] = [
     sessions: createSessions('System Administrator'),
     isCustomer: false,
   },
-  // 2. Admin
+  // 2. Admin (Logs in with Email)
   {
     id: 'USR-1002',
     name: 'Arun Venkat',
     email: 'arun.venkat@asrgroups.in',
     phone: '+91 97908 55432',
+    loginMethod: 'email',
     initials: 'AV',
     assignedRoleIds: [1],
     primaryRoleId: 1,
@@ -359,12 +361,15 @@ export const INITIAL_USERS: User[] = [
     sessions: createSessions('Arun Venkat'),
     isCustomer: false,
   },
-  // 3. Manager
+  // 3. Manager (Logs in with Username & Password)
   {
     id: 'USR-1003',
     name: 'Meera Suresh',
+    username: 'meera.suresh',
     email: 'meera.suresh@asrgroups.in',
     phone: '+91 94440 88765',
+    loginMethod: 'username',
+    tempPassword: 'ASR@Manager2026',
     initials: 'MS',
     assignedRoleIds: [2],
     primaryRoleId: 2,
@@ -380,12 +385,15 @@ export const INITIAL_USERS: User[] = [
     sessions: createSessions('Meera Suresh'),
     isCustomer: false,
   },
-  // 4. Accountant
+  // 4. Accountant (Logs in with Username & Password)
   {
     id: 'USR-1004',
     name: 'Rajesh Kumar',
+    username: 'rajesh.kumar',
     email: 'rajesh.kumar@asrgroups.in',
     phone: '+91 98840 12345',
+    loginMethod: 'username',
+    tempPassword: 'ASR@Accounts2026',
     initials: 'RK',
     assignedRoleIds: [3],
     primaryRoleId: 3,
@@ -401,12 +409,15 @@ export const INITIAL_USERS: User[] = [
     sessions: createSessions('Rajesh Kumar'),
     isCustomer: false,
   },
-  // 5. Collection Agent 1
+  // 5. Collection Agent 1 (Logs in with Username & Password)
   {
     id: 'USR-1005',
     name: 'Priya Sharma',
+    username: 'priya.sharma',
     email: 'priya.sharma@asrgroups.in',
     phone: '+91 97100 44556',
+    loginMethod: 'username',
+    tempPassword: 'ASR@Agent2026',
     initials: 'PS',
     assignedRoleIds: [4],
     primaryRoleId: 4,
@@ -422,12 +433,15 @@ export const INITIAL_USERS: User[] = [
     sessions: createSessions('Priya Sharma'),
     isCustomer: false,
   },
-  // 6. Collection Agent 2
+  // 6. Collection Agent 2 (Logs in with Username & Password)
   {
     id: 'USR-1006',
     name: 'Anand Verma',
+    username: 'anand.verma',
     email: 'anand.verma@asrgroups.in',
     phone: '+91 98410 77889',
+    loginMethod: 'username',
+    tempPassword: 'ASR@Agent2026',
     initials: 'AV',
     assignedRoleIds: [4],
     primaryRoleId: 4,
@@ -443,12 +457,15 @@ export const INITIAL_USERS: User[] = [
     sessions: createSessions('Anand Verma'),
     isCustomer: false,
   },
-  // 7. Collection Agent 3
+  // 7. Collection Agent 3 (Logs in with Username & Password)
   {
     id: 'USR-1007',
     name: 'Vasanth R',
+    username: 'vasanth.r',
     email: 'vasanth.r@asrgroups.in',
     phone: '+91 99400 33221',
+    loginMethod: 'username',
+    tempPassword: 'ASR@Agent2026',
     initials: 'VR',
     assignedRoleIds: [4],
     primaryRoleId: 4,
@@ -526,8 +543,11 @@ customerNames.forEach((name, idx) => {
   INITIAL_USERS.push({
     id: `USR-${userIdNum}`,
     name,
+    username: emailName,
     email: `${emailName}@gmail.com`,
     phone: `+91 ${98000 + idx} ${10000 + idx * 77}`,
+    loginMethod: 'username',
+    tempPassword: 'ASR@Cust2026',
     initials,
     assignedRoleIds: [6],
     primaryRoleId: 6,

@@ -15,6 +15,9 @@ import {
   ShareholderCompany,
   CompanyProfile,
   SecurityPolicy,
+  CustomerInvestor,
+  BorrowerCompany,
+  IntermediaryLoan,
 } from './types';
 import {
   ROLES_DATA,
@@ -38,6 +41,12 @@ interface AppContextType {
   setActiveAdminTab: (tab: AdminTab) => void;
   selectedUserId: string | null;
   setSelectedUserId: (userId: string | null) => void;
+  selectedCustomerId: string | null;
+  setSelectedCustomerId: (id: string | null) => void;
+  selectedCompanyId: string | null;
+  setSelectedCompanyId: (id: string | null) => void;
+  selectedLoanId: string | null;
+  setSelectedLoanId: (id: string | null) => void;
   userDetailsTab: UserDetailsTab;
   setUserDetailsTab: (tab: UserDetailsTab) => void;
   simulatedRoleId: RoleId;
@@ -51,6 +60,9 @@ interface AppContextType {
   approvalRules: ApprovalRule[];
   auditLogs: AuditLogEntry[];
   systemSettings: SystemSettingsState;
+  customers: CustomerInvestor[];
+  companies: BorrowerCompany[];
+  loans: IntermediaryLoan[];
   toasts: ToastMessage[];
   isLoading: boolean;
 
@@ -67,6 +79,8 @@ interface AppContextType {
   forceLogoutSession: (userId: string, sessionId: string) => Promise<void>;
   toggleTwoFactor: (userId: string) => Promise<void>;
   updatePermissionMatrix: (newMatrix: PermissionMatrixState) => Promise<void>;
+  updateRole: (roleId: number, data: Partial<Role>) => Promise<boolean>;
+  createRole: (roleData: Partial<Role>) => Promise<Role | null>;
   addApprovalRule: (rule: Omit<ApprovalRule, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
   updateApprovalRule: (id: string, updates: Partial<ApprovalRule>) => Promise<void>;
   deleteApprovalRule: (id: string) => Promise<void>;
@@ -76,6 +90,23 @@ interface AppContextType {
   updateFeatureToggles: (toggles: SystemSettingsState['featureToggles']) => Promise<void>;
   triggerBackupNow: () => Promise<void>;
   resetToDefaults: () => Promise<void>;
+
+  // Customer / Investor Operations
+  createCustomer: (data: Partial<CustomerInvestor> & { fullName: string; phone: string; companyName?: string; email?: string }) => Promise<CustomerInvestor | null>;
+  updateCustomer: (id: string, updates: Partial<CustomerInvestor>) => Promise<CustomerInvestor | null>;
+  deleteCustomer: (id: string) => Promise<boolean>;
+
+  // Company / Borrower Operations
+  createCompany: (data: Partial<BorrowerCompany> & { companyName: string; contactPerson: string; phone: string }) => Promise<BorrowerCompany | null>;
+  updateCompany: (id: string, updates: Partial<BorrowerCompany>) => Promise<BorrowerCompany | null>;
+  deleteCompany: (id: string) => Promise<boolean>;
+
+  // Loan / Intermediary Operations
+  createLoan: (loanData: Omit<IntermediaryLoan, 'id' | 'createdAt'>) => Promise<IntermediaryLoan | null>;
+  updateLoan: (id: string, updates: Partial<IntermediaryLoan>) => Promise<IntermediaryLoan | null>;
+  updateLoanInstallmentStatus: (loanId: string, sNo: number, status: 'Paid' | 'Pending' | 'Overdue') => Promise<IntermediaryLoan | null>;
+  updateLoanInstallmentDate: (loanId: string, sNo: number, newDate: string, newDueDate?: string, reason?: string) => Promise<IntermediaryLoan | null>;
+  deleteLoan: (id: string) => Promise<boolean>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -104,6 +135,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [activeMainTab, setActiveMainTab] = useState<string>('administration');
   const [activeAdminTab, setActiveAdminTab] = useState<AdminTab>('overview');
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
+  const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
+  const [selectedLoanId, setSelectedLoanId] = useState<string | null>(null);
   const [userDetailsTab, setUserDetailsTab] = useState<UserDetailsTab>('roles');
   const [simulatedRoleId, setSimulatedRoleId] = useState<RoleId>(0); // Default Super Admin
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -114,6 +148,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [approvalRules, setApprovalRules] = useState<ApprovalRule[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([]);
   const [systemSettings, setSystemSettings] = useState<SystemSettingsState>(INITIAL_SYSTEM_SETTINGS);
+  const [customers, setCustomers] = useState<CustomerInvestor[]>([]);
+  const [companies, setCompanies] = useState<BorrowerCompany[]>([]);
+  const [loans, setLoans] = useState<IntermediaryLoan[]>([]);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
   const showToast = useCallback(
@@ -136,14 +173,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const refreshAll = useCallback(async () => {
     try {
       setIsLoading(true);
-      const [usersRes, rolesRes, matrixRes, rulesRes, auditRes, settingsRes] = await Promise.all([
-        fetch('/api/admin/users').then((r) => r.json()),
-        fetch('/api/admin/roles').then((r) => r.json()),
-        fetch('/api/admin/permissions').then((r) => r.json()),
-        fetch('/api/admin/rules').then((r) => r.json()),
-        fetch('/api/admin/audit').then((r) => r.json()),
-        fetch('/api/admin/settings').then((r) => r.json()),
-      ]);
+      const [usersRes, rolesRes, matrixRes, rulesRes, auditRes, settingsRes, custRes, compRes, loansRes] =
+        await Promise.all([
+          fetch('/api/admin/users').then((r) => r.json()),
+          fetch('/api/admin/roles').then((r) => r.json()),
+          fetch('/api/admin/permissions').then((r) => r.json()),
+          fetch('/api/admin/rules').then((r) => r.json()),
+          fetch('/api/admin/audit').then((r) => r.json()),
+          fetch('/api/admin/settings').then((r) => r.json()),
+          fetch('/api/customers').then((r) => r.json()),
+          fetch('/api/companies').then((r) => r.json()),
+          fetch('/api/loans').then((r) => r.json()),
+        ]);
 
       if (usersRes?.success && usersRes.data) setUsers(usersRes.data);
       if (rolesRes?.success && rolesRes.data) setRoles(rolesRes.data);
@@ -151,6 +192,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (rulesRes?.success && rulesRes.data) setApprovalRules(rulesRes.data);
       if (auditRes?.success && auditRes.data) setAuditLogs(auditRes.data);
       if (settingsRes?.success && settingsRes.data) setSystemSettings(settingsRes.data);
+      if (custRes?.success && custRes.data) setCustomers(custRes.data);
+      if (compRes?.success && compRes.data) setCompanies(compRes.data);
+      if (loansRes?.success && loansRes.data) setLoans(loansRes.data);
     } catch (err) {
       console.warn('API fetch error, using local state:', err);
     } finally {
@@ -335,6 +379,44 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const updateRole = async (roleId: number, data: Partial<Role>): Promise<boolean> => {
+    try {
+      const res = await fetch('/api/admin/roles', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: roleId, ...data }),
+      });
+      const resData = await res.json();
+      if (!resData.success) throw new Error(resData.error);
+
+      await refreshAll();
+      showToast('Role Saved', `Role details for "${resData.data.name}" updated successfully.`, 'success');
+      return true;
+    } catch (err: any) {
+      showToast('Role Update Error', err.message, 'error');
+      return false;
+    }
+  };
+
+  const createRole = async (roleData: Partial<Role>): Promise<Role | null> => {
+    try {
+      const res = await fetch('/api/admin/roles', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(roleData),
+      });
+      const resData = await res.json();
+      if (!resData.success) throw new Error(resData.error);
+
+      await refreshAll();
+      showToast('Role Created', `New role "${resData.data.name}" created successfully.`, 'success');
+      return resData.data;
+    } catch (err: any) {
+      showToast('Role Creation Error', err.message, 'error');
+      return null;
+    }
+  };
+
   const addApprovalRule = async (rule: Omit<ApprovalRule, 'id' | 'createdAt' | 'updatedAt'>) => {
     try {
       const res = await fetch('/api/admin/rules', {
@@ -472,6 +554,233 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     showToast('State Reloaded', 'Synchronized with latest backend records.', 'info');
   };
 
+  // ==========================================
+  // Customer / Investor Mutations
+  // ==========================================
+  const createCustomer = async (
+    data: Partial<CustomerInvestor> & { fullName: string; phone: string; companyName?: string; email?: string }
+  ): Promise<CustomerInvestor | null> => {
+    try {
+      const res = await fetch('/api/customers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      const resData = await res.json();
+      if (!resData.success) throw new Error(resData.error);
+
+      await refreshAll();
+      showToast('Customer Created', `Investor ${resData.data.fullName} registered successfully.`, 'success');
+      return resData.data;
+    } catch (err: any) {
+      showToast('Customer Creation Error', err.message, 'error');
+      return null;
+    }
+  };
+
+  const updateCustomer = async (id: string, updates: Partial<CustomerInvestor>): Promise<CustomerInvestor | null> => {
+    try {
+      const res = await fetch('/api/customers', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, updates }),
+      });
+      const resData = await res.json();
+      if (!resData.success) throw new Error(resData.error);
+
+      await refreshAll();
+      showToast('Customer Updated', 'Investor profile updated.', 'success');
+      return resData.data;
+    } catch (err: any) {
+      showToast('Update Error', err.message, 'error');
+      return null;
+    }
+  };
+
+  const deleteCustomer = async (id: string): Promise<boolean> => {
+    try {
+      const res = await fetch(`/api/customers?id=${id}`, { method: 'DELETE' });
+      const resData = await res.json();
+      if (!resData.success) throw new Error(resData.error);
+
+      await refreshAll();
+      showToast('Customer Removed', 'Investor account removed.', 'info');
+      if (selectedCustomerId === id) setSelectedCustomerId(null);
+      return true;
+    } catch (err: any) {
+      showToast('Delete Error', err.message, 'error');
+      return false;
+    }
+  };
+
+  // ==========================================
+  // Company / Borrower Mutations
+  // ==========================================
+  const createCompany = async (
+    data: Partial<BorrowerCompany> & { companyName: string; contactPerson: string; phone: string }
+  ): Promise<BorrowerCompany | null> => {
+    try {
+      const res = await fetch('/api/companies', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      const resData = await res.json();
+      if (!resData.success) throw new Error(resData.error);
+
+      await refreshAll();
+      showToast('Company Onboarded', `Borrowing business ${resData.data.companyName} registered.`, 'success');
+      return resData.data;
+    } catch (err: any) {
+      showToast('Company Creation Error', err.message, 'error');
+      return null;
+    }
+  };
+
+  const updateCompany = async (id: string, updates: Partial<BorrowerCompany>): Promise<BorrowerCompany | null> => {
+    try {
+      const res = await fetch('/api/companies', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, updates }),
+      });
+      const resData = await res.json();
+      if (!resData.success) throw new Error(resData.error);
+
+      await refreshAll();
+      showToast('Company Updated', 'Borrower details updated.', 'success');
+      return resData.data;
+    } catch (err: any) {
+      showToast('Update Error', err.message, 'error');
+      return null;
+    }
+  };
+
+  const deleteCompany = async (id: string): Promise<boolean> => {
+    try {
+      const res = await fetch(`/api/companies?id=${id}`, { method: 'DELETE' });
+      const resData = await res.json();
+      if (!resData.success) throw new Error(resData.error);
+
+      await refreshAll();
+      showToast('Company Removed', 'Borrower entity removed.', 'info');
+      if (selectedCompanyId === id) setSelectedCompanyId(null);
+      return true;
+    } catch (err: any) {
+      showToast('Delete Error', err.message, 'error');
+      return false;
+    }
+  };
+
+  // ==========================================
+  // Loan / Intermediary Syndication Mutations
+  // ==========================================
+  const createLoan = async (loanData: Omit<IntermediaryLoan, 'id' | 'createdAt'>): Promise<IntermediaryLoan | null> => {
+    try {
+      const res = await fetch('/api/loans', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(loanData),
+      });
+      const resData = await res.json();
+      if (!resData.success) throw new Error(resData.error);
+
+      await refreshAll();
+      showToast('Loan Created & Disbursed', `Loan ${resData.data.id} created across ${loanData.companies.length} company split(s).`, 'success');
+      return resData.data;
+    } catch (err: any) {
+      showToast('Loan Creation Error', err.message, 'error');
+      return null;
+    }
+  };
+
+  const updateLoan = async (id: string, updates: Partial<IntermediaryLoan>): Promise<IntermediaryLoan | null> => {
+    try {
+      const res = await fetch('/api/loans', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, updates }),
+      });
+      const resData = await res.json();
+      if (!resData.success) throw new Error(resData.error);
+
+      await refreshAll();
+      showToast('Loan Updated', `Loan deal ${id} updated.`, 'success');
+      return resData.data;
+    } catch (err: any) {
+      showToast('Loan Update Error', err.message, 'error');
+      return null;
+    }
+  };
+
+  const updateLoanInstallmentStatus = async (
+    loanId: string,
+    sNo: number,
+    status: 'Paid' | 'Pending' | 'Overdue'
+  ): Promise<IntermediaryLoan | null> => {
+    try {
+      const res = await fetch(`/api/loans/${loanId}/installment`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sNo, status }),
+      });
+      const resData = await res.json();
+      if (!resData.success) throw new Error(resData.error);
+
+      await refreshAll();
+      showToast(
+        status === 'Paid' ? 'Payment Collected' : 'Status Updated',
+        `Installment #${sNo} marked as ${status}. Returns updated for participating investors.`,
+        'success'
+      );
+      return resData.data;
+    } catch (err: any) {
+      showToast('Collection Error', err.message, 'error');
+      return null;
+    }
+  };
+
+  const updateLoanInstallmentDate = async (
+    loanId: string,
+    sNo: number,
+    newDate: string,
+    newDueDate?: string,
+    reason?: string
+  ): Promise<IntermediaryLoan | null> => {
+    try {
+      const res = await fetch(`/api/loans/${loanId}/installment`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sNo, newDate, newDueDate, reason }),
+      });
+      const resData = await res.json();
+      if (!resData.success) throw new Error(resData.error);
+
+      await refreshAll();
+      showToast('Schedule Date Updated', `Installment #${sNo} rescheduled to ${newDate}.`, 'success');
+      return resData.data;
+    } catch (err: any) {
+      showToast('Rescheduling Error', err.message, 'error');
+      return null;
+    }
+  };
+
+  const deleteLoan = async (id: string): Promise<boolean> => {
+    try {
+      const res = await fetch(`/api/loans?id=${id}`, { method: 'DELETE' });
+      const resData = await res.json();
+      if (!resData.success) throw new Error(resData.error);
+
+      await refreshAll();
+      showToast('Loan Deal Deleted', `Loan ${id} removed.`, 'info');
+      if (selectedLoanId === id) setSelectedLoanId(null);
+      return true;
+    } catch (err: any) {
+      showToast('Delete Error', err.message, 'error');
+      return false;
+    }
+  };
+
   return (
     <AppContext.Provider
       value={{
@@ -481,6 +790,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setActiveAdminTab,
         selectedUserId,
         setSelectedUserId,
+        selectedCustomerId,
+        setSelectedCustomerId,
+        selectedCompanyId,
+        setSelectedCompanyId,
+        selectedLoanId,
+        setSelectedLoanId,
         userDetailsTab,
         setUserDetailsTab,
         simulatedRoleId,
@@ -492,6 +807,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         approvalRules,
         auditLogs,
         systemSettings,
+        customers,
+        companies,
+        loans,
         toasts,
         isLoading,
         refreshAll,
@@ -506,6 +824,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         forceLogoutSession,
         toggleTwoFactor,
         updatePermissionMatrix,
+        updateRole,
+        createRole,
         addApprovalRule,
         updateApprovalRule,
         deleteApprovalRule,
@@ -515,6 +835,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         updateFeatureToggles,
         triggerBackupNow,
         resetToDefaults,
+        createCustomer,
+        updateCustomer,
+        deleteCustomer,
+        createCompany,
+        updateCompany,
+        deleteCompany,
+        createLoan,
+        updateLoan,
+        updateLoanInstallmentStatus,
+        updateLoanInstallmentDate,
+        deleteLoan,
       }}
     >
       {children}

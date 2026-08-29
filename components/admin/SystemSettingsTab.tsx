@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { useApp } from '@/lib/store';
 import { ShareholderCompany } from '@/lib/types';
+import { INITIAL_SYSTEM_SETTINGS } from '@/lib/seedData';
 import {
   Building2,
   PieChart,
@@ -35,24 +36,36 @@ export const SystemSettingsTab: React.FC = () => {
     showToast,
   } = useApp();
 
+  const safeSettings = systemSettings || INITIAL_SYSTEM_SETTINGS;
+
   const [activeSubTab, setActiveSubTab] = useState<SettingsSubTab>('profile');
 
   // Company Profile Draft
-  const [profile, setProfile] = useState(systemSettings.companyProfile);
+  const [profile, setProfile] = useState(safeSettings.companyProfile || INITIAL_SYSTEM_SETTINGS.companyProfile);
 
   // Shareholders Draft
   const [shareholders, setShareholders] = useState<ShareholderCompany[]>(
-    systemSettings.shareholders
+    safeSettings.shareholders || INITIAL_SYSTEM_SETTINGS.shareholders
   );
 
   // Security Policy Draft
-  const [security, setSecurity] = useState(systemSettings.securityPolicy);
+  const [security, setSecurity] = useState(safeSettings.securityPolicy || INITIAL_SYSTEM_SETTINGS.securityPolicy);
   const [ipListString, setIpListString] = useState(
-    systemSettings.securityPolicy.ipAllowlist.join('\n')
+    (safeSettings.securityPolicy?.ipAllowlist || INITIAL_SYSTEM_SETTINGS.securityPolicy.ipAllowlist).join('\n')
   );
 
   // Feature Toggles Draft
-  const [toggles, setToggles] = useState(systemSettings.featureToggles);
+  const [toggles, setToggles] = useState(safeSettings.featureToggles || INITIAL_SYSTEM_SETTINGS.featureToggles);
+
+  useEffect(() => {
+    if (systemSettings) {
+      setProfile(systemSettings.companyProfile || INITIAL_SYSTEM_SETTINGS.companyProfile);
+      setShareholders(systemSettings.shareholders || INITIAL_SYSTEM_SETTINGS.shareholders);
+      setSecurity(systemSettings.securityPolicy || INITIAL_SYSTEM_SETTINGS.securityPolicy);
+      setIpListString((systemSettings.securityPolicy?.ipAllowlist || INITIAL_SYSTEM_SETTINGS.securityPolicy.ipAllowlist).join('\n'));
+      setToggles(systemSettings.featureToggles || INITIAL_SYSTEM_SETTINGS.featureToggles);
+    }
+  }, [systemSettings]);
 
   // Backup loading
   const [isBackingUp, setIsBackingUp] = useState(false);

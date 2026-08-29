@@ -65,9 +65,7 @@ export const TopNav: React.FC<TopNavProps> = ({ onOpenMobileMenu }) => {
   const tabTitles: Record<string, string> = {
     overview: 'Overview',
     users: 'User Management',
-    roles: 'Roles & Permissions',
-    matrix: 'Permission Matrix',
-    rules: 'Approval Rules',
+    roles: 'Role Management',
     audit: 'Audit Log',
     settings: 'System Settings',
   };

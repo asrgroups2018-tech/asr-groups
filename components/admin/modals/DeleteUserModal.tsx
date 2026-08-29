@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { User } from '@/lib/types';
 import { useApp } from '@/lib/store';
-import { AlertTriangle, Trash2, X } from 'lucide-react';
+import { AlertTriangle, Trash2, X, ShieldAlert } from 'lucide-react';
 
 interface DeleteUserModalProps {
   user: User | null;
@@ -16,7 +16,7 @@ export const DeleteUserModal: React.FC<DeleteUserModalProps> = ({
   isOpen,
   onClose,
 }) => {
-  const { deleteUser } = useApp();
+  const { deleteUser, users, showToast } = useApp();
   const [confirmationPhrase, setConfirmationPhrase] = useState('');
   const targetPhrase = 'DELETE USER';
 
@@ -24,10 +24,22 @@ export const DeleteUserModal: React.FC<DeleteUserModalProps> = ({
 
   const isConfirmed = confirmationPhrase.trim() === targetPhrase;
 
-  const handleDelete = () => {
-    if (!isConfirmed) return;
-    deleteUser(user.id);
-    onClose();
+  // Check if this user is a Super Admin and is the LAST one
+  const isSuperAdmin = user.assignedRoleIds.includes(0);
+  const otherSuperAdmins = users.filter(
+    (u) => u.id !== user.id && u.assignedRoleIds.includes(0)
+  );
+  const isLastSuperAdmin = isSuperAdmin && otherSuperAdmins.length === 0;
+
+  const handleDelete = async () => {
+    if (!isConfirmed || isLastSuperAdmin) return;
+    try {
+      await deleteUser(user.id);
+      setConfirmationPhrase('');
+      onClose();
+    } catch {
+      // Store handles error toasts
+    }
   };
 
   return (
@@ -40,7 +52,7 @@ export const DeleteUserModal: React.FC<DeleteUserModalProps> = ({
             <span>DANGER ZONE · PERMANENT DELETE</span>
           </div>
           <button
-            onClick={onClose}
+            onClick={() => { setConfirmationPhrase(''); onClose(); }}
             className="text-white/80 hover:text-white p-1 rounded-lg hover:bg-black/10 transition-colors"
           >
             <X className="w-4 h-4" />
@@ -48,59 +60,108 @@ export const DeleteUserModal: React.FC<DeleteUserModalProps> = ({
         </div>
 
         <div className="p-6">
-          <div className="flex items-start gap-3 mb-4">
-            <div className="w-10 h-10 rounded-xl bg-rose-100 border border-rose-300 flex items-center justify-center text-rose-700 shrink-0">
-              <AlertTriangle className="w-5 h-5" />
+          {isLastSuperAdmin ? (
+            /* ── Last Super Admin Block ── */
+            <div className="space-y-4">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-100 border border-amber-300 flex items-center justify-center text-amber-700 shrink-0">
+                  <ShieldAlert className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900 leading-snug">
+                    Cannot Delete — Last Super Admin
+                  </h3>
+                  <p className="text-xs text-slate-600 mt-1">
+                    <strong className="text-slate-900">{user.name}</strong> ({user.id}) is the only Super Admin in the system.
+                  </p>
+                </div>
+              </div>
+
+              <div className="bg-amber-50 rounded-xl p-4 border border-amber-200 text-xs text-amber-900 space-y-2">
+                <p className="font-semibold">⚠️ At least one Super Admin must exist at all times.</p>
+                <p className="text-slate-700">
+                  To delete this account, first assign another user the <strong>Super Admin (R0)</strong> role, then return here.
+                </p>
+              </div>
+
+              <div className="flex justify-end pt-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => { setConfirmationPhrase(''); onClose(); }}
+                  className="px-4 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors"
+                >
+                  Understood
+                </button>
+              </div>
             </div>
-            <div>
-              <h3 className="text-base font-bold text-slate-900 leading-snug">
-                Permanently Delete User Account
-              </h3>
-              <p className="text-xs text-slate-600 mt-1">
-                You are about to irreversibly delete{' '}
-                <strong className="text-slate-900">{user.name}</strong> ({user.id}).
-              </p>
-            </div>
-          </div>
+          ) : (
+            /* ── Normal Delete Flow ── */
+            <>
+              <div className="flex items-start gap-3 mb-4">
+                <div className="w-10 h-10 rounded-xl bg-rose-100 border border-rose-300 flex items-center justify-center text-rose-700 shrink-0">
+                  <AlertTriangle className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900 leading-snug">
+                    Permanently Delete User Account
+                  </h3>
+                  <p className="text-xs text-slate-600 mt-1">
+                    You are about to irreversibly delete{' '}
+                    <strong className="text-slate-900">{user.name}</strong> ({user.id}).
+                  </p>
+                </div>
+              </div>
 
-          <div className="bg-rose-50 rounded-xl p-3.5 border border-rose-200 mb-5 text-xs text-rose-900 space-y-1.5">
-            <p className="font-semibold">⚠️ This action cannot be undone.</p>
-            <p className="text-slate-700">
-              All credentials, active sessions, and access mappings will be deleted immediately.
-            </p>
-          </div>
+              {isSuperAdmin && (
+                <div className="bg-amber-50 rounded-xl p-3 border border-amber-200 mb-4 text-xs text-amber-900 flex items-start gap-2">
+                  <ShieldAlert className="w-4 h-4 shrink-0 mt-0.5" />
+                  <span>
+                    This user is a <strong>Super Admin</strong>. Deletion is allowed because{' '}
+                    <strong>{otherSuperAdmins.length}</strong> other Super Admin(s) exist.
+                  </span>
+                </div>
+              )}
 
-          <div className="space-y-2 mb-6">
-            <label className="block text-xs font-semibold text-slate-700">
-              Type <span className="font-mono font-bold text-rose-700 select-all">{targetPhrase}</span> to confirm:
-            </label>
-            <input
-              type="text"
-              value={confirmationPhrase}
-              onChange={(e) => setConfirmationPhrase(e.target.value)}
-              placeholder="Type phrase here"
-              className="w-full px-3.5 py-2 text-xs font-mono rounded-xl border border-rose-300 bg-rose-50/40 focus:bg-white focus:outline-none focus:ring-2 focus:ring-rose-500 text-slate-900"
-            />
-          </div>
+              <div className="bg-rose-50 rounded-xl p-3.5 border border-rose-200 mb-5 text-xs text-rose-900 space-y-1.5">
+                <p className="font-semibold">⚠️ This action cannot be undone.</p>
+                <p className="text-slate-700">
+                  All credentials, active sessions, and access mappings will be deleted immediately.
+                </p>
+              </div>
 
-          <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              disabled={!isConfirmed}
-              onClick={handleDelete}
-              className="px-5 py-2 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 disabled:opacity-40 disabled:cursor-not-allowed rounded-xl transition-all shadow-xs flex items-center gap-1.5"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-              Delete Account Forever
-            </button>
-          </div>
+              <div className="space-y-2 mb-6">
+                <label className="block text-xs font-semibold text-slate-700">
+                  Type <span className="font-mono font-bold text-rose-700 select-all">{targetPhrase}</span> to confirm:
+                </label>
+                <input
+                  type="text"
+                  value={confirmationPhrase}
+                  onChange={(e) => setConfirmationPhrase(e.target.value)}
+                  placeholder="Type phrase here"
+                  className="w-full px-3.5 py-2 text-xs font-mono rounded-xl border border-rose-300 bg-rose-50/40 focus:bg-white focus:outline-none focus:ring-2 focus:ring-rose-500 text-slate-900"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => { setConfirmationPhrase(''); onClose(); }}
+                  className="px-4 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={!isConfirmed}
+                  onClick={handleDelete}
+                  className="px-5 py-2 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 disabled:opacity-40 disabled:cursor-not-allowed rounded-xl transition-all shadow-xs flex items-center gap-1.5"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  Delete Account Forever
+                </button>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>

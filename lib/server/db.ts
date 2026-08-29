@@ -8,6 +8,9 @@ import {
   AuditLogEntry,
   SystemSettingsState,
   RoleId,
+  CustomerInvestor,
+  BorrowerCompany,
+  IntermediaryLoan,
 } from '@/lib/types';
 import {
   ROLES_DATA,
@@ -69,6 +72,9 @@ interface DatabaseSchema {
   approvalRules: ApprovalRule[];
   auditLogs: AuditLogEntry[];
   systemSettings: SystemSettingsState;
+  customers: CustomerInvestor[];
+  companies: BorrowerCompany[];
+  loans: IntermediaryLoan[];
 }
 
 const DATA_DIR = path.join(process.cwd(), '.data');
@@ -87,7 +93,35 @@ function ensureDataFile(): DatabaseSchema {
 
     if (fs.existsSync(DB_FILE)) {
       const content = fs.readFileSync(DB_FILE, 'utf-8');
-      memoryDb = JSON.parse(content);
+      const loaded = JSON.parse(content);
+      memoryDb = {
+        users: loaded.users || [BASELINE_ROOT_ADMIN],
+        roles: loaded.roles || ROLES_DATA,
+        permissionMatrix: loaded.permissionMatrix || INITIAL_PERMISSION_MATRIX,
+        approvalRules: loaded.approvalRules || [],
+        auditLogs: loaded.auditLogs || [BASELINE_AUDIT_LOG],
+        customers: loaded.customers || [],
+        companies: loaded.companies || [],
+        loans: loaded.loans || [],
+        systemSettings: {
+          ...INITIAL_SYSTEM_SETTINGS,
+          ...(loaded.systemSettings || {}),
+          companyProfile: {
+            ...INITIAL_SYSTEM_SETTINGS.companyProfile,
+            ...(loaded.systemSettings?.companyProfile || {}),
+          },
+          securityPolicy: {
+            ...INITIAL_SYSTEM_SETTINGS.securityPolicy,
+            ...(loaded.systemSettings?.securityPolicy || {}),
+            ipAllowlist: loaded.systemSettings?.securityPolicy?.ipAllowlist || INITIAL_SYSTEM_SETTINGS.securityPolicy.ipAllowlist,
+          },
+          featureToggles: {
+            ...INITIAL_SYSTEM_SETTINGS.featureToggles,
+            ...(loaded.systemSettings?.featureToggles || {}),
+          },
+          shareholders: loaded.systemSettings?.shareholders || INITIAL_SYSTEM_SETTINGS.shareholders,
+        },
+      };
       return memoryDb!;
     }
   } catch (err) {
@@ -105,6 +139,9 @@ function ensureDataFile(): DatabaseSchema {
     approvalRules: [],
     auditLogs: [BASELINE_AUDIT_LOG],
     systemSettings: INITIAL_SYSTEM_SETTINGS,
+    customers: [],
+    companies: [],
+    loans: [],
   };
 
   saveDb(initialDb);
@@ -165,9 +202,16 @@ export const db = {
       now.getHours()
     )}:${pad(now.getMinutes())}`;
 
+    const isAdmin = user.assignedRoleIds.includes(0) || user.assignedRoleIds.includes(1);
+    const defaultUsername = user.username || user.name.toLowerCase().replace(/[^a-z0-9]/g, '.');
+    const defaultPassword = user.tempPassword || `ASR@${Math.floor(1000 + Math.random() * 9000)}`;
+
     const newUser: User = {
       ...user,
       id: newId,
+      username: isAdmin ? undefined : defaultUsername,
+      loginMethod: isAdmin ? 'email' : 'username',
+      tempPassword: isAdmin ? undefined : defaultPassword,
       createdAt: timestamp,
       lastLogin: 'Never',
       sessions: [],
@@ -294,6 +338,31 @@ export const db = {
 
     saveDb(dbData);
     return newRole;
+  },
+
+  updateRole: (id: number, updates: Partial<Role>) => {
+    const dbData = ensureDataFile();
+    const index = dbData.roles.findIndex((r) => r.id === id);
+    if (index === -1) return null;
+
+    dbData.roles[index] = {
+      ...dbData.roles[index],
+      ...updates,
+    };
+
+    db.logAudit({
+      actorId: 'ADM-1001',
+      actorName: 'System Administrator',
+      actorRoleId: 0,
+      action: 'Updated Settings',
+      target: `Role Config: ${dbData.roles[index].name} (${id})`,
+      beforeVal: 'Active Role',
+      afterVal: `Updated: ${updates.name || updates.description || 'Config'}`,
+      isSensitive: true,
+    });
+
+    saveDb(dbData);
+    return dbData.roles[index];
   },
 
   // Permissions Matrix
@@ -493,6 +562,372 @@ export const db = {
     return ts;
   },
 
+  // ==========================================
+  // Customers (Investors / Financiers)
+  // ==========================================
+  getCustomers: (query?: string) => {
+    const dbData = ensureDataFile();
+    let res = dbData.customers || [];
+    if (query) {
+      const q = query.toLowerCase();
+      res = res.filter(
+        (c) =>
+          c.fullName.toLowerCase().includes(q) ||
+          (c.companyName && c.companyName.toLowerCase().includes(q)) ||
+          c.phone.includes(q) ||
+          c.email.toLowerCase().includes(q) ||
+          c.id.toLowerCase().includes(q)
+      );
+    }
+    return res;
+  },
+
+  getCustomerById: (id: string) => {
+    const dbData = ensureDataFile();
+    return (dbData.customers || []).find((c) => c.id === id) || null;
+  },
+
+  createCustomer: (data: Partial<CustomerInvestor> & { fullName: string; phone: string; email?: string }) => {
+    const dbData = ensureDataFile();
+    if (!dbData.customers) dbData.customers = [];
+
+    const newId = `CUST-${100 + dbData.customers.length + 1}`;
+    const now = new Date();
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    const ts = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+
+    const newCustomer: CustomerInvestor = {
+      id: newId,
+      fullName: data.fullName.trim(),
+      companyName: data.companyName ? data.companyName.trim() : undefined,
+      phone: data.phone.trim(),
+      email: data.email ? data.email.trim() : `${data.fullName.toLowerCase().replace(/[^a-z0-9]/g, '.')}@investor.in`,
+      address: data.address || 'Chennai, Tamil Nadu',
+      status: data.status || 'Active',
+      totalInvested: data.totalInvested || 0,
+      totalReturns: data.totalReturns || 0,
+      activeLoansCount: data.activeLoansCount || 0,
+      createdAt: ts,
+    };
+
+    dbData.customers.unshift(newCustomer);
+
+    db.logAudit({
+      actorId: 'ADM-1001',
+      actorName: 'System Administrator',
+      actorRoleId: 0,
+      action: 'Created User',
+      target: `Customer / Investor: ${newCustomer.fullName} (${newCustomer.id})`,
+      beforeVal: '-',
+      afterVal: `Investor Registered (${newCustomer.phone})`,
+      isSensitive: false,
+    });
+
+    saveDb(dbData);
+    return newCustomer;
+  },
+
+  updateCustomer: (id: string, updates: Partial<CustomerInvestor>) => {
+    const dbData = ensureDataFile();
+    if (!dbData.customers) dbData.customers = [];
+
+    const index = dbData.customers.findIndex((c) => c.id === id);
+    if (index === -1) return null;
+
+    dbData.customers[index] = {
+      ...dbData.customers[index],
+      ...updates,
+    };
+
+    saveDb(dbData);
+    return dbData.customers[index];
+  },
+
+  deleteCustomer: (id: string) => {
+    const dbData = ensureDataFile();
+    if (!dbData.customers) return false;
+    dbData.customers = dbData.customers.filter((c) => c.id !== id);
+    saveDb(dbData);
+    return true;
+  },
+
+  // ==========================================
+  // Companies (Borrowers)
+  // ==========================================
+  getCompanies: (query?: string) => {
+    const dbData = ensureDataFile();
+    let res = dbData.companies || [];
+    if (query) {
+      const q = query.toLowerCase();
+      res = res.filter(
+        (c) =>
+          c.companyName.toLowerCase().includes(q) ||
+          c.contactPerson.toLowerCase().includes(q) ||
+          c.phone.includes(q) ||
+          c.area.toLowerCase().includes(q) ||
+          c.id.toLowerCase().includes(q)
+      );
+    }
+    return res;
+  },
+
+  getCompanyById: (id: string) => {
+    const dbData = ensureDataFile();
+    return (dbData.companies || []).find((c) => c.id === id) || null;
+  },
+
+  createCompany: (data: Partial<BorrowerCompany> & { companyName: string; contactPerson: string; phone: string }) => {
+    const dbData = ensureDataFile();
+    if (!dbData.companies) dbData.companies = [];
+
+    const newId = `COMP-${100 + dbData.companies.length + 1}`;
+    const now = new Date();
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    const ts = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+
+    const newCompany: BorrowerCompany = {
+      id: newId,
+      companyName: data.companyName.trim(),
+      contactPerson: data.contactPerson.trim(),
+      phone: data.phone.trim(),
+      email: data.email ? data.email.trim() : `${data.companyName.toLowerCase().replace(/[^a-z0-9]/g, '')}@borrower.in`,
+      address: data.address || 'Chennai, Tamil Nadu',
+      area: data.area || 'Chennai Industrial Area',
+      defaultInterestRate: data.defaultInterestRate ?? 24,
+      bankDetails: data.bankDetails || {
+        bankName: 'HDFC Bank',
+        accountNumber: '502000' + Math.floor(100000 + Math.random() * 900000),
+        ifsc: 'HDFC0001234',
+      },
+      totalBorrowed: data.totalBorrowed || 0,
+      outstandingAmount: data.outstandingAmount || 0,
+      activeLoansCount: data.activeLoansCount || 0,
+      onTimeRepaymentRate: data.onTimeRepaymentRate ?? 100,
+      status: data.status || 'Active',
+      createdAt: ts,
+    };
+
+    dbData.companies.unshift(newCompany);
+
+    db.logAudit({
+      actorId: 'ADM-1001',
+      actorName: 'System Administrator',
+      actorRoleId: 0,
+      action: 'Created User',
+      target: `Borrower Company: ${newCompany.companyName} (${newCompany.id})`,
+      beforeVal: '-',
+      afterVal: `Default Rate: ${newCompany.defaultInterestRate}%`,
+      isSensitive: false,
+    });
+
+    saveDb(dbData);
+    return newCompany;
+  },
+
+  updateCompany: (id: string, updates: Partial<BorrowerCompany>) => {
+    const dbData = ensureDataFile();
+    if (!dbData.companies) dbData.companies = [];
+
+    const index = dbData.companies.findIndex((c) => c.id === id);
+    if (index === -1) return null;
+
+    dbData.companies[index] = {
+      ...dbData.companies[index],
+      ...updates,
+    };
+
+    saveDb(dbData);
+    return dbData.companies[index];
+  },
+
+  deleteCompany: (id: string) => {
+    const dbData = ensureDataFile();
+    if (!dbData.companies) return false;
+    dbData.companies = dbData.companies.filter((c) => c.id !== id);
+    saveDb(dbData);
+    return true;
+  },
+
+  // ==========================================
+  // Loans (Intermediary Multi-Party Syndication)
+  // ==========================================
+  getLoans: (query?: string) => {
+    const dbData = ensureDataFile();
+    let res = dbData.loans || [];
+    if (query) {
+      const q = query.toLowerCase();
+      res = res.filter(
+        (l) =>
+          l.id.toLowerCase().includes(q) ||
+          l.customers.some((c) => c.customerName.toLowerCase().includes(q)) ||
+          l.companies.some((c) => c.companyName.toLowerCase().includes(q)) ||
+          l.status.toLowerCase().includes(q)
+      );
+    }
+    return res;
+  },
+
+  getLoanById: (id: string) => {
+    const dbData = ensureDataFile();
+    return (dbData.loans || []).find((l) => l.id === id) || null;
+  },
+
+  createLoan: (loanData: Omit<IntermediaryLoan, 'id' | 'createdAt'>) => {
+    const dbData = ensureDataFile();
+    if (!dbData.loans) dbData.loans = [];
+    if (!dbData.customers) dbData.customers = [];
+    if (!dbData.companies) dbData.companies = [];
+
+    const newId = `LOAN-2026-${String(dbData.loans.length + 1).padStart(3, '0')}`;
+    const now = new Date();
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    const ts = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+
+    const newLoan: IntermediaryLoan = {
+      ...loanData,
+      id: newId,
+      createdAt: ts,
+    };
+
+    dbData.loans.unshift(newLoan);
+
+    // Update participating Customers stats
+    newLoan.customers.forEach((custShare) => {
+      const custIndex = dbData.customers.findIndex((c) => c.id === custShare.customerId);
+      if (custIndex !== -1) {
+        dbData.customers[custIndex].totalInvested =
+          (dbData.customers[custIndex].totalInvested || 0) + (custShare.shareAmount || 0);
+        dbData.customers[custIndex].activeLoansCount =
+          (dbData.customers[custIndex].activeLoansCount || 0) + 1;
+      }
+    });
+
+    // Update participating Borrower Companies stats
+    newLoan.companies.forEach((compSplit) => {
+      const compIndex = dbData.companies.findIndex((c) => c.id === compSplit.companyId);
+      if (compIndex !== -1) {
+        const principal = compSplit.amount || 0;
+        const rate = compSplit.interestRate || newLoan.defaultInterestRate || 24;
+        const tenure = newLoan.tenureMonths || 12;
+        const interest = principal * (rate / 100) * (tenure / 12);
+
+        dbData.companies[compIndex].totalBorrowed =
+          (dbData.companies[compIndex].totalBorrowed || 0) + principal;
+        dbData.companies[compIndex].outstandingAmount =
+          (dbData.companies[compIndex].outstandingAmount || 0) + principal + interest;
+        dbData.companies[compIndex].activeLoansCount =
+          (dbData.companies[compIndex].activeLoansCount || 0) + 1;
+      }
+    });
+
+    db.logAudit({
+      actorId: 'ADM-1001',
+      actorName: 'System Administrator',
+      actorRoleId: 0,
+      action: 'Created User',
+      target: `New Loan Syndication (${newLoan.id})`,
+      beforeVal: '-',
+      afterVal: `Amount: ₹${newLoan.totalAmount.toLocaleString('en-IN')}, Borrowers: ${newLoan.companies.length}`,
+      isSensitive: true,
+    });
+
+    saveDb(dbData);
+    return newLoan;
+  },
+
+  updateLoan: (id: string, updates: Partial<IntermediaryLoan>) => {
+    const dbData = ensureDataFile();
+    if (!dbData.loans) dbData.loans = [];
+
+    const index = dbData.loans.findIndex((l) => l.id === id);
+    if (index === -1) return null;
+
+    dbData.loans[index] = {
+      ...dbData.loans[index],
+      ...updates,
+    };
+
+    saveDb(dbData);
+    return dbData.loans[index];
+  },
+
+  updateLoanInstallmentStatus: (loanId: string, sNo: number, status: 'Paid' | 'Pending' | 'Overdue') => {
+    const dbData = ensureDataFile();
+    if (!dbData.loans) return null;
+
+    const loan = dbData.loans.find((l) => l.id === loanId);
+    if (!loan) return null;
+
+    const installment = loan.schedule.find((s) => s.sNo === sNo);
+    if (!installment) return null;
+
+    installment.status = status;
+    if (status === 'Paid') {
+      const now = new Date();
+      const pad = (n: number) => n.toString().padStart(2, '0');
+      installment.paidDate = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+
+      // Update customer returns proportional
+      const profitPortion = (loan.customerNetProfit / loan.schedule.length);
+      loan.customers.forEach((custShare) => {
+        const custIndex = dbData.customers.findIndex((c) => c.id === custShare.customerId);
+        if (custIndex !== -1) {
+          dbData.customers[custIndex].totalReturns += Math.round(profitPortion * (custShare.sharePercentage / 100));
+        }
+      });
+    }
+
+    saveDb(dbData);
+    return loan;
+  },
+
+  updateLoanInstallmentDate: (
+    loanId: string,
+    sNo: number,
+    newDate: string,
+    newDueDate?: string,
+    reason?: string
+  ) => {
+    const dbData = ensureDataFile();
+    if (!dbData.loans) return null;
+
+    const loan = dbData.loans.find((l) => l.id === loanId);
+    if (!loan) return null;
+
+    const installment = loan.schedule.find((s) => s.sNo === sNo);
+    if (!installment) return null;
+
+    const oldDate = installment.date;
+    installment.date = newDate;
+    if (newDueDate) installment.dueDate = newDueDate;
+    if (reason) installment.rescheduledReason = reason;
+    if (installment.status !== 'Paid') {
+      installment.status = 'Rescheduled';
+    }
+
+    db.logAudit({
+      actorId: 'ADM-1001',
+      actorName: 'System Administrator',
+      actorRoleId: 0,
+      action: 'Updated Settings',
+      target: `Rescheduled Cycle #${sNo} for ${loan.id}`,
+      beforeVal: `Date: ${oldDate}`,
+      afterVal: `New Date: ${newDate}${reason ? ` (Reason: ${reason})` : ''}`,
+      isSensitive: false,
+    });
+
+    saveDb(dbData);
+    return loan;
+  },
+
+  deleteLoan: (id: string) => {
+    const dbData = ensureDataFile();
+    if (!dbData.loans) return false;
+    dbData.loans = dbData.loans.filter((l) => l.id !== id);
+    saveDb(dbData);
+    return true;
+  },
+
   resetAll: () => {
     const initialDb: DatabaseSchema = {
       users: [BASELINE_ROOT_ADMIN],
@@ -501,6 +936,9 @@ export const db = {
       approvalRules: [],
       auditLogs: [BASELINE_AUDIT_LOG],
       systemSettings: INITIAL_SYSTEM_SETTINGS,
+      customers: [],
+      companies: [],
+      loans: [],
     };
     saveDb(initialDb);
     return initialDb;

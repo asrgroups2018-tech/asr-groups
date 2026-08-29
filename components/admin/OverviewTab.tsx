@@ -1,32 +1,34 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useApp } from '@/lib/store';
 import {
-  Users,
-  UserCheck,
-  Clock,
-  Shield,
-  FileCheck2,
   ArrowRight,
   Sliders,
   UserPlus,
-  Lock,
+  Shield,
+  FileCheck2,
+  History,
+  Settings,
+  Users,
+  Clock,
+  ChevronRight,
+  Activity,
 } from 'lucide-react';
 import { RoleBadge } from '@/components/common/RoleBadge';
 
-const ROLE_TONES: Record<number, string> = {
-  0: '#1A0A13',
-  1: '#701A35',
-  2: '#334155',
-  3: '#475569',
-  4: '#64748B',
-  5: '#94A3B8',
+const ROLE_BAR_COLORS: Record<number, string> = {
+  0: '#701A35',
+  1: '#8B2548',
+  2: '#475569',
+  3: '#64748B',
+  4: '#94A3B8',
+  5: '#CBD5E1',
   6: '#0F172A',
 };
 
 export const OverviewTab: React.FC = () => {
-  const { users, roles, auditLogs, approvalRules, setActiveAdminTab, setSelectedUserId } = useApp();
+  const { users, roles, auditLogs, approvalRules, setActiveAdminTab } = useApp();
 
   const totalUsers = users.length;
   const activeUsers = users.filter((u) => u.status === 'Active').length;
@@ -36,288 +38,250 @@ export const OverviewTab: React.FC = () => {
   const totalRoles = roles.length;
   const activeRulesCount = approvalRules.filter((r) => r.isActive).length;
 
-  const activePercent = totalUsers > 0 ? Math.round((activeUsers / totalUsers) * 100) : 100;
+  const roleCounts = roles.map((role) => ({
+    role,
+    count: users.filter((u) => u.assignedRoleIds.includes(role.id)).length,
+  }));
+  const maxRoleCount = Math.max(...roleCounts.map((r) => r.count), 1);
+
+  const formatRelativeTime = (timestamp: string): string => {
+    try {
+      const parts = timestamp.split(/[\s-:]/);
+      if (parts.length >= 5) {
+        const date = new Date(
+          parseInt(parts[0]),
+          parseInt(parts[1]) - 1,
+          parseInt(parts[2]),
+          parseInt(parts[3]),
+          parseInt(parts[4])
+        );
+        const now = new Date();
+        const diffMs = now.getTime() - date.getTime();
+        const diffMin = Math.floor(diffMs / 60000);
+        if (diffMin < 1) return 'Just now';
+        if (diffMin < 60) return `${diffMin}m ago`;
+        const diffHrs = Math.floor(diffMin / 60);
+        if (diffHrs < 24) return `${diffHrs}h ago`;
+        const diffDays = Math.floor(diffHrs / 24);
+        return `${diffDays}d ago`;
+      }
+    } catch {
+      // fallback
+    }
+    return timestamp;
+  };
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
-      {/* 1. Dignified Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-1">
+      {/* ─── Header ─── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="font-serif text-2xl font-bold text-slate-900 tracking-tight">
-            Administration Overview
+          <h1 className="text-xl font-bold text-slate-900 tracking-tight">
+            Administration
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            System identity management, access control matrices, and audit logging.
+            System identity, roles, and security controls
           </p>
         </div>
-
-        <div className="flex items-center gap-2.5 shrink-0">
+        <div className="flex items-center gap-2">
           <button
-            onClick={() => setActiveAdminTab('matrix')}
-            className="px-3.5 py-2 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-50 border border-[#E6E1D6] rounded-xl transition-all shadow-2xs flex items-center gap-1.5"
+            onClick={() => setActiveAdminTab('roles')}
+            className="px-3 py-1.5 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-50 border border-[#E6E1D6] rounded-xl transition-all shadow-2xs flex items-center gap-1.5 cursor-pointer"
           >
-            <Sliders className="w-3.5 h-3.5 text-slate-500" />
-            <span>Permission Matrix</span>
+            <Shield className="w-3.5 h-3.5 text-slate-400" />
+            <span>Roles</span>
           </button>
-          {/* Sole primary button in Maroon */}
           <button
             onClick={() => setActiveAdminTab('users')}
-            className="px-4 py-2 text-xs font-bold text-white bg-[#701A35] hover:bg-[#5C142B] active:scale-98 rounded-xl transition-all shadow-xs flex items-center gap-1.5"
+            className="px-3.5 py-1.5 text-xs font-bold text-white bg-[#701A35] hover:bg-[#5C142B] active:scale-98 rounded-xl transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
           >
-            <UserPlus className="w-4 h-4 text-amber-200" />
-            <span>+ Add User</span>
+            <UserPlus className="w-3.5 h-3.5 text-amber-200" />
+            <span>Add User</span>
           </button>
         </div>
       </div>
 
-      {/* 2. Asymmetrical KPI Pattern: Hero Card + 3 Secondary Stats */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-        {/* Left Elevated Hero KPI Card (Span 5) */}
+      {/* ─── 4 Clean KPI Metric Cards ─── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {/* Card 1: Users */}
         <div
           onClick={() => setActiveAdminTab('users')}
-          className="lg:col-span-5 bg-white rounded-2xl p-5 sm:p-6 border border-[#E6E1D6] shadow-[0_1px_3px_rgba(0,0,0,0.03)] hover:border-[#C5A059]/60 transition-all cursor-pointer flex flex-col justify-between space-y-4 group"
+          className="bg-white p-4 rounded-2xl border border-[#E6E1D6] hover:border-[#C5A059]/60 transition-all cursor-pointer shadow-[0_1px_3px_rgba(0,0,0,0.02)] group"
         >
-          <div className="flex items-start justify-between">
-            <div className="space-y-1">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 font-mono">
-                TOTAL DIRECTORY ACCOUNTS
-              </span>
-              <div className="flex items-baseline gap-3">
-                <span className="font-serif text-3xl sm:text-4xl font-bold text-slate-900 tabular-nums">
-                  {totalUsers}
-                </span>
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#FAF8F5] text-slate-800 border border-[#E6E1D6]">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
-                  {activePercent}% Operational
-                </span>
-              </div>
-            </div>
-
-            <div className="w-10 h-10 rounded-xl bg-[#FAF8F5] border border-[#E6E1D6] flex items-center justify-center text-[#701A35] group-hover:bg-[#701A35] group-hover:text-white transition-colors">
-              <Users className="w-5 h-5" />
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-slate-500">Accounts</span>
+            <div className="w-7 h-7 rounded-lg bg-[#FAF8F5] border border-[#E6E1D6] flex items-center justify-center text-[#701A35] group-hover:bg-[#701A35] group-hover:text-white transition-colors">
+              <Users className="w-3.5 h-3.5" />
             </div>
           </div>
-
-          <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-600">
-            <div className="flex items-center gap-3">
-              <span>Staff: <strong className="text-slate-900 font-mono">{staffCount}</strong></span>
-              <span className="text-slate-300">·</span>
-              <span>Customers: <strong className="text-slate-900 font-mono">{customerCount}</strong></span>
-            </div>
-            <span className="text-[#701A35] font-semibold group-hover:translate-x-0.5 transition-transform flex items-center gap-1">
-              <span>View directory</span>
-              <ArrowRight className="w-3 h-3" />
-            </span>
+          <div className="mt-2 flex items-baseline gap-2">
+            <span className="text-2xl font-bold text-slate-900 tabular-nums">{totalUsers}</span>
+            <span className="text-[11px] text-slate-400">({staffCount} staff, {customerCount} cust)</span>
           </div>
         </div>
 
-        {/* Right 3 Secondary Metric Cards (Span 7) */}
-        <div className="lg:col-span-7 grid grid-cols-1 sm:grid-cols-3 gap-3.5">
-          {/* Secondary 1: Pending Approvals */}
-          <div
-            onClick={() => setActiveAdminTab('users')}
-            className="bg-white rounded-2xl p-4 sm:p-5 border border-[#E6E1D6] shadow-[0_1px_3px_rgba(0,0,0,0.03)] hover:border-slate-300 transition-all cursor-pointer flex flex-col justify-between space-y-3 group"
-          >
-            <div className="space-y-1">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 font-mono">
-                PENDING REVIEW
-              </span>
-              <h3 className="font-serif text-2xl font-bold text-slate-900 tabular-nums">
-                {pendingApprovals}
-              </h3>
-            </div>
-            <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px]">
-              <span className={pendingApprovals > 0 ? 'text-amber-800 font-semibold' : 'text-slate-500'}>
-                {pendingApprovals > 0 ? 'Action required' : 'Queue cleared'}
-              </span>
-              <Clock className="w-3.5 h-3.5 text-slate-400" />
+        {/* Card 2: Pending */}
+        <div
+          onClick={() => setActiveAdminTab('users')}
+          className="bg-white p-4 rounded-2xl border border-[#E6E1D6] hover:border-[#C5A059]/60 transition-all cursor-pointer shadow-[0_1px_3px_rgba(0,0,0,0.02)] group"
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-slate-500">Pending Review</span>
+            <div className="w-7 h-7 rounded-lg bg-[#FAF8F5] border border-[#E6E1D6] flex items-center justify-center text-amber-700 group-hover:bg-amber-600 group-hover:text-white transition-colors">
+              <Clock className="w-3.5 h-3.5" />
             </div>
           </div>
+          <div className="mt-2 flex items-baseline gap-2">
+            <span className={`text-2xl font-bold tabular-nums ${pendingApprovals > 0 ? 'text-amber-700' : 'text-slate-900'}`}>
+              {pendingApprovals}
+            </span>
+            <span className="text-[11px] text-slate-400">{pendingApprovals === 0 ? 'All clear' : 'Requires action'}</span>
+          </div>
+        </div>
 
-          {/* Secondary 2: Configured Roles */}
-          <div
-            onClick={() => setActiveAdminTab('roles')}
-            className="bg-white rounded-2xl p-4 sm:p-5 border border-[#E6E1D6] shadow-[0_1px_3px_rgba(0,0,0,0.03)] hover:border-slate-300 transition-all cursor-pointer flex flex-col justify-between space-y-3 group"
-          >
-            <div className="space-y-1">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 font-mono">
-                ACCESS TIERS
-              </span>
-              <h3 className="font-serif text-2xl font-bold text-slate-900 tabular-nums">
-                {totalRoles}
-              </h3>
-            </div>
-            <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px]">
-              <span className="text-slate-600">Roles 0 to 6</span>
-              <Shield className="w-3.5 h-3.5 text-slate-400" />
+        {/* Card 3: Roles */}
+        <div
+          onClick={() => setActiveAdminTab('roles')}
+          className="bg-white p-4 rounded-2xl border border-[#E6E1D6] hover:border-[#C5A059]/60 transition-all cursor-pointer shadow-[0_1px_3px_rgba(0,0,0,0.02)] group"
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-slate-500">Access Roles</span>
+            <div className="w-7 h-7 rounded-lg bg-[#FAF8F5] border border-[#E6E1D6] flex items-center justify-center text-slate-700 group-hover:bg-slate-800 group-hover:text-white transition-colors">
+              <Shield className="w-3.5 h-3.5" />
             </div>
           </div>
+          <div className="mt-2 flex items-baseline gap-2">
+            <span className="text-2xl font-bold text-slate-900 tabular-nums">{totalRoles}</span>
+            <span className="text-[11px] text-slate-400">Tiers 0–6</span>
+          </div>
+        </div>
 
-          {/* Secondary 3: Active Approval Rules */}
-          <div
-            onClick={() => setActiveAdminTab('rules')}
-            className="bg-white rounded-2xl p-4 sm:p-5 border border-[#E6E1D6] shadow-[0_1px_3px_rgba(0,0,0,0.03)] hover:border-slate-300 transition-all cursor-pointer flex flex-col justify-between space-y-3 group"
-          >
-            <div className="space-y-1">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 font-mono">
-                APPROVAL RULES
-              </span>
-              <h3 className="font-serif text-2xl font-bold text-slate-900 tabular-nums">
-                {activeRulesCount}
-              </h3>
+        {/* Card 4: Audit */}
+        <div
+          onClick={() => setActiveAdminTab('audit')}
+          className="bg-white p-4 rounded-2xl border border-[#E6E1D6] hover:border-[#C5A059]/60 transition-all cursor-pointer shadow-[0_1px_3px_rgba(0,0,0,0.02)] group"
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-slate-500">Audit Logs</span>
+            <div className="w-7 h-7 rounded-lg bg-[#FAF8F5] border border-[#E6E1D6] flex items-center justify-center text-slate-700 group-hover:bg-slate-800 group-hover:text-white transition-colors">
+              <History className="w-3.5 h-3.5" />
             </div>
-            <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px]">
-              <span className="text-slate-600">{approvalRules.length} Defined</span>
-              <FileCheck2 className="w-3.5 h-3.5 text-slate-400" />
-            </div>
+          </div>
+          <div className="mt-2 flex items-baseline gap-2">
+            <span className="text-2xl font-bold text-slate-900 tabular-nums">{auditLogs.length}</span>
+            <span className="text-[11px] text-slate-400">Events</span>
           </div>
         </div>
       </div>
 
-      {/* 3. Main Two-Column Layout: Stacked Bar Role Visual + Connected Timeline */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left: Role Distribution (Signature Monochromatic Stacked Bar) */}
-        <div className="lg:col-span-6 bg-white rounded-2xl p-5 sm:p-6 border border-[#E6E1D6] shadow-[0_1px_3px_rgba(0,0,0,0.03)] flex flex-col justify-between space-y-5">
-          <div className="space-y-5">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <div>
-                <h2 className="font-serif text-base font-bold text-slate-900">
-                  Role Distribution & Hierarchy
-                </h2>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Proportional headcount across active system security tiers
-                </p>
-              </div>
+      {/* ─── Two Columns: Roles Distribution & Recent Activity ─── */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        {/* Left: Role Distribution */}
+        <div className="lg:col-span-7 bg-white rounded-2xl p-5 border border-[#E6E1D6] shadow-[0_1px_3px_rgba(0,0,0,0.02)] flex flex-col justify-between space-y-4">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+              <h2 className="text-sm font-bold text-slate-900">
+                Role Headcount
+              </h2>
               <button
                 onClick={() => setActiveAdminTab('roles')}
                 className="text-xs font-semibold text-[#701A35] hover:text-[#5C142B] flex items-center gap-1 group transition-colors"
               >
-                <span>View Roles</span>
-                <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+                <span>Manage Roles</span>
+                <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
               </button>
             </div>
 
-            {/* Signature Element: Full-width tonal stacked bar */}
-            <div className="space-y-2">
-              <div className="h-3.5 w-full bg-slate-100 rounded-lg overflow-hidden flex shadow-inner">
-                {roles.map((role) => {
-                  const count = users.filter((u) => u.assignedRoleIds.includes(role.id)).length;
-                  const widthPercent = totalUsers > 0 ? (count / totalUsers) * 100 : 0;
-
-                  if (count === 0) return null;
-
-                  return (
-                    <div
-                      key={role.id}
-                      style={{
-                        width: `${Math.max(widthPercent, 5)}%`,
-                        backgroundColor: ROLE_TONES[role.id] || '#475569',
-                      }}
-                      className="h-full transition-all duration-300 hover:opacity-90 relative group/segment cursor-pointer"
-                      title={`${role.name}: ${count} users (${widthPercent.toFixed(1)}%)`}
-                    />
-                  );
-                })}
-              </div>
-              <p className="text-[11px] text-slate-400 font-mono text-right">
-                100% of directory accounts mapped
-              </p>
-            </div>
-
-            {/* Clean Monochromatic Grid Legend */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
-              {roles.map((role) => {
-                const count = users.filter((u) => u.assignedRoleIds.includes(role.id)).length;
-                const percentage = totalUsers > 0 ? ((count / totalUsers) * 100).toFixed(0) : '0';
-
+            <div className="space-y-1.5">
+              {roleCounts.map(({ role, count }) => {
+                const barWidth = maxRoleCount > 0 ? (count / maxRoleCount) * 100 : 0;
                 return (
-                  <div
+                  <button
                     key={role.id}
-                    className="flex items-center justify-between p-2.5 rounded-xl bg-[#FAF8F5] border border-[#E6E1D6]/70 text-xs hover:bg-[#F3EFE6] transition-colors"
+                    onClick={() => setActiveAdminTab('roles')}
+                    className="w-full flex items-center gap-3 p-2 rounded-xl hover:bg-[#FAF8F5] transition-colors cursor-pointer text-left group"
                   >
-                    <div className="flex items-center gap-2 min-w-0">
+                    <div className="w-32 shrink-0">
                       <RoleBadge roleId={role.id} size="xs" isPrimary={role.id === 0} />
-                      <span className="font-semibold text-slate-800 truncate">
-                        {role.name}
-                      </span>
                     </div>
-                    <div className="flex items-center gap-1.5 font-mono tabular-nums shrink-0 ml-2">
-                      <span className="font-bold text-slate-900">{count}</span>
-                      <span className="text-[11px] text-slate-400">({percentage}%)</span>
+
+                    <div className="flex-1 h-2 bg-[#F3EFE6] rounded-full overflow-hidden">
+                      <div
+                        className="h-full rounded-full transition-all duration-500"
+                        style={{
+                          width: `${Math.max(barWidth, count > 0 ? 6 : 0)}%`,
+                          backgroundColor: ROLE_BAR_COLORS[role.id] || '#64748B',
+                        }}
+                      />
                     </div>
-                  </div>
+
+                    <div className="w-12 text-right shrink-0">
+                      <span className="text-xs font-bold text-slate-900 tabular-nums">{count}</span>
+                    </div>
+                  </button>
                 );
               })}
             </div>
           </div>
 
-          <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-            <span>Multi-role union access evaluation: Active</span>
+          <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
+            <span>Click any role to edit permissions</span>
             <button
-              onClick={() => setActiveAdminTab('matrix')}
+              onClick={() => setActiveAdminTab('roles')}
               className="text-[#701A35] font-semibold hover:underline flex items-center gap-1"
             >
-              <Sliders className="w-3.5 h-3.5 text-[#C5A059]" />
-              <span>Permission Matrix</span>
+              <Shield className="w-3 h-3" />
+              <span>Role Management</span>
             </button>
           </div>
         </div>
 
-        {/* Right: Recent Security Activity (Real Connected Timeline) */}
-        <div className="lg:col-span-6 bg-white rounded-2xl p-5 sm:p-6 border border-[#E6E1D6] shadow-[0_1px_3px_rgba(0,0,0,0.03)] flex flex-col justify-between space-y-5">
-          <div className="space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <div>
-                <h2 className="font-serif text-base font-bold text-slate-900">
-                  Recent Account & Security Changes
+        {/* Right: Recent Activity */}
+        <div className="lg:col-span-5 bg-white rounded-2xl p-5 border border-[#E6E1D6] shadow-[0_1px_3px_rgba(0,0,0,0.02)] flex flex-col justify-between space-y-4">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+              <div className="flex items-center gap-1.5">
+                <Activity className="w-4 h-4 text-[#C5A059]" />
+                <h2 className="text-sm font-bold text-slate-900">
+                  Recent Activity
                 </h2>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Chronological log of administrative actions and permissions
-                </p>
               </div>
               <button
                 onClick={() => setActiveAdminTab('audit')}
                 className="text-xs font-semibold text-[#701A35] hover:text-[#5C142B] flex items-center gap-1 group transition-colors"
               >
-                <span>Full Audit Log</span>
-                <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+                <span>Full Log</span>
+                <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
               </button>
             </div>
 
-            {/* Real Connected Vertical Timeline */}
-            <div className="relative pl-6 space-y-4 before:absolute before:top-2 before:bottom-2 before:left-2.5 before:w-0.5 before:bg-slate-200">
+            <div className="space-y-2">
               {auditLogs.length === 0 ? (
-                <div className="py-8 text-center text-xs text-slate-500">
-                  No activity entries recorded yet. Real events will stream here.
+                <div className="py-8 text-center text-xs text-slate-400">
+                  No activity recorded yet
                 </div>
               ) : (
                 auditLogs.slice(0, 4).map((log) => (
-                  <div key={log.id} className="relative group">
-                    {/* Timeline Node Dot */}
-                    <div
-                      className={`absolute -left-6 top-1.5 w-3 h-3 rounded-full border-2 bg-white ${
-                        log.isSensitive ? 'border-amber-500' : 'border-[#701A35]'
-                      }`}
-                    />
-
-                    <div className="bg-[#FAF8F5] p-3 rounded-xl border border-[#E6E1D6]/70 text-xs space-y-1 hover:bg-[#F3EFE6] transition-colors">
-                      <div className="flex items-center justify-between gap-2 flex-wrap">
-                        <span className="font-bold text-slate-900">{log.action}</span>
-                        <span className="text-[10px] text-slate-400 font-mono">{log.timestamp}</span>
-                      </div>
-
-                      <p className="text-slate-700 text-xs">
-                        Target: <strong className="text-slate-900">{log.target}</strong>
-                      </p>
-
-                      <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1">
-                        <span>by <strong>{log.actorName}</strong></span>
-                        {log.afterVal && (
-                          <span className="font-mono text-slate-600 bg-white px-2 py-0.5 rounded border border-slate-200">
-                            {log.afterVal}
-                          </span>
-                        )}
-                      </div>
+                  <div
+                    key={log.id}
+                    className="p-2.5 rounded-xl bg-[#FAF8F5] border border-[#E6E1D6]/60 text-xs space-y-1 hover:bg-[#F3EFE6]/60 transition-colors"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-bold text-slate-900">{log.action}</span>
+                      <span className="text-[10px] text-slate-400 font-mono">
+                        {formatRelativeTime(log.timestamp)}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-600 truncate">
+                      {log.target}
+                    </p>
+                    <div className="flex items-center justify-between text-[10px] text-slate-400 pt-0.5">
+                      <span>by {log.actorName}</span>
+                      {log.afterVal && (
+                        <span className="font-mono bg-white px-1.5 py-0.2 rounded border border-[#E6E1D6] text-slate-600 truncate max-w-[120px]">
+                          {log.afterVal}
+                        </span>
+                      )}
                     </div>
                   </div>
                 ))
@@ -325,21 +289,52 @@ export const OverviewTab: React.FC = () => {
             </div>
           </div>
 
-          {/* Integrated Live Status Strip */}
-          <div className="p-3 bg-[#FAF8F5] rounded-xl border border-[#E6E1D6]/70 flex items-center justify-between text-xs text-slate-600">
-            <div className="flex items-center gap-2">
-              <Lock className="w-3.5 h-3.5 text-[#C5A059]" />
-              <span className="text-[11px]">Audit Ledger Synchronization: <strong>Active & Verified</strong></span>
-            </div>
+          <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
+            <span className="flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+              Audit ledger verified
+            </span>
             <button
               onClick={() => setActiveAdminTab('audit')}
-              className="text-[#701A35] font-semibold hover:underline text-[11px]"
+              className="text-[#701A35] font-semibold hover:underline"
             >
-              Export CSV / PDF
+              Export
             </button>
           </div>
         </div>
       </div>
+
+      {/* ─── Quick Shortcuts ─── */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
+        {[
+          { label: 'User Directory', desc: `${totalUsers} accounts`, icon: <Users className="w-4 h-4" />, tab: 'users' as const },
+          { label: 'Role Management', desc: `${totalRoles} tiers`, icon: <Shield className="w-4 h-4" />, tab: 'roles' as const },
+          { label: 'Audit Trail', desc: 'Verified ledger logs', icon: <History className="w-4 h-4" />, tab: 'audit' as const },
+          { label: 'System Settings', desc: 'Company & Security', icon: <Settings className="w-4 h-4" />, tab: 'settings' as const },
+        ].map((item) => (
+          <button
+            key={item.tab}
+            onClick={() => setActiveAdminTab(item.tab)}
+            className="p-3.5 bg-white border border-[#E6E1D6] rounded-xl hover:border-[#C5A059]/60 hover:shadow-2xs transition-all text-left group flex items-center gap-3 cursor-pointer"
+          >
+            <div className="w-8 h-8 rounded-lg bg-[#FAF8F5] border border-[#E6E1D6] flex items-center justify-center text-slate-600 group-hover:bg-[#701A35] group-hover:text-white transition-colors shrink-0">
+              {item.icon}
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-800 group-hover:text-[#701A35] truncate transition-colors">
+                  {item.label}
+                </span>
+                <ChevronRight className="w-3 h-3 text-slate-300 group-hover:text-[#701A35] shrink-0" />
+              </div>
+              <span className="text-[11px] text-slate-400 block truncate mt-0.5">
+                {item.desc}
+              </span>
+            </div>
+          </button>
+        ))}
+      </div>
     </div>
   );
 };
+

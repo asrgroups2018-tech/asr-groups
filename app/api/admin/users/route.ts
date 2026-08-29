@@ -68,11 +68,20 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'User ID parameter is required.' }, { status: 400 });
     }
 
-    if (id === 'USR-1001') {
-      return NextResponse.json(
-        { success: false, error: 'Root Super Admin cannot be deleted.' },
-        { status: 403 }
+    // Check if trying to delete a Super Admin — only allow if another Super Admin exists
+    const allUsers = db.getUsers({});
+    const targetUser = allUsers.find((u) => u.id === id);
+
+    if (targetUser && targetUser.assignedRoleIds.includes(0)) {
+      const otherSuperAdmins = allUsers.filter(
+        (u) => u.id !== id && u.assignedRoleIds.includes(0)
       );
+      if (otherSuperAdmins.length === 0) {
+        return NextResponse.json(
+          { success: false, error: 'Cannot delete the last Super Admin. Assign another user as Super Admin first.' },
+          { status: 403 }
+        );
+      }
     }
 
     const deleted = db.deleteUser(id);

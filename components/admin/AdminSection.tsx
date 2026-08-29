@@ -16,8 +16,6 @@ import { OverviewTab } from './OverviewTab';
 import { UserManagementTab } from './UserManagementTab';
 import { UserDetailsView } from './UserDetailsView';
 import { RolesPermissionsTab } from './RolesPermissionsTab';
-import { PermissionMatrixTab } from './PermissionMatrixTab';
-import { ApprovalRulesTab } from './ApprovalRulesTab';
 import { AuditLogTab } from './AuditLogTab';
 import { SystemSettingsTab } from './SystemSettingsTab';
 
@@ -32,9 +30,7 @@ export const AdminSection: React.FC = () => {
   const tabs: { id: AdminTab; label: string; icon: React.ReactNode }[] = [
     { id: 'overview', label: 'Overview', icon: <LayoutGrid className="w-3.5 h-3.5" /> },
     { id: 'users', label: 'User Management', icon: <Users className="w-3.5 h-3.5" /> },
-    { id: 'roles', label: 'Roles & Permissions', icon: <Shield className="w-3.5 h-3.5" /> },
-    { id: 'matrix', label: 'Permission Matrix', icon: <Sliders className="w-3.5 h-3.5" /> },
-    { id: 'rules', label: 'Approval Rules', icon: <FileCheck2 className="w-3.5 h-3.5" /> },
+    { id: 'roles', label: 'Role Management', icon: <Shield className="w-3.5 h-3.5" /> },
     { id: 'audit', label: 'Audit Log', icon: <History className="w-3.5 h-3.5" /> },
     { id: 'settings', label: 'System Settings', icon: <Settings className="w-3.5 h-3.5" /> },
   ];
@@ -81,8 +77,6 @@ export const AdminSection: React.FC = () => {
             {activeAdminTab === 'overview' && <OverviewTab />}
             {activeAdminTab === 'users' && <UserManagementTab />}
             {activeAdminTab === 'roles' && <RolesPermissionsTab />}
-            {activeAdminTab === 'matrix' && <PermissionMatrixTab />}
-            {activeAdminTab === 'rules' && <ApprovalRulesTab />}
             {activeAdminTab === 'audit' && <AuditLogTab />}
             {activeAdminTab === 'settings' && <SystemSettingsTab />}
           </>

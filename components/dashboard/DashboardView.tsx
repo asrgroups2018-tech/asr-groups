@@ -154,7 +154,7 @@ export const DashboardView: React.FC = () => {
           iconBgColor="bg-amber-100/70"
           onClick={() => {
             setActiveMainTab('administration');
-            setActiveAdminTab('rules');
+            setActiveAdminTab('users');
           }}
         />
       </div>

@@ -8,6 +8,7 @@ import {
   ShieldCheck,
   CreditCard,
   Users,
+  Building2,
   Coins,
   TrendingUp,
   Receipt,
@@ -27,25 +28,27 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ isOpenMobile, onCloseMobile }) => {
-  const { activeMainTab, setActiveMainTab, simulatedRoleId, setSelectedUserId } = useApp();
+  const { 
+    activeMainTab, 
+    setActiveMainTab, 
+    simulatedRoleId, 
+    setSelectedUserId, 
+    setSelectedCustomerId,
+    setSelectedCompanyId,
+    setSelectedLoanId,
+    permissionMatrix 
+  } = useApp();
 
-  // Admin access check: Roles 0 (Super Admin), 1 (Admin), and 2 (Manager) can view Administration
-  const hasAdminAccess = simulatedRoleId <= 2;
-
-  const navItems = [
+  const allNavItems = [
     { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard className="w-4 h-4" /> },
-    // Administration comes immediately below Dashboard if admin is logged in!
-    ...(hasAdminAccess
-      ? [
-          {
-            id: 'administration',
-            label: 'Administration',
-            icon: <ShieldCheck className="w-4 h-4 text-amber-400" />,
-          },
-        ]
-      : []),
+    {
+      id: 'administration',
+      label: 'Administration',
+      icon: <ShieldCheck className="w-4 h-4 text-amber-400" />,
+    },
     { id: 'loans', label: 'Loans', icon: <CreditCard className="w-4 h-4" /> },
     { id: 'customers', label: 'Customers', icon: <Users className="w-4 h-4" /> },
+    { id: 'companies', label: 'Companies', icon: <Building2 className="w-4 h-4" /> },
     { id: 'collections', label: 'Collections', icon: <Coins className="w-4 h-4" /> },
     { id: 'income', label: 'Income', icon: <TrendingUp className="w-4 h-4" /> },
     { id: 'expenses', label: 'Expenses', icon: <Receipt className="w-4 h-4" /> },
@@ -63,9 +66,27 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpenMobile, onCloseMobile })
     { id: 'settings', label: 'Settings', icon: <Settings className="w-4 h-4" /> },
   ];
 
+  // Dynamic filter: Role 0 sees all. Other roles see only modules where 'view' permission is allowed!
+  const navItems = allNavItems.filter((item) => {
+    if (simulatedRoleId === 0) return true; // Super admin sees all
+    if (permissionMatrix && permissionMatrix[item.id]?.view !== undefined) {
+      return !!permissionMatrix[item.id]?.view?.[simulatedRoleId];
+    }
+    // Fallback: Administration is restricted to roles <= 1
+    if (item.id === 'administration') return simulatedRoleId <= 1;
+    // Customer sees only customer portal pages
+    if (simulatedRoleId === 6) {
+      return ['dashboard', 'loans', 'requests', 'settings'].includes(item.id);
+    }
+    return true;
+  });
+
   const handleNavClick = (tabId: string) => {
     setActiveMainTab(tabId);
-    setSelectedUserId(null); // Return to list view if inside user details
+    setSelectedUserId(null);
+    setSelectedCustomerId(null);
+    setSelectedCompanyId(null);
+    setSelectedLoanId(null);
     onCloseMobile();
   };
 

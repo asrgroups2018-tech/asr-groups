@@ -914,6 +914,48 @@
   "approvalRules": [],
   "auditLogs": [
     {
+      "id": "AUD-4847",
+      "timestamp": "2026-08-29 20:28",
+      "actorId": "ADM-1001",
+      "actorName": "System Administrator",
+      "actorRoleId": 0,
+      "action": "Created User",
+      "target": "Customer / Investor: dfs (CUST-102)",
+      "beforeVal": "-",
+      "afterVal": "Investor Registered (34343)",
+      "ipAddress": "127.0.0.1",
+      "device": "Admin Web Console",
+      "isSensitive": false
+    },
+    {
+      "id": "AUD-3290",
+      "timestamp": "2026-08-29 20:14",
+      "actorId": "ADM-1001",
+      "actorName": "System Administrator",
+      "actorRoleId": 0,
+      "action": "Created User",
+      "target": "Borrower Company: AZURE (COMP-101)",
+      "beforeVal": "-",
+      "afterVal": "Default Rate: 11%",
+      "ipAddress": "127.0.0.1",
+      "device": "Admin Web Console",
+      "isSensitive": false
+    },
+    {
+      "id": "AUD-5967",
+      "timestamp": "2026-08-29 20:12",
+      "actorId": "ADM-1001",
+      "actorName": "System Administrator",
+      "actorRoleId": 0,
+      "action": "Created User",
+      "target": "Customer / Investor: Naresh (CUST-101)",
+      "beforeVal": "-",
+      "afterVal": "Investor Registered (332)",
+      "ipAddress": "127.0.0.1",
+      "device": "Admin Web Console",
+      "isSensitive": false
+    },
+    {
       "id": "AUD-1821",
       "timestamp": "2026-08-23 20:37",
       "actorId": "ADM-1001",
@@ -956,18 +998,74 @@
       "isSensitive": false
     }
   ],
+  "customers": [
+    {
+      "id": "CUST-102",
+      "fullName": "dfs",
+      "companyName": "hsdh",
+      "phone": "34343",
+      "email": "dfg@dgf.vom",
+      "address": "dfdgf",
+      "status": "Active",
+      "totalInvested": 0,
+      "totalReturns": 0,
+      "activeLoansCount": 0,
+      "createdAt": "2026-08-29"
+    },
+    {
+      "id": "CUST-101",
+      "fullName": "Naresh",
+      "companyName": "ROCKET Industries",
+      "phone": "332",
+      "email": "3234@ffh.com",
+      "address": "dfs",
+      "status": "Active",
+      "totalInvested": 0,
+      "totalReturns": 0,
+      "activeLoansCount": 0,
+      "createdAt": "2026-08-29"
+    }
+  ],
+  "companies": [
+    {
+      "id": "COMP-101",
+      "companyName": "AZURE",
+      "contactPerson": "rodl",
+      "phone": "fgfgdg",
+      "email": "gddg@kdk.vom",
+      "address": "sdsdfsdfsdfsdfs",
+      "area": "dfgdfg",
+      "defaultInterestRate": 11,
+      "bankDetails": {
+        "bankName": "HDFC Bank",
+        "accountNumber": "502000999580",
+        "ifsc": "HDFC0001234"
+      },
+      "totalBorrowed": 0,
+      "outstandingAmount": 0,
+      "activeLoansCount": 0,
+      "onTimeRepaymentRate": 100,
+      "status": "Active",
+      "createdAt": "2026-08-29"
+    }
+  ],
+  "loans": [],
   "systemSettings": {
     "companyProfile": {
       "companyName": "ASR Groups Financial Services Pvt Ltd",
-      "tradeName": "ASR Groups",
-      "cin": "U65923TN2018PTC123456",
+      "legalEntityName": "ASR Family Microfinance & Investment Private Limited",
+      "logoUrl": "/Groups Finalized.png",
       "gstin": "33AABCA1234F1Z8",
+      "cin": "U65923TN2018PTC123456",
       "pan": "AABCA1234F",
       "registeredAddress": "No. 42, ASR Towers, 4th Floor, Anna Salai, Guindy, Chennai, Tamil Nadu - 600032",
+      "baseCurrency": "INR (₹)",
+      "currencySymbol": "₹",
+      "financialYearStart": "April 1",
       "supportEmail": "support@asrgroups.in",
       "supportPhone": "+91 44 2234 5678",
-      "website": "https://asrgroups.in",
-      "financialYearStart": "April 1"
+      "tradeName": "ASR Groups",
+      "website": "https://asrgroups.in"
     },
     "shareholders": [
       {
@@ -996,7 +1094,18 @@
       }
     ],
     "securityPolicy": {
+      "minPasswordLength": 10,
+      "requireSpecialChar": true,
+      "requireNumber": true,
+      "requireUppercase": true,
       "sessionTimeoutMinutes": 30,
+      "enforce2FA": true,
+      "ipAllowlist": [
+        "49.207.214.0/24 (Head Office Chennai)",
+        "182.73.24.0/24 (Adyar Branch)",
+        "157.44.132.0/24 (OMR Operations)"
+      ],
+      "maxLoginAttempts": 5,
       "maxFailedLogins": 5,
       "enforce2FAForRoles": [
         0,
@@ -1005,13 +1114,20 @@
       "ipWhitelist": "127.0.0.1, 49.207.214.18",
       "passwordMinLength": 10
     },
-    "lastBackupTimestamp": "2026-08-23 04:00 AM IST",
-    "backupStatus": "Completed",
     "featureToggles": {
+      "customerSelfServicePortal": true,
+      "smsNotifications": false,
+      "autoApproveSmallExpenses": true,
+      "twoFactorEnforcement": true,
+      "darkModePreview": false,
+      "multiBranchSupport": true,
+      "strictIpWhitelist": false,
       "emailNotifications": true,
       "smsGateway": false,
       "autoDailyBackups": true,
       "strictAuditMode": true
-    }
+    },
+    "lastBackupTimestamp": "2026-08-23 04:00 AM IST",
+    "backupStatus": "Completed"
   }
 }
