@@ -19,6 +19,7 @@ import {
   SlidersHorizontal,
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
+import { MoneyDisplay } from '@/components/ui/MoneyDisplay';
 import { numberToWordsINR } from '@/lib/utils/formatCurrency';
 
 export const HistoricalSheetView: React.FC = () => {
@@ -138,15 +139,15 @@ export const HistoricalSheetView: React.FC = () => {
       <div className="bg-white p-6 rounded-2xl border border-[#E6E1D6] shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-xl bg-[#701A35]/10 border border-[#701A35]/20 flex items-center justify-center text-[#701A35]">
-              <FileSpreadsheet className="w-5 h-5" />
+            <div className="p-2.5 rounded-xl bg-[#701A35] text-white">
+              <FileSpreadsheet className="w-5 h-5 text-amber-200" />
             </div>
             <div>
               <h1 className="text-xl font-bold text-slate-900 font-serif">
-                July 2026 Historical Receipt Grid
+                July 2026 Receipt Grid Sheet
               </h1>
               <p className="text-xs text-slate-500">
-                Interactive spreadsheet view · 721 Historical EMIs · Real-Time Ledger Sync
+                Live Editable Spreadsheet · 721 Historical Entries · 16 Full Company Splits
               </p>
             </div>
           </div>
@@ -154,18 +155,26 @@ export const HistoricalSheetView: React.FC = () => {
 
         <div className="flex items-center gap-3">
           <button
-            onClick={handleExportExcel}
-            className="px-4 py-2.5 bg-white border border-[#E6E1D6] hover:bg-[#FAF8F5] text-slate-800 text-xs font-bold rounded-xl shadow-2xs flex items-center gap-1.5 transition-all cursor-pointer"
+            onClick={() => fetchReceipts()}
+            className="px-3.5 py-2 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-50 border border-slate-300 rounded-xl transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
           >
-            <Download className="w-4 h-4 text-[#701A35]" />
-            <span>Export Excel (.xlsx)</span>
+            <RefreshCw className="w-3.5 h-3.5" />
+            <span>Reload Data</span>
+          </button>
+
+          <button
+            onClick={handleExportExcel}
+            className="px-4 py-2 text-xs font-bold text-white bg-emerald-700 hover:bg-emerald-800 rounded-xl transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span>Export Real Excel (.xlsx)</span>
           </button>
         </div>
       </div>
 
-      {/* ─── Flagged Mismatch Notification Banner (if any) ─── */}
+      {/* ─── Mismatch / Integrity Warning Banner ─── */}
       {mismatchRows.length > 0 && (
-        <div className="p-4 rounded-xl bg-amber-50/80 border border-amber-300 shadow-xs flex items-start gap-3 text-xs text-amber-900">
+        <div className="bg-amber-50 border border-amber-300 p-4 rounded-xl flex items-start gap-3 text-xs text-amber-900 shadow-xs">
           <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
           <div className="space-y-1">
             <span className="font-bold block">
@@ -173,7 +182,7 @@ export const HistoricalSheetView: React.FC = () => {
             </span>
             {mismatchRows.map((m) => (
               <p key={m.sNo} className="text-amber-800 font-mono text-[11px]">
-                • S.NO {m.sNo} ({m.clientName}): Installment Amount = <strong>₹{m.amount.toLocaleString('en-IN')} ({numberToWordsINR(m.amount)})</strong> vs Company Split Sum = <strong>₹{((m.amount - (m.mismatchDiff || 0))).toLocaleString('en-IN')}</strong> (Diff: ₹{m.mismatchDiff?.toLocaleString('en-IN')})
+                • S.NO {m.sNo} ({m.clientName}): Installment Amount = <strong title={numberToWordsINR(m.amount)} className="cursor-help underline decoration-dotted">₹{m.amount.toLocaleString('en-IN')}</strong> vs Company Split Sum = <strong>₹{((m.amount - (m.mismatchDiff || 0))).toLocaleString('en-IN')}</strong> (Diff: ₹{m.mismatchDiff?.toLocaleString('en-IN')})
               </p>
             ))}
           </div>
@@ -223,8 +232,7 @@ export const HistoricalSheetView: React.FC = () => {
         {/* Total stats & pagination summary */}
         <div className="flex items-center gap-4 text-xs font-mono">
           <div className="text-slate-500">
-            <span>Showing <strong className="text-slate-900">{filteredReceipts.length}</strong> rows · Total: <strong className="text-[#701A35]">₹{totalVolume.toLocaleString('en-IN')}</strong></span>
-            <span className="text-[10px] text-slate-400 block font-sans">({numberToWordsINR(totalVolume)})</span>
+            <span>Showing <strong className="text-slate-900">{filteredReceipts.length}</strong> rows · Total: <MoneyDisplay amount={totalVolume} size="sm" amountClassName="text-[#701A35] font-bold inline-block" /></span>
           </div>
 
           <div className="flex items-center gap-1">

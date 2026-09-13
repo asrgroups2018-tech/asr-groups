@@ -504,16 +504,14 @@ export const SystemSettingsTab: React.FC = () => {
                     </div>
                     <div>
                       <span className="text-[10px] font-semibold text-slate-500">
-                        Email & Phone:
+                        Official Email:
                       </span>
                       <input
-                        type="text"
-                        value={`${sh.email} | ${sh.phone}`}
+                        type="email"
+                        value={sh.email}
                         onChange={(e) => {
-                          const parts = e.target.value.split('|');
                           const updated = [...shareholders];
-                          updated[idx].email = parts[0]?.trim() || '';
-                          if (parts[1]) updated[idx].phone = parts[1].trim();
+                          updated[idx].email = e.target.value.trim();
                           setShareholders(updated);
                         }}
                         className="w-full px-2 py-1 text-[11px] rounded-lg border border-slate-200 bg-slate-50 mt-0.5 font-mono"

@@ -147,7 +147,7 @@ interface AppContextType {
   triggerBackupNow: () => Promise<void>;
 
   // Customer Operations
-  createCustomer: (data: { name: string; place?: string; phone?: string }) => Promise<Customer | null>;
+  createCustomer: (data: { name: string; place?: string; codeNo?: string; phone?: string }) => Promise<Customer | null>;
   updateCustomer: (id: string, updates: Partial<Customer>) => Promise<Customer | null>;
   deleteCustomer: (id: string) => Promise<boolean>;
 
@@ -534,7 +534,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // ==========================================
   // Customer Operations
   // ==========================================
-  const createCustomer = async (data: { name: string; place?: string; phone?: string }) => {
+  const createCustomer = async (data: { name: string; place?: string; codeNo?: string; phone?: string }) => {
     try {
       const res = await fetch('/api/customers', {
         method: 'POST',

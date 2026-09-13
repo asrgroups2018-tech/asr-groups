@@ -25,6 +25,7 @@ export async function POST(req: NextRequest) {
     const created = await db.createCustomer({
       name,
       place: body.place || body.address,
+      codeNo: body.codeNo || body.code,
       phone: body.phone,
     });
     return NextResponse.json({ success: true, data: created });

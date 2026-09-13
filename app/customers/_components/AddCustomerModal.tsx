@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useApp } from '@/lib/store';
-import { Users, X, Phone, MapPin } from 'lucide-react';
+import { Users, X, MapPin } from 'lucide-react';
 
 interface AddCustomerModalProps {
   isOpen: boolean;
@@ -21,7 +21,7 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
 
   const [name, setName] = useState(initialName);
   const [place, setPlace] = useState('');
-  const [phone, setPhone] = useState('');
+  const [codeNo, setCodeNo] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (!isOpen) return null;
@@ -37,7 +37,7 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
     const created = await createCustomer({
       name: name.trim(),
       place: place.trim() || undefined,
-      phone: phone.trim() || undefined,
+      codeNo: codeNo.trim() || undefined,
     });
     setIsSubmitting(false);
 
@@ -46,7 +46,7 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
       onClose();
       setName('');
       setPlace('');
-      setPhone('');
+      setCodeNo('');
     }
   };
 
@@ -92,34 +92,33 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
             />
           </div>
 
-          <div>
-            <label className="block font-bold text-slate-700 mb-1">
-              Place / City (Optional)
-            </label>
-            <div className="relative">
-              <MapPin className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
-              <input
-                type="text"
-                placeholder="e.g. COIMBATORE, TIRUPUR, CHENNAI"
-                value={place}
-                onChange={(e) => setPlace(e.target.value)}
-                className="w-full pl-8 pr-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-1 focus:ring-[#701A35]"
-              />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block font-bold text-slate-700 mb-1">
+                Place / City (Optional)
+              </label>
+              <div className="relative">
+                <MapPin className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
+                <input
+                  type="text"
+                  placeholder="e.g. CHENNAI, CBE"
+                  value={place}
+                  onChange={(e) => setPlace(e.target.value)}
+                  className="w-full pl-8 pr-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-1 focus:ring-[#701A35]"
+                />
+              </div>
             </div>
-          </div>
 
-          <div>
-            <label className="block font-bold text-slate-700 mb-1">
-              Phone Number (Optional)
-            </label>
-            <div className="relative">
-              <Phone className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
+            <div>
+              <label className="block font-bold text-slate-700 mb-1">
+                Code No (Optional)
+              </label>
               <input
                 type="text"
-                placeholder="+91 98400 99887"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                className="w-full pl-8 pr-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-1 focus:ring-[#701A35] font-mono"
+                placeholder="e.g. 101, A-12"
+                value={codeNo}
+                onChange={(e) => setCodeNo(e.target.value)}
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 font-mono focus:outline-none focus:ring-1 focus:ring-[#701A35]"
               />
             </div>
           </div>

@@ -4,7 +4,6 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useApp } from '@/lib/store';
 import {
   X,
-  Sparkles,
   ChevronRight,
   ChevronLeft,
   Check,
@@ -25,14 +24,14 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
 
   const [currentStep, setCurrentStep] = useState<number>(1);
 
-  // Step 1: Customer & Amount
+  // Step 1: Customer & Borrower
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
   const [customerSearch, setCustomerSearch] = useState<string>('');
   const [isCreatingNewCustomer, setIsCreatingNewCustomer] = useState<boolean>(false);
   const [newCustomerName, setNewCustomerName] = useState<string>('');
-  const [newCustomerPlace, setNewCustomerPlace] = useState<string>('CHENNAI');
-  const [newCustomerPhone, setNewCustomerPhone] = useState<string>('');
-  const [totalAmount, setTotalAmount] = useState<number>(1000000);
+  const [newCustomerPlace, setNewCustomerPlace] = useState<string>('');
+  const [newCustomerCodeNo, setNewCustomerCodeNo] = useState<string>('');
+  const [totalAmount, setTotalAmount] = useState<number>(0);
 
   // Step 2: Repayment Schedule
   const [frequency, setFrequency] = useState<'Weekly' | 'Monthly'>('Monthly');
@@ -50,14 +49,22 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
   // Step 4: Schedule Rows (Installment-level grid)
   const [scheduleRows, setScheduleRows] = useState<ScheduleStepRow[]>([]);
 
-  // Reset or initialize on open
+  // Reset on open
   useEffect(() => {
     if (isOpen) {
       setCurrentStep(1);
-      if (customers.length > 0 && !selectedCustomerId) {
-        setSelectedCustomerId(customers[0].id);
-        setCustomerSearch(customers[0].name);
-      }
+      setSelectedCustomerId('');
+      setCustomerSearch('');
+      setIsCreatingNewCustomer(false);
+      setNewCustomerName('');
+      setNewCustomerPlace('');
+      setNewCustomerCodeNo('');
+      setTotalAmount(0);
+      setFrequency('Monthly');
+      setInstallmentCount(5);
+      setStartDate(new Date().toISOString().slice(0, 10));
+      setScheduleRows([]);
+
       // Pick default ASR companies if none selected
       if (selectedCompanyIds.length === 0 && companies.length > 0) {
         const asrComps = companies.filter((c) => !c.isOutsideParty).slice(0, 3);
@@ -77,7 +84,7 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
         setCompanyPcts(initialPcts);
       }
     }
-  }, [isOpen, customers, companies]);
+  }, [isOpen, companies]);
 
   // Selected company objects
   const selectedCompanies = useMemo(() => {
@@ -254,8 +261,8 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
         }
         const created = await createCustomer({
           name: newCustomerName.trim(),
-          place: newCustomerPlace.trim() || 'CHENNAI',
-          phone: newCustomerPhone.trim() || '+91 98400 00000',
+          place: newCustomerPlace.trim() || undefined,
+          codeNo: newCustomerCodeNo.trim() || undefined,
         });
         if (created) {
           setSelectedCustomerId(created.id);
@@ -268,14 +275,14 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
         showToast('Validation Error', 'Please select or create a borrower customer.', 'warning');
         return;
       }
-      if (totalAmount <= 0) {
-        showToast('Validation Error', 'Total amount must be greater than zero.', 'warning');
-        return;
-      }
       setCurrentStep(2);
     } else if (currentStep === 2) {
+      if (totalAmount <= 0) {
+        showToast('Validation Error', 'Total loan capital amount must be greater than zero.', 'warning');
+        return;
+      }
       if (installmentCount <= 0) {
-        showToast('Validation Error', 'Installment count must be at least 1.', 'warning');
+        showToast('Validation Error', 'Number of EMIs must be at least 1.', 'warning');
         return;
       }
       setCurrentStep(3);
@@ -354,32 +361,27 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
       <div className="relative w-full max-w-4xl bg-[#1A0A13] border border-[#3D1A2C] rounded-2xl shadow-2xl text-slate-100 flex flex-col my-8 overflow-hidden">
         {/* Header */}
         <div className="p-6 border-b border-[#2C1420] flex items-center justify-between bg-[#230D1B]">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#C5A059]/10 border border-[#C5A059]/30 flex items-center justify-center text-[#EED8A1]">
-              <Sparkles className="w-5 h-5 text-[#C5A059]" />
-            </div>
-            <div>
-              <h2 className="font-serif text-lg font-bold text-[#EED8A1] tracking-wide">
-                Create New Loan
-              </h2>
-              <p className="text-xs text-slate-400">
-                Step {currentStep} of 5 —{' '}
-                {currentStep === 1
-                  ? 'Borrower & Amount'
-                  : currentStep === 2
-                  ? 'Payment Terms'
-                  : currentStep === 3
-                  ? 'Funding Companies'
-                  : currentStep === 4
-                  ? 'EMI Schedule'
-                  : 'Review & Save'}
-              </p>
-            </div>
+          <div>
+            <h2 className="font-serif text-lg font-bold text-[#EED8A1] tracking-wide">
+              Create New Loan
+            </h2>
+            <p className="text-xs text-slate-400">
+              Step {currentStep} of 5 —{' '}
+              {currentStep === 1
+                ? 'Borrower Details'
+                : currentStep === 2
+                ? 'Loan Amount & Terms'
+                : currentStep === 3
+                ? 'Funding Companies'
+                : currentStep === 4
+                ? 'EMI Schedule'
+                : 'Review & Save'}
+            </p>
           </div>
 
           <button
             onClick={onClose}
-            className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-white/10 transition-colors"
+            className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-white/10 transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -428,8 +430,8 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
               setNewCustomerName={setNewCustomerName}
               newCustomerPlace={newCustomerPlace}
               setNewCustomerPlace={setNewCustomerPlace}
-              newCustomerPhone={newCustomerPhone}
-              setNewCustomerPhone={setNewCustomerPhone}
+              newCustomerCodeNo={newCustomerCodeNo}
+              setNewCustomerCodeNo={setNewCustomerCodeNo}
               totalAmount={totalAmount}
               setTotalAmount={setTotalAmount}
             />
@@ -437,13 +439,14 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
 
           {currentStep === 2 && (
             <TermsStep
+              totalAmount={totalAmount}
+              setTotalAmount={setTotalAmount}
               frequency={frequency}
               setFrequency={setFrequency}
               installmentCount={installmentCount}
               setInstallmentCount={setInstallmentCount}
               startDate={startDate}
               setStartDate={setStartDate}
-              totalAmount={totalAmount}
             />
           )}
 

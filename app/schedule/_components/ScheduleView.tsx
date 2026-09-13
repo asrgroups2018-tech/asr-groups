@@ -17,7 +17,7 @@ import {
   TrendingUp,
 } from 'lucide-react';
 import { StatusPill } from '@/components/ui/StatusPill';
-import { numberToWordsINR } from '@/lib/utils/formatCurrency';
+import { MoneyDisplay } from '@/components/ui/MoneyDisplay';
 
 export const ScheduleView: React.FC = () => {
   const {
@@ -138,12 +138,13 @@ export const ScheduleView: React.FC = () => {
             </span>
             <CreditCard className="w-4 h-4 text-[#701A35]" />
           </div>
-          <span className="text-2xl font-bold text-slate-900 font-mono block mt-1">
-            ₹{kpiStats.totalCapital.toLocaleString('en-IN')}
-          </span>
-          <span className="text-[11px] text-slate-600 font-medium block leading-snug">
-            {numberToWordsINR(kpiStats.totalCapital)}
-          </span>
+          <div className="mt-1">
+            <MoneyDisplay
+              amount={kpiStats.totalCapital}
+              size="2xl"
+              amountClassName="font-bold text-slate-900 block"
+            />
+          </div>
           <span className="text-[10px] text-slate-400 mt-0.5 block">
             Across {loans.length} client loans
           </span>
@@ -299,12 +300,11 @@ export const ScheduleView: React.FC = () => {
                         <span className="text-[10px] text-slate-400 uppercase font-mono block">
                           Total Amount
                         </span>
-                        <span className="font-mono font-bold text-sm text-slate-900 block">
-                          ₹{loan.totalAmount.toLocaleString('en-IN')}
-                        </span>
-                        <span className="text-[10px] text-slate-500 font-sans block leading-tight">
-                          {numberToWordsINR(loan.totalAmount)}
-                        </span>
+                        <MoneyDisplay
+                          amount={loan.totalAmount}
+                          size="sm"
+                          amountClassName="font-bold text-sm text-slate-900 block text-right"
+                        />
                       </div>
 
                       <div className="min-w-[120px] text-right">
@@ -373,10 +373,11 @@ export const ScheduleView: React.FC = () => {
                                     {row.dueDate}
                                   </td>
                                   <td className="p-2.5 border-r border-[#E6E1D6] text-right font-bold text-slate-900">
-                                    <span className="block">₹{row.amountDue.toLocaleString('en-IN')}</span>
-                                    <span className="text-[10px] text-slate-500 font-sans block leading-tight font-normal">
-                                      {numberToWordsINR(row.amountDue)}
-                                    </span>
+                                    <MoneyDisplay
+                                      amount={row.amountDue}
+                                      size="sm"
+                                      amountClassName="block font-bold text-slate-900 text-right"
+                                    />
                                   </td>
                                   <td className="p-2.5 border-r border-[#E6E1D6] text-center">
                                     <StatusPill status={row.status} />

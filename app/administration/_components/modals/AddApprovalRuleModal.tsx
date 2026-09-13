@@ -164,11 +164,6 @@ export const AddApprovalRuleModal: React.FC<AddApprovalRuleModalProps> = ({
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-800 font-mono font-bold focus:bg-white focus:border-[#701A35] focus:outline-hidden"
                 placeholder="25000"
               />
-              {amountThreshold > 0 && (
-                <p className="text-[11px] text-[#701A35] font-medium mt-1">
-                  {numberToWordsINR(amountThreshold)}
-                </p>
-              )}
             </div>
           </div>
 
@@ -179,7 +174,7 @@ export const AddApprovalRuleModal: React.FC<AddApprovalRuleModalProps> = ({
                   Auto-Approve Below Threshold
                 </span>
                 <p className="text-[11px] text-slate-500">
-                  Requests below ₹{amountThreshold.toLocaleString('en-IN')} ({numberToWordsINR(amountThreshold)}) will auto-pass without manual queue
+                  Requests below <strong title={numberToWordsINR(amountThreshold)} className="underline decoration-dotted cursor-help text-slate-700">₹{amountThreshold.toLocaleString('en-IN')}</strong> will auto-pass without manual queue
                 </p>
               </div>
               <input

@@ -191,17 +191,15 @@ export const ScheduleStep: React.FC<ScheduleStepProps> = ({
             <AlertCircle className="w-5 h-5 text-rose-400 shrink-0" />
           )}
           <div>
-            <span className="font-bold block">
-              Scheduled Total: ₹{scheduledTotal.toLocaleString('en-IN')} vs Loan Total: ₹{totalAmount.toLocaleString('en-IN')}
-            </span>
-            <span className="text-[10px] opacity-75 block">
-              ({numberToWordsINR(scheduledTotal)})
+            <span className="font-bold block flex items-center gap-1.5">
+              <span>Scheduled Total: <strong title={numberToWordsINR(scheduledTotal)} className="underline decoration-dotted cursor-help">₹{scheduledTotal.toLocaleString('en-IN')}</strong></span>
+              <span>vs Loan Total: <strong title={numberToWordsINR(totalAmount)} className="underline decoration-dotted cursor-help">₹{totalAmount.toLocaleString('en-IN')}</strong></span>
             </span>
             <span className="text-[11px] opacity-80 mt-0.5 block font-sans">
               {isStep4Valid
                 ? 'All installments and company splits are perfectly balanced.'
                 : !isScheduledTotalBalanced
-                ? `Difference of ₹${Math.abs(totalAmount - scheduledTotal).toLocaleString('en-IN')} (${numberToWordsINR(Math.abs(totalAmount - scheduledTotal))}) between installments and loan capital.`
+                ? `Difference of ₹${Math.abs(totalAmount - scheduledTotal).toLocaleString('en-IN')} between installments and loan capital.`
                 : 'Some individual row company splits do not sum to their installment amount.'}
             </span>
           </div>

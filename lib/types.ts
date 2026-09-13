@@ -32,7 +32,7 @@ export interface User {
   name: string;
   username?: string; // Login username for non-admin users
   email: string;
-  phone: string;
+  phone?: string;
   tempPassword?: string;
   loginMethod?: 'email' | 'username';
   avatar?: string;
@@ -154,7 +154,7 @@ export interface CompanyProfile {
   currencySymbol: string;
   financialYearStart: string;
   supportEmail: string;
-  supportPhone: string;
+  supportPhone?: string;
   tradeName?: string;
   website?: string;
 }
@@ -218,7 +218,8 @@ export interface Customer {
   id: string; // e.g. "CUST-1001"
   name: string; // Client / Borrower name (e.g. "ABI ASSOCIATES")
   place: string; // City / Branch (e.g. "CHENNAI", "CBE")
-  phone: string;
+  codeNo?: string; // Optional code number (e.g. "101", "CUST-1001")
+  phone?: string;
   createdAt: string;
   totalBorrowed?: number; // Cumulative ₹ borrowed across all loans
   totalRepaid?: number; // Total ₹ successfully repaid

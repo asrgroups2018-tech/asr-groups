@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { DataTable, ColumnDef } from '@/components/ui/DataTable';
 import { AddCompanyModal } from './AddCompanyModal';
-import { numberToWordsINR } from '@/lib/utils/formatCurrency';
+import { MoneyDisplay } from '@/components/ui/MoneyDisplay';
 
 export const CompaniesListView: React.FC = () => {
   const {
@@ -155,14 +155,11 @@ export const CompaniesListView: React.FC = () => {
       align: 'right',
       accessor: (c) => c.totalFunded || 0,
       render: (c) => (
-        <div>
-          <span className="font-mono text-xs font-bold text-slate-900 block">
-            ₹{(c.totalFunded || 0).toLocaleString('en-IN')}
-          </span>
-          <span className="text-[10px] text-slate-500 font-sans block leading-tight">
-            {numberToWordsINR(c.totalFunded || 0)}
-          </span>
-        </div>
+        <MoneyDisplay
+          amount={c.totalFunded || 0}
+          size="sm"
+          amountClassName="text-slate-900 font-bold block text-right"
+        />
       ),
     },
     {
@@ -229,12 +226,13 @@ export const CompaniesListView: React.FC = () => {
           <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider font-mono">
             Total Capital Funded
           </span>
-          <span className="text-xl font-bold text-slate-900 font-mono block mt-1">
-            ₹{totalFundedSum.toLocaleString('en-IN')}
-          </span>
-          <span className="text-[11px] text-slate-600 font-medium block leading-snug">
-            {numberToWordsINR(totalFundedSum)}
-          </span>
+          <div className="mt-1">
+            <MoneyDisplay
+              amount={totalFundedSum}
+              size="xl"
+              amountClassName="text-slate-900 font-bold block"
+            />
+          </div>
           <span className="text-[10px] text-slate-400 mt-0.5 block">Disbursed across all loans</span>
         </div>
 

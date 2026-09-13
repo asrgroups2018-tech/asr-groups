@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { RoleBadge } from '@/components/ui/RoleBadge';
 import { AddApprovalRuleModal } from './modals/AddApprovalRuleModal';
-import { numberToWordsINR } from '@/lib/utils/formatCurrency';
+import { MoneyDisplay } from '@/components/ui/MoneyDisplay';
 import { DataTable, ColumnDef } from '@/components/ui/DataTable';
 
 export const ApprovalRulesTab: React.FC = () => {
@@ -92,14 +92,11 @@ export const ApprovalRulesTab: React.FC = () => {
       render: (r) => (
         <div className="font-mono text-xs tabular-nums">
           {r.amountThreshold > 0 ? (
-            <>
-              <span className="font-bold text-slate-900 block">
-                ₹{r.amountThreshold.toLocaleString('en-IN')}
-              </span>
-              <span className="text-[10px] text-slate-500 font-sans block leading-tight">
-                {numberToWordsINR(r.amountThreshold)}
-              </span>
-            </>
+            <MoneyDisplay
+              amount={r.amountThreshold}
+              size="sm"
+              amountClassName="font-bold text-slate-900 block"
+            />
           ) : (
             <span className="text-slate-400 italic">No cap</span>
           )}

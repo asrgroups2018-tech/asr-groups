@@ -12,7 +12,6 @@ import {
   X,
   AlertTriangle,
   Lock,
-  Smartphone,
   Trash2,
   KeyRound,
   RotateCcw,
@@ -62,7 +61,6 @@ export const UserDetailsView: React.FC = () => {
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [profileName, setProfileName] = useState(user.name);
   const [profileEmail, setProfileEmail] = useState(user.email);
-  const [profilePhone, setProfilePhone] = useState(user.phone);
   const [profileDept, setProfileDept] = useState(user.department);
   const [profileDesignation, setProfileDesignation] = useState(user.designation);
   const [profileAddress, setProfileAddress] = useState(user.address || '');
@@ -143,7 +141,6 @@ export const UserDetailsView: React.FC = () => {
     updateUserProfile(user.id, {
       name: profileName,
       email: profileEmail,
-      phone: profilePhone,
       department: profileDept,
       designation: profileDesignation,
       address: profileAddress,
@@ -314,15 +311,6 @@ export const UserDetailsView: React.FC = () => {
                       />
                     </div>
                     <div>
-                      <label className="block font-semibold text-slate-700 mb-1">Phone Number</label>
-                      <input
-                        type="text"
-                        value={profilePhone}
-                        onChange={(e) => setProfilePhone(e.target.value)}
-                        className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-1 focus:ring-[#701A35]"
-                      />
-                    </div>
-                    <div>
                       <label className="block font-semibold text-slate-700 mb-1">Department</label>
                       <input
                         type="text"
@@ -413,10 +401,6 @@ export const UserDetailsView: React.FC = () => {
                       <div>
                         <span className="text-slate-400 block text-[11px]">Email Address</span>
                         <span className="text-slate-900 font-medium block mt-0.5">{user.email}</span>
-                      </div>
-                      <div>
-                        <span className="text-slate-400 block text-[11px]">Phone Number</span>
-                        <span className="text-slate-900 font-mono block mt-0.5">{user.phone}</span>
                       </div>
                       <div>
                         <span className="text-slate-400 block text-[11px]">Login Method</span>
@@ -657,7 +641,6 @@ export const UserDetailsView: React.FC = () => {
                 {user.isCustomer ? 'Customer User' : `Internal Staff · ${user.designation || 'Staff'}`}
               </p>
               <p className="text-xs text-slate-600 mt-2 break-all">{user.email}</p>
-              <p className="text-xs text-slate-500 font-mono mt-0.5">{user.phone}</p>
             </div>
 
             {/* Status Pill */}

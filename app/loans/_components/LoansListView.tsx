@@ -30,7 +30,7 @@ import { NewLoanModal } from '@/app/loans/_components/new-loan/NewLoanModal';
 import { EditLoanExcelModal } from './EditLoanExcelModal';
 import { ImportReviewModal } from './ImportReviewModal';
 import { DateRangePicker, DateRangeValue, getCurrentMonthRange } from '@/components/ui/DateRangePicker';
-import { numberToWordsINR } from '@/lib/utils/formatCurrency';
+import { MoneyDisplay } from '@/components/ui/MoneyDisplay';
 
 function parseToDate(dStr: string | null | undefined): Date | null {
   if (!dStr) return null;
@@ -84,7 +84,7 @@ export const LoansListView: React.FC = () => {
   const [dateRange, setDateRange] = useState<DateRangeValue>({
     startDate: null,
     endDate: null,
-    presetLabel: undefined,
+    presetLabel: 'all',
   });
 
   // Sorting state
@@ -342,12 +342,13 @@ export const LoansListView: React.FC = () => {
           <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider font-mono">
             {dateRange.startDate ? 'Filtered Loan Amount' : 'Total Portfolio Amount'}
           </span>
-          <span className="text-xl font-bold text-slate-900 font-mono block mt-1">
-            ₹{totalPortfolioAmount.toLocaleString('en-IN')}
-          </span>
-          <span className="text-[11px] text-slate-600 font-medium block leading-snug">
-            {numberToWordsINR(totalPortfolioAmount)}
-          </span>
+          <div className="mt-1">
+            <MoneyDisplay
+              amount={totalPortfolioAmount}
+              size="xl"
+              amountClassName="text-slate-900 font-bold block"
+            />
+          </div>
           <span className="text-[10px] text-slate-400 mt-0.5 block">
             Across {filteredAndSortedLoans.length} loan facilities
           </span>
@@ -357,12 +358,13 @@ export const LoansListView: React.FC = () => {
           <span className="text-[11px] font-bold text-emerald-800 uppercase tracking-wider font-mono">
             Total Amount Collected
           </span>
-          <span className="text-xl font-bold text-emerald-700 font-mono block mt-1">
-            ₹{totalCollectedAmount.toLocaleString('en-IN')}
-          </span>
-          <span className="text-[11px] text-emerald-800 font-medium block leading-snug">
-            {numberToWordsINR(totalCollectedAmount)}
-          </span>
+          <div className="mt-1">
+            <MoneyDisplay
+              amount={totalCollectedAmount}
+              size="xl"
+              amountClassName="text-emerald-700 font-bold block"
+            />
+          </div>
           <span className="text-[10px] text-emerald-600 mt-0.5 block">
             {totalPortfolioAmount > 0 ? ((totalCollectedAmount / totalPortfolioAmount) * 100).toFixed(1) : 0}% recovery rate
           </span>
@@ -372,12 +374,13 @@ export const LoansListView: React.FC = () => {
           <span className="text-[11px] font-bold text-[#701A35] uppercase tracking-wider font-mono">
             Total Balance Due
           </span>
-          <span className="text-xl font-bold text-[#701A35] font-mono block mt-1">
-            ₹{totalOutstandingAmount.toLocaleString('en-IN')}
-          </span>
-          <span className="text-[11px] text-[#701A35] font-medium block leading-snug">
-            {numberToWordsINR(totalOutstandingAmount)}
-          </span>
+          <div className="mt-1">
+            <MoneyDisplay
+              amount={totalOutstandingAmount}
+              size="xl"
+              amountClassName="text-[#701A35] font-bold block"
+            />
+          </div>
           <span className="text-[10px] text-amber-800 mt-0.5 block">
             Pending collection
           </span>
@@ -825,12 +828,11 @@ export const LoansListView: React.FC = () => {
 
                     {/* Total Loan Amount */}
                     <div className="col-span-3 sm:col-span-2 text-right font-mono">
-                      <span className="font-bold text-slate-900 text-xs block">
-                        ₹{loan.totalAmount.toLocaleString('en-IN')}
-                      </span>
-                      <span className="text-[10px] text-slate-500 font-sans block leading-tight">
-                        {numberToWordsINR(loan.totalAmount)}
-                      </span>
+                      <MoneyDisplay
+                        amount={loan.totalAmount}
+                        size="sm"
+                        amountClassName="font-bold text-slate-900 text-xs block text-right"
+                      />
                       <span className="text-[10px] text-slate-400 block mt-0.5">
                         ₹{(loan.totalCollected || 0).toLocaleString('en-IN')} collected
                       </span>
@@ -995,12 +997,11 @@ export const LoansListView: React.FC = () => {
                                     </div>
                                   </td>
                                   <td className="p-2.5 text-right font-mono">
-                                    <span className="font-bold text-slate-900 block">
-                                      ₹{inst.amountDue.toLocaleString('en-IN')}
-                                    </span>
-                                    <span className="text-[10px] text-slate-500 font-sans block leading-tight">
-                                      {numberToWordsINR(inst.amountDue)}
-                                    </span>
+                                    <MoneyDisplay
+                                      amount={inst.amountDue}
+                                      size="sm"
+                                      amountClassName="font-bold text-slate-900 block text-right"
+                                    />
                                   </td>
                                   <td className="p-2.5 text-center">
                                     <StatusPill status={inst.status} size="sm" />

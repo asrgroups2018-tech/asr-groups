@@ -4,7 +4,6 @@ import React from 'react';
 import { useApp } from '@/lib/store';
 import {
   Users,
-  Phone,
   MapPin,
   ArrowLeft,
   ArrowUpRight,
@@ -12,7 +11,7 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import { StatusPill } from '@/components/ui/StatusPill';
-import { numberToWordsINR } from '@/lib/utils/formatCurrency';
+import { MoneyDisplay } from '@/components/ui/MoneyDisplay';
 
 export const CustomerDetailsView: React.FC = () => {
   const {
@@ -30,7 +29,7 @@ export const CustomerDetailsView: React.FC = () => {
     return (
       <div className="p-8 text-center bg-white rounded-2xl border border-[#E6E1D6]">
         <Users className="w-10 h-10 text-slate-300 mx-auto mb-2" />
-        <h3 className="text-sm font-bold text-slate-800">Borrower Record Not Found</h3>
+        <h3 className="text-sm font-bold text-slate-800">Customer Not Found</h3>
         <button
           onClick={() => setSelectedCustomerId(null)}
           className="mt-3 px-4 py-1.5 text-xs font-bold text-white bg-[#701A35] rounded-xl"
@@ -42,15 +41,13 @@ export const CustomerDetailsView: React.FC = () => {
   }
 
   // All loans for this customer
-  const customerLoans = loans.filter((l) =>
-    l.customerId === customer.id || l.customerName?.toLowerCase() === customer.name?.toLowerCase()
-  );
+  const customerLoans = loans.filter((l) => l.customerId === customer.id);
 
-  const totalBorrowed = customerLoans.reduce((sum, l) => sum + (l.totalAmount || 0), 0);
+  const totalBorrowed = customerLoans.reduce((sum, l) => sum + (l.totalAmount || 0), 0) || customer.totalBorrowed || 0;
 
   return (
-    <div className="space-y-5 animate-in fade-in duration-200">
-      {/* ─── Header & Back Button ─── */}
+    <div className="space-y-6 animate-in fade-in duration-200">
+      {/* ─── Top Header & Back Button ─── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-5 rounded-2xl border border-[#E6E1D6] shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
         <div className="flex items-center gap-3">
           <button
@@ -70,13 +67,15 @@ export const CustomerDetailsView: React.FC = () => {
               </span>
             </div>
             <p className="text-xs text-slate-500 mt-0.5">
-              Borrower / Client · Place: <span className="font-semibold text-slate-700">{customer.place || 'N/A'}</span>
+              Client Profile · Location: <strong className="text-slate-700">{customer.place || 'CHENNAI'}</strong>
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
-          <StatusPill status="Active" size="md" />
+          <span className="text-xs font-mono font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-full">
+            Active Client Account
+          </span>
         </div>
       </div>
 
@@ -86,12 +85,13 @@ export const CustomerDetailsView: React.FC = () => {
           <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 font-mono block">
             Total Loan Portfolio
           </span>
-          <span className="text-xl font-bold text-slate-900 font-mono block mt-1">
-            ₹{totalBorrowed.toLocaleString('en-IN')}
-          </span>
-          <span className="text-[11px] text-slate-600 font-medium block leading-snug">
-            {numberToWordsINR(totalBorrowed)}
-          </span>
+          <div className="mt-1">
+            <MoneyDisplay
+              amount={totalBorrowed}
+              size="xl"
+              amountClassName="text-slate-900 font-bold block"
+            />
+          </div>
           <span className="text-[10px] text-slate-400 mt-0.5 block">Total borrowed amount</span>
         </div>
 
@@ -128,14 +128,6 @@ export const CustomerDetailsView: React.FC = () => {
             <div>
               <span className="text-slate-400 text-[11px] block">Client Name</span>
               <span className="text-slate-900 font-semibold block mt-0.5">{customer.name}</span>
-            </div>
-
-            <div>
-              <span className="text-slate-400 text-[11px] block">Phone Number</span>
-              <div className="flex items-center gap-1.5 mt-0.5 font-mono text-slate-800">
-                <Phone className="w-3.5 h-3.5 text-slate-400" />
-                <span>{customer.phone || '—'}</span>
-              </div>
             </div>
 
             <div>
@@ -204,12 +196,11 @@ export const CustomerDetailsView: React.FC = () => {
                         {l.startDate}
                       </td>
                       <td className="p-3 font-mono text-right">
-                        <span className="font-bold text-slate-900 block">
-                          ₹{l.totalAmount.toLocaleString('en-IN')}
-                        </span>
-                        <span className="text-[10px] text-slate-500 font-sans block leading-tight">
-                          {numberToWordsINR(l.totalAmount)}
-                        </span>
+                        <MoneyDisplay
+                          amount={l.totalAmount}
+                          size="sm"
+                          amountClassName="text-slate-900 font-bold block text-right"
+                        />
                       </td>
                       <td className="p-3 text-center font-mono font-bold text-slate-700">
                         {l.installmentCount}

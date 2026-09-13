@@ -30,7 +30,6 @@ export const CreateUserModal: React.FC<CreateUserModalProps> = ({ isOpen, onClos
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [phone, setPhone] = useState('');
   const [department, setDepartment] = useState('Operations & Finance');
   const [designation, setDesignation] = useState('Operations Officer');
   const [status, setStatus] = useState<UserStatus>('Active');
@@ -123,7 +122,6 @@ export const CreateUserModal: React.FC<CreateUserModalProps> = ({ isOpen, onClos
       email: effectiveEmail,
       tempPassword: isAdminRole ? undefined : finalPassword,
       loginMethod: isAdminRole ? 'email' : 'username',
-      phone: phone.trim() || '+91 98000 00000',
       initials,
       assignedRoleIds: selectedRoleIds,
       primaryRoleId: selectedRoleIds.includes(primaryRoleId) ? primaryRoleId : selectedRoleIds[0],
@@ -375,34 +373,20 @@ export const CreateUserModal: React.FC<CreateUserModalProps> = ({ isOpen, onClos
                 </div>
               )}
 
-              {/* Phone & Status */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                    Phone Number
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="+91 98400 12345"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    className="w-full px-3.5 py-2 text-xs font-mono rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#701A35]"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                    Account Status
-                  </label>
-                  <select
-                    value={status}
-                    onChange={(e) => setStatus(e.target.value as UserStatus)}
-                    className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#701A35] cursor-pointer"
-                  >
-                    <option value="Active">Active (Ready for access)</option>
-                    <option value="Pending">Pending (KYC pending)</option>
-                    <option value="Suspended">Suspended (Locked)</option>
-                  </select>
-                </div>
+              {/* Account Status */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                  Account Status
+                </label>
+                <select
+                  value={status}
+                  onChange={(e) => setStatus(e.target.value as UserStatus)}
+                  className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#701A35] cursor-pointer"
+                >
+                  <option value="Active">Active (Ready for access)</option>
+                  <option value="Pending">Pending (KYC pending)</option>
+                  <option value="Suspended">Suspended (Locked)</option>
+                </select>
               </div>
 
               {/* Department & Designation */}

@@ -35,7 +35,7 @@ function ERPContent() {
       />
 
       {/* 2. Main Right Scrollable Content Column */}
-      <div className="flex-1 flex flex-col h-screen min-w-0 overflow-y-auto">
+      <div className="flex-1 flex flex-col h-screen min-w-0 overflow-y-auto overflow-x-hidden">
         {/* Top Header (Sticky inside right pane) */}
         <TopNav onOpenMobileMenu={() => setIsMobileSidebarOpen(true)} />
 

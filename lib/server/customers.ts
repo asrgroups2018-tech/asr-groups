@@ -89,19 +89,22 @@ export async function getCustomerById(id: string): Promise<Customer | null> {
   return list.find((c) => c.id === id || c.name.toLowerCase() === id.toLowerCase()) || null;
 }
 
-export async function createCustomer(data: { name: string; place?: string; phone?: string }): Promise<Customer> {
+export async function createCustomer(data: { name: string; place?: string; codeNo?: string; phone?: string }): Promise<Customer> {
   await ensureDbInitialized();
   const client = getTursoClient();
 
   const countRes = await client.execute('SELECT COUNT(*) as count FROM customers');
   const total = Number(countRes.rows[0].count);
-  const newId = `CUST-${1000 + total + 1}`;
+  const newId = data.codeNo?.trim()
+    ? (data.codeNo.trim().startsWith('CUST-') ? data.codeNo.trim() : `CUST-${data.codeNo.trim()}`)
+    : `CUST-${1000 + total + 1}`;
   const now = new Date().toISOString().slice(0, 10);
 
   const newCustomer: Customer = {
     id: newId,
     name: data.name.trim(),
     place: data.place?.trim() || 'CHENNAI',
+    codeNo: data.codeNo?.trim() || newId,
     phone: data.phone?.trim() || '+91 98400 00000',
     createdAt: now,
     totalBorrowed: 0,
@@ -113,7 +116,7 @@ export async function createCustomer(data: { name: string; place?: string; phone
 
   await client.execute({
     sql: 'INSERT INTO customers (id, name, place, phone, created_at) VALUES (?, ?, ?, ?, ?)',
-    args: [newCustomer.id, newCustomer.name, newCustomer.place, newCustomer.phone, newCustomer.createdAt],
+    args: [newCustomer.id, newCustomer.name, newCustomer.place, newCustomer.phone || null, newCustomer.createdAt],
   });
 
   await logAudit({
@@ -141,7 +144,7 @@ export async function updateCustomer(id: string, updates: Partial<Customer>): Pr
 
   await client.execute({
     sql: 'UPDATE customers SET name = ?, place = ?, phone = ? WHERE id = ?',
-    args: [updated.name, updated.place, updated.phone, id],
+    args: [updated.name, updated.place, updated.phone || null, id],
   });
 
   return updated;

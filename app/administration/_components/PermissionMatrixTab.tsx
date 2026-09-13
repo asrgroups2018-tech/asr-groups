@@ -14,7 +14,6 @@ import {
   Save,
   AlertTriangle,
   HelpCircle,
-  Smartphone,
   Layers,
   ChevronDown,
   ChevronRight,

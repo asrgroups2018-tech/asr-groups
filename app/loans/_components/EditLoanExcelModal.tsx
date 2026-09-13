@@ -3,7 +3,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useApp } from '@/lib/store';
 import { Loan, Installment, Company } from '@/lib/types';
-import { numberToWordsINR } from '@/lib/utils/formatCurrency';
+import { MoneyDisplay } from '@/components/ui/MoneyDisplay';
 import {
   FileSpreadsheet,
   X,
@@ -403,8 +403,9 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
                 <span className="font-mono text-xs font-bold px-2.5 py-0.5 rounded bg-[#701A35] text-white">
                   {loan.id}
                 </span>
-                <span className="font-mono text-xs font-bold px-3 py-0.5 rounded-full bg-amber-100 text-amber-950 border border-amber-300">
-                  Total Loan: ₹{totalLoanAmount.toLocaleString('en-IN')} ({numberToWordsINR(totalLoanAmount)})
+                <span className="font-mono text-xs font-bold px-3 py-0.5 rounded-full bg-amber-100 text-amber-950 border border-amber-300 flex items-center gap-1">
+                  <span>Total Loan:</span>
+                  <MoneyDisplay amount={totalLoanAmount} size="xs" amountClassName="text-amber-950 font-bold" />
                 </span>
               </div>
               <p className="text-[11px] text-slate-500 font-mono mt-0.5">

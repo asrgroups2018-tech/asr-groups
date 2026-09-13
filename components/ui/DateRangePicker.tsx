@@ -28,6 +28,7 @@ const MONTH_NAMES = [
 ];
 
 const PRESETS = [
+  { id: 'all', label: 'All Dates (No Filter)' },
   { id: 'today', label: 'Today' },
   { id: 'yesterday', label: 'Yesterday' },
   { id: 'tomorrow', label: 'Tomorrow' },
@@ -90,13 +91,21 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
     if (value.endDate) return new Date(value.endDate);
     return getCurrentMonthRange().end;
   });
-  const [activePreset, setActivePreset] = useState<string>(value.presetLabel || 'curr_month');
+  const [activePreset, setActivePreset] = useState<string>(() => {
+    if (value.presetLabel) return value.presetLabel;
+    if (!value.startDate && !value.endDate) return 'all';
+    return 'curr_month';
+  });
 
   // Sync internal state when external value changes
   useEffect(() => {
     if (value.startDate) setTempStart(new Date(value.startDate));
     if (value.endDate) setTempEnd(new Date(value.endDate));
-    if (value.presetLabel) setActivePreset(value.presetLabel);
+    if (value.presetLabel) {
+      setActivePreset(value.presetLabel);
+    } else if (!value.startDate && !value.endDate) {
+      setActivePreset('all');
+    }
   }, [value.startDate, value.endDate, value.presetLabel]);
 
   // Click outside listener
@@ -122,6 +131,15 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
     let e = new Date(tempEnd);
 
     switch (presetId) {
+      case 'all': {
+        setActivePreset('all');
+        onChange({
+          startDate: null,
+          endDate: null,
+          presetLabel: 'all',
+        });
+        return;
+      }
       case 'today': {
         s = new Date(now.getFullYear(), now.getMonth(), now.getDate());
         e = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -235,19 +253,28 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
   };
 
   const handleDone = () => {
-    onChange({
-      startDate: toIsoDate(tempStart),
-      endDate: toIsoDate(tempEnd),
-      presetLabel: activePreset,
-    });
+    if (activePreset === 'all') {
+      onChange({
+        startDate: null,
+        endDate: null,
+        presetLabel: 'all',
+      });
+    } else {
+      onChange({
+        startDate: toIsoDate(tempStart),
+        endDate: toIsoDate(tempEnd),
+        presetLabel: activePreset,
+      });
+    }
     setIsOpen(false);
   };
 
   const handleClear = () => {
+    setActivePreset('all');
     onChange({
       startDate: null,
       endDate: null,
-      presetLabel: undefined,
+      presetLabel: 'all',
     });
     setIsOpen(false);
   };

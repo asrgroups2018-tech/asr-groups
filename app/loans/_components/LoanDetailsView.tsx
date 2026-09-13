@@ -17,7 +17,7 @@ import {
 import { StatusPill } from '@/components/ui/StatusPill';
 import { Installment } from '@/lib/types';
 import { EditLoanExcelModal } from './EditLoanExcelModal';
-import { numberToWordsINR } from '@/lib/utils/formatCurrency';
+import { MoneyDisplay } from '@/components/ui/MoneyDisplay';
 
 const COMPANY_COLORS = [
   '#701A35',
@@ -89,12 +89,11 @@ export const LoanDetailsView: React.FC = () => {
                 {loan.customerName || loan.id}
               </h1>
               <div className="flex items-center gap-1.5 flex-wrap">
-                <span className="text-xs font-mono font-bold px-2.5 py-0.5 rounded-full bg-[#701A35]/10 text-[#701A35] border border-[#701A35]/20">
-                  ₹{loan.totalAmount.toLocaleString('en-IN')}
-                </span>
-                <span className="text-[11px] text-slate-500 font-medium">
-                  ({numberToWordsINR(loan.totalAmount)})
-                </span>
+                <MoneyDisplay
+                  amount={loan.totalAmount}
+                  size="sm"
+                  amountClassName="text-xs font-mono font-bold px-2.5 py-0.5 rounded-full bg-[#701A35]/10 text-[#701A35] border border-[#701A35]/20 inline-block"
+                />
               </div>
             </div>
             <p className="text-xs text-slate-500 mt-0.5 font-mono">
@@ -136,12 +135,13 @@ export const LoanDetailsView: React.FC = () => {
           <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 font-mono block">
             Total Loan Amount
           </span>
-          <span className="text-xl font-bold text-slate-900 font-mono block mt-1">
-            ₹{loan.totalAmount.toLocaleString('en-IN')}
-          </span>
-          <span className="text-[11px] text-slate-600 font-medium block leading-snug">
-            {numberToWordsINR(loan.totalAmount)}
-          </span>
+          <div className="mt-1">
+            <MoneyDisplay
+              amount={loan.totalAmount}
+              size="xl"
+              amountClassName="text-slate-900 font-bold block"
+            />
+          </div>
           <span className="text-[10px] text-slate-400 mt-0.5 block">
             Funded across {splits.length} partner companies
           </span>
@@ -154,9 +154,13 @@ export const LoanDetailsView: React.FC = () => {
           <span className="text-xl font-bold text-[#701A35] font-mono block mt-1">
             {totalPaidInstallments} / {totalInstallmentsCount} Settled
           </span>
-          <span className="text-[11px] text-amber-900 font-medium block leading-snug">
-            ₹{(loan.totalCollected ?? 0).toLocaleString('en-IN')} ({numberToWordsINR(loan.totalCollected ?? 0)})
-          </span>
+          <div className="mt-0.5">
+            <MoneyDisplay
+              amount={loan.totalCollected ?? 0}
+              size="sm"
+              amountClassName="text-amber-900 font-medium block"
+            />
+          </div>
           <span className="text-[10px] text-amber-700 mt-0.5 block">
             {progressPercentage}% of EMIs settled
           </span>
@@ -278,8 +282,11 @@ export const LoanDetailsView: React.FC = () => {
                   <div className="flex items-center justify-between text-[11px] text-slate-500 font-mono">
                     <span>Amount Funded:</span>
                     <div className="text-right">
-                      <strong className="text-slate-900 block">₹{comp.splitAmount.toLocaleString('en-IN')}</strong>
-                      <span className="text-[10px] text-slate-500 font-sans block">{numberToWordsINR(comp.splitAmount)}</span>
+                      <MoneyDisplay
+                        amount={comp.splitAmount}
+                        size="sm"
+                        amountClassName="text-slate-900 font-bold block"
+                      />
                     </div>
                   </div>
                 </div>
@@ -341,10 +348,11 @@ export const LoanDetailsView: React.FC = () => {
                         {row.dueDate}
                       </td>
                       <td className="p-2.5 border-r border-[#E6E1D6] text-right font-bold text-slate-900">
-                        <span className="block">₹{row.amountDue.toLocaleString('en-IN')}</span>
-                        <span className="text-[10px] text-slate-500 font-sans block leading-tight font-normal">
-                          {numberToWordsINR(row.amountDue)}
-                        </span>
+                        <MoneyDisplay
+                          amount={row.amountDue}
+                          size="sm"
+                          amountClassName="block font-bold text-slate-900 text-right"
+                        />
                       </td>
                       <td className="p-2.5 border-r border-[#E6E1D6] text-center">
                         <StatusPill status={row.status} size="sm" />

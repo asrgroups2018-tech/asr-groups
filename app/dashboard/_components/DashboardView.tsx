@@ -16,11 +16,11 @@ import {
   ChevronRight,
   Sparkles,
   PieChart as PieIcon,
-  FileSpreadsheet,
   Info,
   Inbox,
 } from 'lucide-react';
 import { StatusPill } from '@/components/ui/StatusPill';
+import { MoneyDisplay } from '@/components/ui/MoneyDisplay';
 import { numberToWordsINR } from '@/lib/utils/formatCurrency';
 
 // Helper to parse dates formatted as '1-Jul-2026', '2026-07-01', '13-Sep-2026', etc.
@@ -372,7 +372,7 @@ export const DashboardView: React.FC = () => {
       </div>
 
       {/* ─── Hero Metric Banner: ALL-TIME PORTFOLIO (NEVER MOVES WITH TIME FILTER) ─── */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#1A0A13] via-[#2A1020] to-[#14060E] border border-[#3D1A2C] p-6 sm:p-8 text-white shadow-xl">
+      <div className="relative rounded-2xl bg-gradient-to-br from-[#1A0A13] via-[#2A1020] to-[#14060E] border border-[#3D1A2C] p-6 sm:p-8 text-white shadow-xl">
         <div className="absolute right-0 top-0 -mt-8 -mr-8 w-64 h-64 rounded-full bg-[#C5A059]/10 blur-3xl pointer-events-none" />
 
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -388,12 +388,11 @@ export const DashboardView: React.FC = () => {
                 <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block font-mono">
                   Current Outstanding Due
                 </span>
-                <span className="text-2xl sm:text-4xl font-mono font-bold text-[#EED8A1] tracking-tight block">
-                  ₹{portfolioMetrics.totalOutstanding.toLocaleString('en-IN')}
-                </span>
-                <span className="text-[11px] text-[#EED8A1]/85 font-medium block leading-snug">
-                  {numberToWordsINR(portfolioMetrics.totalOutstanding)}
-                </span>
+                <MoneyDisplay
+                  amount={portfolioMetrics.totalOutstanding}
+                  size="3xl"
+                  amountClassName="text-[#EED8A1] tracking-tight block"
+                />
                 <span className="text-[10px] text-slate-400 block pt-0.5">
                   Capital remaining to be collected
                 </span>
@@ -404,12 +403,11 @@ export const DashboardView: React.FC = () => {
                 <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block font-mono">
                   Total Capital Deployed
                 </span>
-                <span className="text-xl sm:text-2xl font-mono font-bold text-white tracking-tight block">
-                  ₹{portfolioMetrics.totalDeployed.toLocaleString('en-IN')}
-                </span>
-                <span className="text-[11px] text-slate-300 font-medium block leading-snug">
-                  {numberToWordsINR(portfolioMetrics.totalDeployed)}
-                </span>
+                <MoneyDisplay
+                  amount={portfolioMetrics.totalDeployed}
+                  size="2xl"
+                  amountClassName="text-white tracking-tight block"
+                />
                 <span className="text-[10px] text-slate-400 block pt-0.5">
                   Principal across {portfolioMetrics.totalLoansCount} borrower accounts
                 </span>
@@ -421,38 +419,20 @@ export const DashboardView: React.FC = () => {
                   Total Capital Recovered
                 </span>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-xl sm:text-2xl font-mono font-bold text-emerald-400 tracking-tight">
-                    ₹{portfolioMetrics.totalRecovered.toLocaleString('en-IN')}
-                  </span>
+                  <MoneyDisplay
+                    amount={portfolioMetrics.totalRecovered}
+                    size="2xl"
+                    amountClassName="text-emerald-400 tracking-tight"
+                  />
                   <span className="text-[10px] text-emerald-300 bg-emerald-950/60 border border-emerald-500/30 px-1.5 py-0.5 rounded font-mono">
                     {portfolioMetrics.collectionRate}%
                   </span>
                 </div>
-                <span className="text-[11px] text-emerald-300/90 font-medium block leading-snug">
-                  {numberToWordsINR(portfolioMetrics.totalRecovered)}
-                </span>
                 <span className="text-[10px] text-slate-400 block pt-0.5">
                   Confirmed settled installment receipts
                 </span>
               </div>
             </div>
-          </div>
-
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 shrink-0 pt-2 md:pt-0">
-            <button
-              onClick={() => setActiveMainTab('historical-sheet')}
-              className="px-4 py-2.5 bg-[#C5A059] hover:bg-[#D4AF37] text-slate-950 font-bold text-xs rounded-xl shadow-md flex items-center justify-center gap-1.5 transition-all cursor-pointer"
-            >
-              <FileSpreadsheet className="w-4 h-4" />
-              <span>Historical Sheet Grid</span>
-            </button>
-            <button
-              onClick={() => setActiveMainTab('loans')}
-              className="px-4 py-2.5 bg-white/10 hover:bg-white/15 text-white font-semibold text-xs rounded-xl border border-white/20 flex items-center justify-center gap-1.5 transition-all cursor-pointer"
-            >
-              <span>View All Loans</span>
-              <ChevronRight className="w-4 h-4" />
-            </button>
           </div>
         </div>
       </div>
@@ -508,12 +488,11 @@ export const DashboardView: React.FC = () => {
             </div>
           </div>
           <div className="mt-3">
-            <span className="text-2xl font-bold font-mono text-emerald-700 block">
-              ₹{periodData.periodCollections.toLocaleString('en-IN')}
-            </span>
-            <span className="text-[11px] font-medium text-emerald-800 mt-0.5 block leading-snug">
-              {numberToWordsINR(periodData.periodCollections)}
-            </span>
+            <MoneyDisplay
+              amount={periodData.periodCollections}
+              size="2xl"
+              amountClassName="text-emerald-700 block"
+            />
             <span className="text-[11px] text-emerald-600 mt-1 block">
               Direct settlements in {filterLabel}
             </span>
@@ -531,12 +510,11 @@ export const DashboardView: React.FC = () => {
             </div>
           </div>
           <div className="mt-3">
-            <span className="text-2xl font-bold font-mono text-amber-800 block">
-              ₹{periodData.periodUnpaidPastDue.toLocaleString('en-IN')}
-            </span>
-            <span className="text-[11px] font-medium text-amber-900 mt-0.5 block leading-snug">
-              {numberToWordsINR(periodData.periodUnpaidPastDue)}
-            </span>
+            <MoneyDisplay
+              amount={periodData.periodUnpaidPastDue}
+              size="2xl"
+              amountClassName="text-amber-800 block"
+            />
             <span className="text-[11px] text-amber-700 mt-1 block">
               {periodData.periodUnpaidCount} Pending EMIs
             </span>
@@ -554,12 +532,11 @@ export const DashboardView: React.FC = () => {
             </div>
           </div>
           <div className="mt-3">
-            <span className="text-2xl font-bold font-mono text-rose-700 block">
-              ₹{periodData.periodBounced.toLocaleString('en-IN')}
-            </span>
-            <span className="text-[11px] font-medium text-rose-800 mt-0.5 block leading-snug">
-              {numberToWordsINR(periodData.periodBounced)}
-            </span>
+            <MoneyDisplay
+              amount={periodData.periodBounced}
+              size="2xl"
+              amountClassName="text-rose-700 block"
+            />
             <span className="text-[11px] text-rose-600 mt-1 block">
               {periodData.periodBouncedCount} Returned Cheques
             </span>
@@ -662,12 +639,11 @@ export const DashboardView: React.FC = () => {
               </p>
             </div>
             <div className="text-right">
-              <span className="text-xs font-mono font-bold text-[#701A35] block">
-                ₹{totalFundedSum.toLocaleString('en-IN')}
-              </span>
-              <span className="text-[10px] text-slate-500 block font-sans">
-                {numberToWordsINR(totalFundedSum)}
-              </span>
+              <MoneyDisplay
+                amount={totalFundedSum}
+                size="sm"
+                amountClassName="text-[#701A35] font-bold block"
+              />
             </div>
           </div>
 
@@ -687,12 +663,13 @@ export const DashboardView: React.FC = () => {
                       <span className="font-bold text-slate-900">{c.shortCode}</span>
                       <span className="text-[10px] text-slate-400">({c.isOutsideParty ? 'Outside Party' : 'ASR Own'})</span>
                     </div>
-                    <div className="text-right">
-                      <span className="font-bold text-slate-900">₹{c.totalFunded.toLocaleString('en-IN')}</span>
-                      <span className="text-slate-400 ml-2">({pct.toFixed(1)}%)</span>
-                      <span className="text-[10px] text-slate-500 block font-sans leading-tight">
-                        {numberToWordsINR(c.totalFunded)}
-                      </span>
+                    <div className="text-right flex items-baseline gap-2">
+                      <MoneyDisplay
+                        amount={c.totalFunded}
+                        size="sm"
+                        amountClassName="text-slate-900"
+                      />
+                      <span className="text-slate-400">({pct.toFixed(1)}%)</span>
                     </div>
                   </div>
                   <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
@@ -788,7 +765,7 @@ export const DashboardView: React.FC = () => {
                 </button>
               </div>
             ) : (
-              <div className="divide-y divide-[#EDE8DF] mt-3 max-h-56 overflow-y-auto">
+              <div className="divide-y divide-[#EDE8DF] mt-3 max-h-56 overflow-y-auto pr-3 space-y-1">
                 {periodData.periodSchedule.map((item) => (
                   <div
                     key={item.installmentId}
@@ -796,20 +773,19 @@ export const DashboardView: React.FC = () => {
                       setSelectedLoanId(item.loanId);
                       setActiveMainTab('loans');
                     }}
-                    className="py-2.5 flex items-center justify-between cursor-pointer hover:bg-slate-50 text-xs font-mono transition-colors"
+                    className="py-2.5 px-2 flex items-center justify-between cursor-pointer hover:bg-slate-50 text-xs font-mono transition-colors rounded-xl"
                   >
-                    <div className="min-w-0 pr-2">
+                    <div className="min-w-0 pr-3">
                       <span className="font-bold text-slate-900 block truncate">{item.customerName}</span>
                       <span className="text-[10px] text-slate-400 block">{item.place}</span>
                     </div>
-                    <div className="text-right shrink-0">
-                      <span className="font-bold text-slate-900 block">
-                        ₹{item.amountDue.toLocaleString('en-IN')}
-                      </span>
-                      <span className="text-[10px] text-slate-500 block font-sans leading-tight">
-                        {numberToWordsINR(item.amountDue)}
-                      </span>
-                      <div className="flex items-center justify-end gap-1 mt-0.5">
+                    <div className="text-right shrink-0 pr-1">
+                      <MoneyDisplay
+                        amount={item.amountDue}
+                        size="sm"
+                        amountClassName="text-slate-900 font-bold block"
+                      />
+                      <div className="flex items-center justify-end gap-1.5 mt-0.5">
                         <span className="text-[10px] text-slate-500">{item.dueDate}</span>
                         <StatusPill status={item.status} size="xs" showIcon={false} />
                       </div>
@@ -819,13 +795,6 @@ export const DashboardView: React.FC = () => {
               </div>
             )}
           </div>
-
-          <button
-            onClick={() => setActiveMainTab('historical-sheet')}
-            className="w-full py-2.5 bg-[#FAF5ED] hover:bg-[#F3EAD7] text-[#701A35] border border-[#E2D2B0] rounded-xl text-xs font-bold font-mono transition-colors flex items-center justify-center gap-1.5 cursor-pointer mt-4"
-          >
-            <FileSpreadsheet className="w-4 h-4" /> Open Full Historical Grid ({portfolioMetrics.totalInstallments} EMIs)
-          </button>
         </div>
       </div>
     </div>

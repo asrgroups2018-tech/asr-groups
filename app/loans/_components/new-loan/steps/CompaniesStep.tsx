@@ -3,7 +3,7 @@
 import React from 'react';
 import { Building2, Check, Sparkles, Layers, RefreshCw, X } from 'lucide-react';
 import { Company } from '@/lib/types';
-import { numberToWordsINR } from '@/lib/utils/formatCurrency';
+import { MoneyDisplay } from '@/components/ui/MoneyDisplay';
 
 interface CompaniesStepProps {
   companies: Company[];
@@ -342,15 +342,22 @@ export const CompaniesStep: React.FC<CompaniesStepProps> = ({
 
                     <div className="text-right font-mono text-xs min-w-[140px]">
                       {splitMode === 'PERCENT' ? (
-                        <>
-                          <span className="text-[#EED8A1] font-bold block">₹{Math.round((totalAmount * pct) / 100).toLocaleString('en-IN')}</span>
-                          <span className="text-[10px] text-slate-400 font-sans block leading-tight">{numberToWordsINR(Math.round((totalAmount * pct) / 100))}</span>
-                        </>
+                        <MoneyDisplay
+                          amount={Math.round((totalAmount * pct) / 100)}
+                          size="sm"
+                          amountClassName="text-[#EED8A1] font-bold block"
+                        />
                       ) : (
-                        <>
-                          <span className="text-slate-300 font-bold block">{totalAmount > 0 ? ((amt / totalAmount) * 100).toFixed(1) : 0}%</span>
-                          <span className="text-[10px] text-slate-400 font-sans block leading-tight">{numberToWordsINR(amt)}</span>
-                        </>
+                        <div className="flex flex-col items-end">
+                          <span className="text-slate-300 font-bold block">
+                            {totalAmount > 0 ? ((amt / totalAmount) * 100).toFixed(1) : 0}%
+                          </span>
+                          <MoneyDisplay
+                            amount={amt}
+                            size="xs"
+                            amountClassName="text-slate-300 font-mono"
+                          />
+                        </div>
                       )}
                     </div>
                   </div>

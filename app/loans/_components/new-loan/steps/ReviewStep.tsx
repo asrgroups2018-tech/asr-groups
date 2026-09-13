@@ -3,7 +3,7 @@
 import React from 'react';
 import { CheckCircle2, Building2 } from 'lucide-react';
 import { Customer, Company } from '@/lib/types';
-import { numberToWordsINR } from '@/lib/utils/formatCurrency';
+import { MoneyDisplay } from '@/components/ui/MoneyDisplay';
 
 interface ReviewStepProps {
   targetCustomer: Customer | undefined;
@@ -29,13 +29,14 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({
   companyManualAmounts,
 }) => {
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <div className="bg-[#240F1D] p-5 rounded-xl border border-[#3D1A2C] space-y-4">
         <h3 className="text-sm font-bold text-[#EED8A1] flex items-center gap-2 font-serif">
-          <CheckCircle2 className="w-4 h-4 text-[#C5A059]" /> Review Loan Syndication
+          <CheckCircle2 className="w-4 h-4 text-emerald-400" /> Loan Verification & Review
         </h3>
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 p-4 bg-[#160810] rounded-lg border border-[#3D1A2C] font-mono text-xs">
+        {/* Core Summary Grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-3 bg-[#160810] rounded-lg border border-[#3D1A2C] text-xs font-mono">
           <div>
             <span className="text-slate-500 block text-[10px] uppercase tracking-wider font-bold">Borrower Client</span>
             <span className="font-bold text-slate-100 text-sm">{targetCustomer?.name || customerSearch}</span>
@@ -43,8 +44,11 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({
           </div>
           <div>
             <span className="text-slate-500 block text-[10px] uppercase tracking-wider font-bold">Total Capital</span>
-            <span className="font-bold text-[#EED8A1] block text-sm">₹{totalAmount.toLocaleString('en-IN')}</span>
-            <span className="text-[10px] text-slate-400 font-sans block leading-tight">{numberToWordsINR(totalAmount)}</span>
+            <MoneyDisplay
+              amount={totalAmount}
+              size="sm"
+              amountClassName="font-bold text-[#EED8A1] block text-sm"
+            />
           </div>
           <div>
             <span className="text-slate-500 block text-[10px] uppercase tracking-wider font-bold">Installments</span>
@@ -86,8 +90,11 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({
                     Code: {c.shortCode} • {c.isOutsideParty ? 'Outside Party' : 'ASR Group Internal'}
                   </div>
                   <div className="pt-1 border-t border-[#2C1420]">
-                    <span className="text-[#EED8A1] block text-xs font-bold">₹{amt.toLocaleString('en-IN')}</span>
-                    <span className="text-slate-400 block text-[10px] font-sans leading-tight">{numberToWordsINR(amt)}</span>
+                    <MoneyDisplay
+                      amount={amt}
+                      size="sm"
+                      amountClassName="text-[#EED8A1] block text-xs font-bold"
+                    />
                   </div>
                 </div>
               );

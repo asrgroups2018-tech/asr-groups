@@ -9,7 +9,7 @@ import {
   TrendingUp,
 } from 'lucide-react';
 import { StatusPill } from '@/components/ui/StatusPill';
-import { numberToWordsINR } from '@/lib/utils/formatCurrency';
+import { MoneyDisplay } from '@/components/ui/MoneyDisplay';
 
 export const CompanyDetailsView: React.FC = () => {
   const {
@@ -25,78 +25,74 @@ export const CompanyDetailsView: React.FC = () => {
 
   if (!company) {
     return (
-      <div className="p-8 text-center bg-white rounded-2xl border border-[#E6E1D6]">
-        <Building2 className="w-10 h-10 text-slate-300 mx-auto mb-2" />
-        <h3 className="text-sm font-bold text-slate-800">Company Record Not Found</h3>
+      <div className="bg-white rounded-2xl p-12 text-center border border-[#E6E1D6]">
+        <Building2 className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+        <h2 className="text-base font-bold text-slate-800">Company Not Found</h2>
         <button
           onClick={() => setSelectedCompanyId(null)}
-          className="mt-3 px-4 py-1.5 text-xs font-bold text-white bg-[#701A35] rounded-xl"
+          className="mt-4 px-4 py-2 bg-[#701A35] text-white text-xs font-bold rounded-xl cursor-pointer"
         >
-          Return to Companies
+          Back to Companies List
         </button>
       </div>
     );
   }
 
   // Find all loans this company has funded
-  const codeUpper = company.shortCode?.toUpperCase() || '';
-  const nameUpper = company.name?.toUpperCase() || '';
-
   const companyLoans = loans.filter((l) =>
     (l.splits || []).some(
       (s) =>
         s.companyId === company.id ||
-        (s.companyCode && s.companyCode.toUpperCase() === codeUpper) ||
-        (s.companyName && s.companyName.toUpperCase() === nameUpper)
+        (s.companyCode && s.companyCode.toUpperCase() === company.shortCode.toUpperCase()) ||
+        (s.companyName && s.companyName.toUpperCase() === company.name.toUpperCase())
     )
   );
 
   const totalFunded = companyLoans.reduce((sum, l) => {
-    const split = (l.splits || []).find(
+    const sp = (l.splits || []).find(
       (s) =>
         s.companyId === company.id ||
-        (s.companyCode && s.companyCode.toUpperCase() === codeUpper) ||
-        (s.companyName && s.companyName.toUpperCase() === nameUpper)
+        (s.companyCode && s.companyCode.toUpperCase() === company.shortCode.toUpperCase()) ||
+        (s.companyName && s.companyName.toUpperCase() === company.name.toUpperCase())
     );
-    return sum + (split ? split.splitAmount : 0);
-  }, 0);
+    return sum + (sp ? sp.splitAmount : 0);
+  }, 0) || company.totalFunded || 0;
 
   return (
-    <div className="space-y-5 animate-in fade-in duration-200">
-      {/* ─── Top Header & Back Button ─── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-5 rounded-2xl border border-[#E6E1D6] shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
+    <div className="space-y-6 animate-in fade-in duration-200">
+      {/* ─── Breadcrumb & Top Bar ─── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-[#E6E1D6] shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
         <div className="flex items-center gap-3">
           <button
             onClick={() => setSelectedCompanyId(null)}
-            className="p-2 rounded-xl text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer border border-slate-200"
-            title="Back to Companies List"
+            className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors cursor-pointer"
+            title="Back to All Companies"
           >
             <ArrowLeft className="w-4 h-4" />
           </button>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-lg font-bold text-slate-900 font-serif">
+              <h1 className="text-xl font-bold text-slate-900 font-serif">
                 {company.name}
               </h1>
-              <span className="text-xs font-mono px-2 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200 font-bold">
-                {company.shortCode || company.id}
-              </span>
-              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                company.isOutsideParty
-                  ? 'bg-purple-50 text-purple-700 border-purple-200'
-                  : 'bg-emerald-50 text-emerald-700 border-emerald-200'
-              }`}>
-                {company.isOutsideParty ? 'Outside Party Company' : 'ASR Group Company'}
+              <span className="font-mono text-xs font-bold px-2 py-0.5 rounded bg-[#FAF8F5] border border-[#E6E1D6] text-[#701A35]">
+                {company.shortCode}
               </span>
             </div>
             <p className="text-xs text-slate-500 mt-0.5">
-              Funding Entity · Short Code: <strong className="text-slate-700 font-mono">{company.shortCode}</strong>
+              {company.isOutsideParty ? 'Outside Party Entity' : 'ASR Group Internal Entity'} · Portfolio Breakdown
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
-          <StatusPill status="Active" size="md" />
+          <span className={`text-xs font-bold px-3 py-1 rounded-full border ${
+            company.isOutsideParty
+              ? 'bg-purple-50 text-purple-700 border-purple-200'
+              : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+          }`}>
+            {company.isOutsideParty ? 'Outside Party' : 'ASR Group Own'}
+          </span>
         </div>
       </div>
 
@@ -106,12 +102,13 @@ export const CompanyDetailsView: React.FC = () => {
           <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 font-mono block">
             Total Capital Funded
           </span>
-          <span className="text-xl font-bold text-slate-900 font-mono block mt-1">
-            ₹{totalFunded.toLocaleString('en-IN')}
-          </span>
-          <span className="text-[11px] text-slate-600 font-medium block leading-snug">
-            {numberToWordsINR(totalFunded)}
-          </span>
+          <div className="mt-1">
+            <MoneyDisplay
+              amount={totalFunded}
+              size="xl"
+              amountClassName="text-slate-900 font-bold block"
+            />
+          </div>
           <span className="text-[10px] text-slate-400 mt-0.5 block">Disbursed across loans</span>
         </div>
 
@@ -213,13 +210,14 @@ export const CompanyDetailsView: React.FC = () => {
                           {l.startDate}
                         </td>
                         <td className="p-3 font-mono text-right">
-                          <span className="font-bold text-slate-900 block">
-                            {mySplit ? `₹${mySplit.splitAmount.toLocaleString('en-IN')}` : '-'}
-                          </span>
-                          {mySplit && (
-                            <span className="text-[10px] text-slate-500 font-sans block leading-tight">
-                              {numberToWordsINR(mySplit.splitAmount)}
-                            </span>
+                          {mySplit ? (
+                            <MoneyDisplay
+                              amount={mySplit.splitAmount}
+                              size="sm"
+                              amountClassName="text-slate-900 font-bold block text-right"
+                            />
+                          ) : (
+                            <span className="text-slate-400">-</span>
                           )}
                         </td>
                         <td className="p-3 font-mono text-slate-700 text-right">

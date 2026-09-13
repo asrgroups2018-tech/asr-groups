@@ -8,11 +8,10 @@ import {
   Plus,
   Eye,
   MapPin,
-  Phone,
 } from 'lucide-react';
 import { DataTable, ColumnDef } from '@/components/ui/DataTable';
 import { AddCustomerModal } from './AddCustomerModal';
-import { numberToWordsINR } from '@/lib/utils/formatCurrency';
+import { MoneyDisplay } from '@/components/ui/MoneyDisplay';
 
 export const CustomersListView: React.FC = () => {
   const {
@@ -24,68 +23,64 @@ export const CustomersListView: React.FC = () => {
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
-  // Compute stats
-  const totalBorrowedSum = useMemo(() => {
-    return loans.reduce((acc, l) => acc + (l.totalAmount || 0), 0);
-  }, [loans]);
+  // Compute live loan sums per customer
+  const enrichedCustomers = useMemo(() => {
+    return customers.map((c) => {
+      const custLoans = loans.filter((l) => l.customerId === c.id);
+      const totalBorrowed = custLoans.reduce((sum, l) => sum + (l.totalAmount || 0), 0);
+      const activeCount = custLoans.filter((l) => l.status !== 'Closed').length;
+
+      return {
+        ...c,
+        totalBorrowed: totalBorrowed > 0 ? totalBorrowed : (c.totalBorrowed || 0),
+        activeLoansCount: activeCount > 0 ? activeCount : (c.activeLoansCount || custLoans.length),
+      };
+    });
+  }, [customers, loans]);
+
+  const totalBorrowedSum = useMemo(
+    () => enrichedCustomers.reduce((acc, c) => acc + (c.totalBorrowed || 0), 0),
+    [enrichedCustomers]
+  );
+
+  const activeLoansTotal = useMemo(
+    () => enrichedCustomers.reduce((acc, c) => acc + (c.activeLoansCount || 0), 0),
+    [enrichedCustomers]
+  );
 
   const columns: ColumnDef<Customer>[] = [
     {
-      key: 'id',
-      header: 'Customer ID',
-      sortable: true,
-      align: 'left',
-      accessor: (c) => c.id,
-      render: (c) => (
-        <span className="font-mono text-xs font-bold text-slate-700">
-          {c.id}
-        </span>
-      ),
-      exportValue: (c) => c.id,
-    },
-    {
       key: 'name',
-      header: 'Customer / Client Name',
+      header: 'Customer Name',
       sortable: true,
-      align: 'left',
       accessor: (c) => c.name,
       render: (c) => (
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-[#FAF8F5] border border-[#E6E1D6] flex items-center justify-center font-bold text-xs text-[#701A35]">
-            {c.name.slice(0, 2).toUpperCase()}
-          </div>
-          <div>
-            <button
-              onClick={() => setSelectedCustomerId(c.id)}
-              className="font-bold text-slate-900 text-xs hover:text-[#701A35] hover:underline block text-left cursor-pointer"
-            >
-              {c.name}
-            </button>
-            <span className="text-[10px] text-slate-400 font-mono block">
-              {c.place ? `Place: ${c.place}` : 'ASR Client'}
-            </span>
-          </div>
+        <div className="min-w-0">
+          <button
+            onClick={() => setSelectedCustomerId(c.id)}
+            className="font-bold text-[#701A35] hover:underline text-xs block text-left cursor-pointer transition-colors"
+          >
+            {c.name}
+          </button>
+          <span className="text-[10px] text-slate-400 font-mono block mt-0.5">
+            ID: {c.id}
+          </span>
         </div>
       ),
       exportValue: (c) => c.name,
     },
     {
       key: 'place',
-      header: 'Place / City',
+      header: 'Place / Region',
       sortable: true,
-      accessor: (c) => c.place || '—',
+      accessor: (c) => c.place || '-',
       render: (c) => (
-        <span className="text-xs text-slate-700 font-semibold">{c.place || '—'}</span>
+        <span className="text-xs text-slate-600 flex items-center gap-1 font-mono">
+          <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+          {c.place || 'CHENNAI'}
+        </span>
       ),
-    },
-    {
-      key: 'phone',
-      header: 'Phone',
-      sortable: true,
-      accessor: (c) => c.phone || '—',
-      render: (c) => (
-        <span className="font-mono text-xs text-slate-600">{c.phone || '—'}</span>
-      ),
+      exportValue: (c) => c.place || '',
     },
     {
       key: 'totalBorrowed',
@@ -94,14 +89,11 @@ export const CustomersListView: React.FC = () => {
       align: 'right',
       accessor: (c) => c.totalBorrowed || 0,
       render: (c) => (
-        <div>
-          <span className="font-mono text-xs font-bold text-slate-900 block">
-            ₹{(c.totalBorrowed || 0).toLocaleString('en-IN')}
-          </span>
-          <span className="text-[10px] text-slate-500 font-sans block leading-tight">
-            {numberToWordsINR(c.totalBorrowed || 0)}
-          </span>
-        </div>
+        <MoneyDisplay
+          amount={c.totalBorrowed || 0}
+          size="sm"
+          amountClassName="text-slate-900 font-bold block text-right"
+        />
       ),
       exportValue: (c) => c.totalBorrowed || 0,
     },
@@ -169,12 +161,13 @@ export const CustomersListView: React.FC = () => {
           <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider font-mono">
             Total Borrowed Portfolio
           </span>
-          <span className="text-xl font-bold text-slate-900 font-mono block mt-1">
-            ₹{totalBorrowedSum.toLocaleString('en-IN')}
-          </span>
-          <span className="text-[11px] text-slate-600 font-medium block leading-snug">
-            {numberToWordsINR(totalBorrowedSum)}
-          </span>
+          <div className="mt-1">
+            <MoneyDisplay
+              amount={totalBorrowedSum}
+              size="xl"
+              amountClassName="text-slate-900 font-bold block"
+            />
+          </div>
           <span className="text-[10px] text-slate-400 mt-0.5 block">Sum across all customer loans</span>
         </div>
 
@@ -225,7 +218,7 @@ export const CustomersListView: React.FC = () => {
           columns={columns}
           keyExtractor={(c) => c.id}
           title="Customer Borrowers Registry"
-          searchPlaceholder="Search client name, place, phone..."
+          searchPlaceholder="Search client name or place..."
           exportFileName="ASR_Customer_Registry"
         />
       )}
