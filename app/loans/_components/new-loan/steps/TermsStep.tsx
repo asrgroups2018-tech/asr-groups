@@ -69,7 +69,12 @@ export const TermsStep: React.FC<TermsStepProps> = ({
               type="date"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
-              className="w-full bg-[#160810] border border-[#3D1A2C] rounded-lg px-3.5 py-2 text-sm font-mono text-slate-100 focus:outline-hidden focus:border-[#C5A059]"
+              onClick={(e) => {
+                try {
+                  (e.target as any).showPicker?.();
+                } catch {}
+              }}
+              className="w-full bg-[#160810] border border-[#3D1A2C] rounded-lg px-3.5 py-2 text-sm font-mono text-slate-100 focus:outline-hidden focus:border-[#C5A059] cursor-pointer [appearance:textfield] [&::-webkit-inner-spin-button]:hidden [&::-webkit-calendar-picker-indicator]:cursor-pointer"
             />
           </div>
         </div>

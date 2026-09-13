@@ -99,19 +99,22 @@ export const HistoricalSheetView: React.FC = () => {
         'AMOUNT': r.amount,
         'STATUS': r.status,
         'RECD DATE': r.recdDate || '',
-        'PASS': r.pass || '',
-        'ALA': r.ala || '',
-        'IG': r.ig || '',
-        'GS': r.gs || '',
-        'MARS': r.mars || '',
-        'TG': r.tg || '',
-        'FIN': r.fin || '',
-        'MM': r.mm || '',
-        'CS': r.cs || '',
-        'MC': r.mc || '',
-        'TA (SS)': r.taSS || '',
-        'OTHERS': r.others || '',
-        'OTHERS NAME': r.othersName || '',
+        'PASS ENTERPRISES': r.pass || '',
+        'KARS ENTERPRISES': r.kars || '',
+        'INFIN GROUP': r.ig || '',
+        'INFINITY ENTERPRISES': r.ine || '',
+        'INNOVATIVE SOLUTIONS': r.ins || '',
+        'MARS SOLUTION': r.mars || '',
+        'MM ASSOCIATES': r.mm || '',
+        'TRIVENI GROUP': r.tg || '',
+        'GLOBAL SOLITAIRE': r.gs || '',
+        'ALAGESH': r.ala || '',
+        'FINCUBE VENTURES': r.fin || '',
+        'CS ASSOCIATES': r.cs || '',
+        'M CHINNIAH': r.mc || '',
+        'TATVA ENTERPRISES': r.tatva || '',
+        'BHAVANA CORP': r.bhavna || '',
+        'THIRUCHENDURAON ASSOCIATE': r.taSS || '',
         'REMARKS': r.remarks || '',
       }));
 
@@ -198,9 +201,9 @@ export const HistoricalSheetView: React.FC = () => {
           {/* Outside-Party Column Filter Toggle */}
           <div className="flex items-center bg-[#F4F1EA] p-1 rounded-lg border border-[#E6E1D6] text-xs font-semibold">
             {[
-              { id: 'ALL', label: 'All Companies' },
-              { id: 'ASR_ONLY', label: 'ASR Group Own' },
-              { id: 'OUTSIDE_ONLY', label: 'Outside Parties' },
+              { id: 'ALL', label: 'All Companies (16)' },
+              { id: 'ASR_ONLY', label: 'ASR Group Own (10)' },
+              { id: 'OUTSIDE_ONLY', label: 'Outside Parties (6)' },
             ].map((f) => (
               <button
                 key={f.id}
@@ -279,28 +282,31 @@ export const HistoricalSheetView: React.FC = () => {
                 <th className="p-2.5 w-24 text-center border-r border-[#3D1A2C]">STATUS</th>
                 <th className="p-2.5 w-28 border-r border-[#3D1A2C]">RECD DATE</th>
 
-                {/* ASR Group Own Companies */}
+                {/* ASR Group Own Companies (10) */}
                 {showAsrCols && (
                   <>
-                    <th className="p-2.5 w-24 text-right bg-[#301226] border-r border-[#3D1A2C] text-[#EED8A1]">PASS</th>
-                    <th className="p-2.5 w-24 text-right bg-[#301226] border-r border-[#3D1A2C] text-[#EED8A1]">ALA</th>
-                    <th className="p-2.5 w-24 text-right bg-[#301226] border-r border-[#3D1A2C] text-[#EED8A1]">IG</th>
-                    <th className="p-2.5 w-24 text-right bg-[#301226] border-r border-[#3D1A2C] text-[#EED8A1]">GS</th>
-                    <th className="p-2.5 w-24 text-right bg-[#301226] border-r border-[#3D1A2C] text-[#EED8A1]">MARS</th>
-                    <th className="p-2.5 w-24 text-right bg-[#301226] border-r border-[#3D1A2C] text-[#EED8A1]">TG</th>
-                    <th className="p-2.5 w-24 text-right bg-[#301226] border-r border-[#3D1A2C] text-[#EED8A1]">FIN</th>
-                    <th className="p-2.5 w-24 text-right bg-[#301226] border-r border-[#3D1A2C] text-[#EED8A1]">MM</th>
+                    <th className="p-2.5 min-w-[140px] text-right bg-[#301226] border-r border-[#3D1A2C] text-[#EED8A1]">PASS ENTERPRISES</th>
+                    <th className="p-2.5 min-w-[140px] text-right bg-[#301226] border-r border-[#3D1A2C] text-[#EED8A1]">KARS ENTERPRISES</th>
+                    <th className="p-2.5 min-w-[120px] text-right bg-[#301226] border-r border-[#3D1A2C] text-[#EED8A1]">INFIN GROUP</th>
+                    <th className="p-2.5 min-w-[140px] text-right bg-[#301226] border-r border-[#3D1A2C] text-[#EED8A1]">INFINITY ENTERPRISES</th>
+                    <th className="p-2.5 min-w-[140px] text-right bg-[#301226] border-r border-[#3D1A2C] text-[#EED8A1]">INNOVATIVE SOLUTIONS</th>
+                    <th className="p-2.5 min-w-[130px] text-right bg-[#301226] border-r border-[#3D1A2C] text-[#EED8A1]">MARS SOLUTION</th>
+                    <th className="p-2.5 min-w-[130px] text-right bg-[#301226] border-r border-[#3D1A2C] text-[#EED8A1]">MM ASSOCIATES</th>
+                    <th className="p-2.5 min-w-[130px] text-right bg-[#301226] border-r border-[#3D1A2C] text-[#EED8A1]">TRIVENI GROUP</th>
+                    <th className="p-2.5 min-w-[140px] text-right bg-[#301226] border-r border-[#3D1A2C] text-[#EED8A1]">GLOBAL SOLITAIRE</th>
+                    <th className="p-2.5 min-w-[120px] text-right bg-[#301226] border-r border-[#3D1A2C] text-[#EED8A1]">ALAGESH</th>
                   </>
                 )}
 
-                {/* Outside-Party Companies */}
+                {/* Outside-Party Companies (6) */}
                 {showOutsideCols && (
                   <>
-                    <th className="p-2.5 w-24 text-right bg-[#2A1713] border-r border-[#3D1A2C] text-amber-300">CS</th>
-                    <th className="p-2.5 w-24 text-right bg-[#2A1713] border-r border-[#3D1A2C] text-amber-300">MC</th>
-                    <th className="p-2.5 w-24 text-right bg-[#2A1713] border-r border-[#3D1A2C] text-amber-300">TA (SS)</th>
-                    <th className="p-2.5 w-24 text-right bg-[#2A1713] border-r border-[#3D1A2C] text-amber-300">OTHERS</th>
-                    <th className="p-2.5 w-28 bg-[#2A1713] border-r border-[#3D1A2C] text-amber-300">OTHERS NAME</th>
+                    <th className="p-2.5 min-w-[140px] text-right bg-[#2A1713] border-r border-[#3D1A2C] text-amber-300">FINCUBE VENTURES</th>
+                    <th className="p-2.5 min-w-[130px] text-right bg-[#2A1713] border-r border-[#3D1A2C] text-amber-300">CS ASSOCIATES</th>
+                    <th className="p-2.5 min-w-[110px] text-right bg-[#2A1713] border-r border-[#3D1A2C] text-amber-300">M CHINNIAH</th>
+                    <th className="p-2.5 min-w-[140px] text-right bg-[#2A1713] border-r border-[#3D1A2C] text-amber-300">TATVA ENTERPRISES</th>
+                    <th className="p-2.5 min-w-[130px] text-right bg-[#2A1713] border-r border-[#3D1A2C] text-amber-300">BHAVANA CORP</th>
+                    <th className="p-2.5 min-w-[160px] text-right bg-[#2A1713] border-r border-[#3D1A2C] text-amber-300">THIRUCHENDURAON ASSOCIATE</th>
                   </>
                 )}
 
@@ -429,7 +435,7 @@ export const HistoricalSheetView: React.FC = () => {
                       />
                     </td>
 
-                    {/* ASR Group Company Splits */}
+                    {/* ASR Group Company Splits (10) */}
                     {showAsrCols && (
                       <>
                         <td className="p-1.5 border-r border-[#EDE8DF] text-right">
@@ -443,8 +449,8 @@ export const HistoricalSheetView: React.FC = () => {
                         <td className="p-1.5 border-r border-[#EDE8DF] text-right">
                           <input
                             type="number"
-                            defaultValue={row.ala || ''}
-                            onBlur={(e) => handleCellBlur(row, 'ala', Number(e.target.value) || 0)}
+                            defaultValue={row.kars || ''}
+                            onBlur={(e) => handleCellBlur(row, 'kars', Number(e.target.value) || 0)}
                             className="w-full bg-transparent px-1.5 py-1 text-right text-slate-800 font-semibold focus:bg-white focus:outline-hidden focus:ring-1 focus:ring-[#701A35] rounded"
                           />
                         </td>
@@ -459,8 +465,16 @@ export const HistoricalSheetView: React.FC = () => {
                         <td className="p-1.5 border-r border-[#EDE8DF] text-right">
                           <input
                             type="number"
-                            defaultValue={row.gs || ''}
-                            onBlur={(e) => handleCellBlur(row, 'gs', Number(e.target.value) || 0)}
+                            defaultValue={row.ine || ''}
+                            onBlur={(e) => handleCellBlur(row, 'ine', Number(e.target.value) || 0)}
+                            className="w-full bg-transparent px-1.5 py-1 text-right text-slate-800 font-semibold focus:bg-white focus:outline-hidden focus:ring-1 focus:ring-[#701A35] rounded"
+                          />
+                        </td>
+                        <td className="p-1.5 border-r border-[#EDE8DF] text-right">
+                          <input
+                            type="number"
+                            defaultValue={row.ins || ''}
+                            onBlur={(e) => handleCellBlur(row, 'ins', Number(e.target.value) || 0)}
                             className="w-full bg-transparent px-1.5 py-1 text-right text-slate-800 font-semibold focus:bg-white focus:outline-hidden focus:ring-1 focus:ring-[#701A35] rounded"
                           />
                         </td>
@@ -475,6 +489,14 @@ export const HistoricalSheetView: React.FC = () => {
                         <td className="p-1.5 border-r border-[#EDE8DF] text-right">
                           <input
                             type="number"
+                            defaultValue={row.mm || ''}
+                            onBlur={(e) => handleCellBlur(row, 'mm', Number(e.target.value) || 0)}
+                            className="w-full bg-transparent px-1.5 py-1 text-right text-slate-800 font-semibold focus:bg-white focus:outline-hidden focus:ring-1 focus:ring-[#701A35] rounded"
+                          />
+                        </td>
+                        <td className="p-1.5 border-r border-[#EDE8DF] text-right">
+                          <input
+                            type="number"
                             defaultValue={row.tg || ''}
                             onBlur={(e) => handleCellBlur(row, 'tg', Number(e.target.value) || 0)}
                             className="w-full bg-transparent px-1.5 py-1 text-right text-slate-800 font-semibold focus:bg-white focus:outline-hidden focus:ring-1 focus:ring-[#701A35] rounded"
@@ -483,25 +505,33 @@ export const HistoricalSheetView: React.FC = () => {
                         <td className="p-1.5 border-r border-[#EDE8DF] text-right">
                           <input
                             type="number"
-                            defaultValue={row.fin || ''}
-                            onBlur={(e) => handleCellBlur(row, 'fin', Number(e.target.value) || 0)}
+                            defaultValue={row.gs || ''}
+                            onBlur={(e) => handleCellBlur(row, 'gs', Number(e.target.value) || 0)}
                             className="w-full bg-transparent px-1.5 py-1 text-right text-slate-800 font-semibold focus:bg-white focus:outline-hidden focus:ring-1 focus:ring-[#701A35] rounded"
                           />
                         </td>
                         <td className="p-1.5 border-r border-[#EDE8DF] text-right">
                           <input
                             type="number"
-                            defaultValue={row.mm || ''}
-                            onBlur={(e) => handleCellBlur(row, 'mm', Number(e.target.value) || 0)}
+                            defaultValue={row.ala || ''}
+                            onBlur={(e) => handleCellBlur(row, 'ala', Number(e.target.value) || 0)}
                             className="w-full bg-transparent px-1.5 py-1 text-right text-slate-800 font-semibold focus:bg-white focus:outline-hidden focus:ring-1 focus:ring-[#701A35] rounded"
                           />
                         </td>
                       </>
                     )}
 
-                    {/* Outside-Party Splits */}
+                    {/* Outside-Party Splits (6) */}
                     {showOutsideCols && (
                       <>
+                        <td className="p-1.5 border-r border-[#EDE8DF] text-right">
+                          <input
+                            type="number"
+                            defaultValue={row.fin || ''}
+                            onBlur={(e) => handleCellBlur(row, 'fin', Number(e.target.value) || 0)}
+                            className="w-full bg-transparent px-1.5 py-1 text-right text-amber-900 font-semibold focus:bg-white focus:outline-hidden focus:ring-1 focus:ring-amber-600 rounded"
+                          />
+                        </td>
                         <td className="p-1.5 border-r border-[#EDE8DF] text-right">
                           <input
                             type="number"
@@ -521,25 +551,25 @@ export const HistoricalSheetView: React.FC = () => {
                         <td className="p-1.5 border-r border-[#EDE8DF] text-right">
                           <input
                             type="number"
-                            defaultValue={row.taSS || ''}
-                            onBlur={(e) => handleCellBlur(row, 'taSS', Number(e.target.value) || 0)}
+                            defaultValue={row.tatva || ''}
+                            onBlur={(e) => handleCellBlur(row, 'tatva', Number(e.target.value) || 0)}
                             className="w-full bg-transparent px-1.5 py-1 text-right text-amber-900 font-semibold focus:bg-white focus:outline-hidden focus:ring-1 focus:ring-amber-600 rounded"
                           />
                         </td>
                         <td className="p-1.5 border-r border-[#EDE8DF] text-right">
                           <input
                             type="number"
-                            defaultValue={row.others || ''}
-                            onBlur={(e) => handleCellBlur(row, 'others', Number(e.target.value) || 0)}
+                            defaultValue={row.bhavna || ''}
+                            onBlur={(e) => handleCellBlur(row, 'bhavna', Number(e.target.value) || 0)}
                             className="w-full bg-transparent px-1.5 py-1 text-right text-amber-900 font-semibold focus:bg-white focus:outline-hidden focus:ring-1 focus:ring-amber-600 rounded"
                           />
                         </td>
-                        <td className="p-1.5 border-r border-[#EDE8DF]">
+                        <td className="p-1.5 border-r border-[#EDE8DF] text-right">
                           <input
-                            type="text"
-                            defaultValue={row.othersName || ''}
-                            onBlur={(e) => handleCellBlur(row, 'othersName', e.target.value)}
-                            className="w-full bg-transparent px-1.5 py-1 text-amber-900 text-[10px] focus:bg-white focus:outline-hidden focus:ring-1 focus:ring-amber-600 rounded"
+                            type="number"
+                            defaultValue={row.taSS || ''}
+                            onBlur={(e) => handleCellBlur(row, 'taSS', Number(e.target.value) || 0)}
+                            className="w-full bg-transparent px-1.5 py-1 text-right text-amber-900 font-semibold focus:bg-white focus:outline-hidden focus:ring-1 focus:ring-amber-600 rounded"
                           />
                         </td>
                       </>

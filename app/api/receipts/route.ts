@@ -32,20 +32,22 @@ export async function PUT(req: NextRequest) {
     // Build company splits object if individual company cols sent
     const companySplits: Record<string, number> = {};
     if (updates.pass !== undefined) companySplits['PASS'] = Number(updates.pass) || 0;
-    if (updates.ala !== undefined) companySplits['ALA'] = Number(updates.ala) || 0;
+    if (updates.kars !== undefined) companySplits['KARS'] = Number(updates.kars) || 0;
+    if (updates.infin !== undefined) companySplits['INFIN'] = Number(updates.infin) || 0;
+    if (updates.ine !== undefined) companySplits['INE'] = Number(updates.ine) || 0;
+    if (updates.ins !== undefined) companySplits['INS'] = Number(updates.ins) || 0;
     if (updates.ig !== undefined) companySplits['IG'] = Number(updates.ig) || 0;
-    if (updates.gs !== undefined) companySplits['GS'] = Number(updates.gs) || 0;
     if (updates.mars !== undefined) companySplits['MARS'] = Number(updates.mars) || 0;
-    if (updates.tg !== undefined) companySplits['TG'] = Number(updates.tg) || 0;
-    if (updates.fin !== undefined) companySplits['FIN'] = Number(updates.fin) || 0;
     if (updates.mm !== undefined) companySplits['MM'] = Number(updates.mm) || 0;
+    if (updates.tg !== undefined) companySplits['TG'] = Number(updates.tg) || 0;
+    if (updates.gs !== undefined) companySplits['GS'] = Number(updates.gs) || 0;
+    if (updates.ala !== undefined) companySplits['ALA'] = Number(updates.ala) || 0;
+    if (updates.fin !== undefined) companySplits['FIN'] = Number(updates.fin) || 0;
     if (updates.cs !== undefined) companySplits['CS'] = Number(updates.cs) || 0;
     if (updates.mc !== undefined) companySplits['MC'] = Number(updates.mc) || 0;
+    if (updates.tatva !== undefined) companySplits['TATVA'] = Number(updates.tatva) || 0;
+    if (updates.bhavna !== undefined) companySplits['BHAVNA'] = Number(updates.bhavna) || 0;
     if (updates.taSS !== undefined) companySplits['TA (SS)'] = Number(updates.taSS) || 0;
-    if (updates.others !== undefined) {
-      const name = updates.othersName ? String(updates.othersName).trim().toUpperCase() : 'OTHERS';
-      companySplits[name] = Number(updates.others) || 0;
-    }
 
     const updated = await updateLoanInstallment(installmentId, {
       status: updates.status,

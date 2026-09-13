@@ -15,6 +15,7 @@ import { numberToWordsINR } from '@/lib/utils/formatCurrency';
 export const CompaniesListView: React.FC = () => {
   const {
     companies,
+    loans,
     selectedCompanyId,
     setSelectedCompanyId,
   } = useApp();
@@ -22,15 +23,75 @@ export const CompaniesListView: React.FC = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [partyFilter, setPartyFilter] = useState<'ALL' | 'ASR' | 'OUTSIDE'>('ALL');
 
+  const COMPANY_ORDER: Record<string, number> = {
+    'PASS ENTERPRISES': 1,
+    'KARS ENTERPRISES': 2,
+    'INFIN GROUP': 3,
+    'INFINITY ENTERPRISES': 4,
+    'INNOVATIVE SOLUTIONS': 5,
+    'MARS SOLUTION': 6,
+    'MM ASSOCIATES': 7,
+    'TRIVENI GROUP': 8,
+    'GLOBAL SOLITAIRE': 9,
+    'ALAGESH': 10,
+    'FINCUBE VENTURES': 11,
+    'CS ASSOCIATES': 12,
+    'M CHINNIAH': 13,
+    'TATVA ENTERPRISES': 14,
+    'BHAVANA CORP': 15,
+    'THIRUCHENDURAON ASSOCIATE': 16,
+  };
+
   const filteredCompanies = useMemo(() => {
-    if (partyFilter === 'ALL') return companies;
-    if (partyFilter === 'ASR') return companies.filter((c) => !c.isOutsideParty);
-    return companies.filter((c) => c.isOutsideParty);
+    let list = companies;
+    if (partyFilter === 'ASR') list = companies.filter((c) => !c.isOutsideParty);
+    else if (partyFilter === 'OUTSIDE') list = companies.filter((c) => c.isOutsideParty);
+
+    return [...list].sort((a, b) => {
+      const orderA = COMPANY_ORDER[a.name.toUpperCase()] ?? (a.isOutsideParty ? 99 : 50);
+      const orderB = COMPANY_ORDER[b.name.toUpperCase()] ?? (b.isOutsideParty ? 99 : 50);
+      return orderA - orderB;
+    });
   }, [companies, partyFilter]);
 
+  const enrichedCompanies = useMemo(() => {
+    return filteredCompanies.map((c) => {
+      const codeUpper = c.shortCode?.toUpperCase() || '';
+      const nameUpper = c.name?.toUpperCase() || '';
+
+      const matchingLoans = loans.filter((l) =>
+        (l.splits || []).some(
+          (sp) =>
+            sp.companyId === c.id ||
+            (sp.companyCode && sp.companyCode.toUpperCase() === codeUpper) ||
+            (sp.companyName && sp.companyName.toUpperCase() === nameUpper)
+        )
+      );
+
+      const computedLoansCount = matchingLoans.length > 0 ? matchingLoans.length : (c.activeLoansCount || 0);
+      const computedTotalFunded = matchingLoans.length > 0
+        ? matchingLoans.reduce((sum, l) => {
+            const sp = (l.splits || []).find(
+              (s) =>
+                s.companyId === c.id ||
+                (s.companyCode && s.companyCode.toUpperCase() === codeUpper) ||
+                (s.companyName && s.companyName.toUpperCase() === nameUpper)
+            );
+            return sum + (sp ? sp.splitAmount : 0);
+          }, 0)
+        : (c.totalFunded || 0);
+
+      return {
+        ...c,
+        totalFunded: computedTotalFunded > 0 ? computedTotalFunded : (c.totalFunded || 0),
+        activeLoansCount: computedLoansCount,
+      };
+    });
+  }, [filteredCompanies, loans]);
+
   const totalFundedSum = useMemo(
-    () => companies.reduce((acc, c) => acc + (c.totalFunded || 0), 0),
-    [companies]
+    () => enrichedCompanies.reduce((acc, c) => acc + (c.totalFunded || 0), 0),
+    [enrichedCompanies]
   );
 
   const asrCount = useMemo(() => companies.filter((c) => !c.isOutsideParty).length, [companies]);
@@ -106,13 +167,13 @@ export const CompaniesListView: React.FC = () => {
     },
     {
       key: 'activeLoansCount',
-      header: 'Syndicated Loans',
+      header: 'Funded Loans',
       sortable: true,
       align: 'center',
       accessor: (c) => c.activeLoansCount || 0,
       render: (c) => (
-        <span className="font-mono text-xs font-bold text-slate-800">
-          {c.activeLoansCount || 0}
+        <span className="font-mono text-xs font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-800 border border-slate-200">
+          {c.activeLoansCount || 0} loans
         </span>
       ),
     },
@@ -184,7 +245,7 @@ export const CompaniesListView: React.FC = () => {
           <span className="text-xl font-bold text-emerald-700 font-mono block mt-1">
             {asrCount} Companies
           </span>
-          <span className="text-[10px] text-slate-400 mt-0.5 block">PASS, ALA, IG, GS, MARS, TG, FIN, MM</span>
+          <span className="text-[10px] text-slate-400 mt-0.5 block truncate">PASS, KARS, INFIN, INFINITY, INNOVATIVE, MARS, TRIVENI, GLOBAL, ALAGESH</span>
         </div>
 
         <div className="bg-white p-4 rounded-xl border border-[#E6E1D6] shadow-2xs">
@@ -194,7 +255,7 @@ export const CompaniesListView: React.FC = () => {
           <span className="text-xl font-bold text-purple-700 font-mono block mt-1">
             {outsideCount} Entities
           </span>
-          <span className="text-[10px] text-slate-400 mt-0.5 block">CS, MC, TA(SS), TATVA, BHAVANA, etc.</span>
+          <span className="text-[10px] text-slate-400 mt-0.5 block truncate">FINCUBE, CS ASSOCIATES, M CHINNIAH, TATVA, BHAVANA, THIRUCHENDURAON</span>
         </div>
       </div>
 
@@ -237,7 +298,7 @@ export const CompaniesListView: React.FC = () => {
         </div>
       ) : (
         <DataTable
-          data={filteredCompanies}
+          data={enrichedCompanies}
           columns={columns}
           keyExtractor={(c) => c.id}
           title="Funding & Deposit Companies Registry"

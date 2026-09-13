@@ -170,6 +170,37 @@ export async function getLoanById(id: string): Promise<Loan | null> {
   return list.find((l) => l.id === id || l.customerName.toLowerCase() === id.toLowerCase()) || null;
 }
 
+export async function generateNextLoanId(startDateOrYear?: string | number): Promise<string> {
+  await ensureDbInitialized();
+  const client = getTursoClient();
+  let year = new Date().getFullYear();
+  if (startDateOrYear) {
+    if (typeof startDateOrYear === 'number') {
+      year = startDateOrYear;
+    } else if (typeof startDateOrYear === 'string' && startDateOrYear.trim()) {
+      const parsedYear = parseInt(startDateOrYear.slice(0, 4), 10);
+      if (!isNaN(parsedYear) && parsedYear > 2000 && parsedYear < 2100) {
+        year = parsedYear;
+      }
+    }
+  }
+  const prefix = `LN${year}`;
+  const res = await client.execute({
+    sql: `SELECT id FROM loans WHERE id LIKE ? ORDER BY id DESC LIMIT 1`,
+    args: [`${prefix}%`],
+  });
+  let nextSeq = 1;
+  if (res.rows.length > 0 && res.rows[0].id) {
+    const lastId = String(res.rows[0].id);
+    const lastSeqStr = lastId.replace(prefix, '');
+    const lastSeq = parseInt(lastSeqStr, 10);
+    if (!isNaN(lastSeq)) {
+      nextSeq = lastSeq + 1;
+    }
+  }
+  return `${prefix}${String(nextSeq).padStart(4, '0')}`;
+}
+
 export async function createLoan(data: {
   customerId: string;
   codeNo?: string;
@@ -187,9 +218,7 @@ export async function createLoan(data: {
   await ensureDbInitialized();
   const client = getTursoClient();
 
-  const countRes = await client.execute('SELECT COUNT(*) as count FROM loans');
-  const totalLoans = Number(countRes.rows[0].count);
-  const loanId = `LOAN-2026-${String(totalLoans + 1).padStart(3, '0')}`;
+  const loanId = await generateNextLoanId(data.startDate);
   const now = new Date().toISOString().slice(0, 10);
 
   const companies = await getCompanies();
@@ -205,7 +234,7 @@ export async function createLoan(data: {
       args: [
         loanId,
         data.customerId,
-        data.codeNo || `CL-${totalLoans + 1}`,
+        data.codeNo || `CL-${loanId.slice(-4)}`,
         data.totalAmount,
         data.startDate,
         data.installments.length,
@@ -608,6 +637,460 @@ export async function deleteLoan(id: string): Promise<boolean> {
   return true;
 }
 
+/**
+ * Merges sourceLoanId into targetLoanId, reassigning all installments and updating totals.
+ */
+export async function mergeLoans(targetLoanId: string, sourceLoanId: string): Promise<Loan | null> {
+  await ensureDbInitialized();
+  const client = getTursoClient();
+
+  const targetLoan = await getLoanById(targetLoanId);
+  const sourceLoan = await getLoanById(sourceLoanId);
+
+  if (!targetLoan || !sourceLoan) {
+    throw new Error('Target or source loan not found.');
+  }
+
+  const statements: any[] = [];
+
+  // 1. Move all installments from sourceLoanId to targetLoanId
+  const sourceInstRes = await client.execute({
+    sql: 'SELECT id, seq_no FROM installments WHERE loan_id = ? ORDER BY seq_no ASC',
+    args: [sourceLoanId],
+  });
+
+  const existingCount = targetLoan.installments?.length || 0;
+  sourceInstRes.rows.forEach((row, idx) => {
+    statements.push({
+      sql: 'UPDATE installments SET loan_id = ?, seq_no = ? WHERE id = ?',
+      args: [targetLoanId, existingCount + idx + 1, String(row.id)],
+    });
+  });
+
+  // 2. Delete source loan records
+  statements.push({
+    sql: 'DELETE FROM loan_company_splits WHERE loan_id = ?',
+    args: [sourceLoanId],
+  });
+  statements.push({
+    sql: 'DELETE FROM loans WHERE id = ?',
+    args: [sourceLoanId],
+  });
+
+  await client.batch(statements, 'write');
+
+  // 3. Recompute target loan totals, status, and company splits
+  const allInstRes = await client.execute({
+    sql: 'SELECT * FROM installments WHERE loan_id = ? ORDER BY seq_no ASC',
+    args: [targetLoanId],
+  });
+
+  const newTotal = allInstRes.rows.reduce((sum, r) => sum + Number(r.amount_due || 0), 0);
+  const hasOverdue = allInstRes.rows.some((r) => ['RET', 'RET NEFT', 'RET PASS', 'Overdue'].includes(String(r.status)));
+  const allPaid = allInstRes.rows.length > 0 && allInstRes.rows.every((r) => ['PASS', 'NEFT', 'CASH', 'PAID', 'Paid'].includes(String(r.status)));
+  const parentStatus = hasOverdue ? 'Overdue' : allPaid ? 'Closed' : 'Active';
+
+  // Recompute splits
+  const instSplitsRes = await client.execute({
+    sql: `SELECT ics.company_id, SUM(ics.amount) as total_amt
+          FROM installment_company_splits ics
+          WHERE ics.installment_id IN (SELECT id FROM installments WHERE loan_id = ?)
+          GROUP BY ics.company_id`,
+    args: [targetLoanId],
+  });
+
+  const recomputeStatements: any[] = [
+    {
+      sql: 'UPDATE loans SET total_amount = ?, installment_count = ?, status = ? WHERE id = ?',
+      args: [newTotal, allInstRes.rows.length, parentStatus, targetLoanId],
+    },
+    {
+      sql: 'DELETE FROM loan_company_splits WHERE loan_id = ?',
+      args: [targetLoanId],
+    },
+  ];
+
+  for (const row of instSplitsRes.rows) {
+    const compId = String(row.company_id);
+    const amt = Number(row.total_amt || 0);
+    const splitPct = newTotal > 0 ? Number(((amt / newTotal) * 100).toFixed(2)) : 0;
+    recomputeStatements.push({
+      sql: `INSERT INTO loan_company_splits (id, loan_id, company_id, split_percent, split_amount)
+            VALUES (?, ?, ?, ?, ?)`,
+      args: [`LCS-${targetLoanId}-${compId}`, targetLoanId, compId, splitPct, amt],
+    });
+  }
+
+  await client.batch(recomputeStatements, 'write');
+
+  await logAudit({
+    actorId: 'ADM-1001',
+    actorName: 'System Administrator',
+    actorRoleId: 0,
+    action: 'Merged Loans',
+    target: `Merged ${sourceLoanId} into ${targetLoanId} (${targetLoan.customerName})`,
+    beforeVal: `Target: ₹${targetLoan.totalAmount.toLocaleString('en-IN')}, Source: ₹${sourceLoan.totalAmount.toLocaleString('en-IN')}`,
+    afterVal: `New Total: ₹${newTotal.toLocaleString('en-IN')}, EMIs: ${allInstRes.rows.length}`,
+    isSensitive: true,
+  });
+
+  return await getLoanById(targetLoanId);
+}
+
+/**
+ * Splits selected installments out of parent loan into a brand new Loan ID.
+ */
+export async function splitLoan(
+  loanId: string,
+  installmentIdsToExtract: string[]
+): Promise<{ parentLoan: Loan; newLoan: Loan }> {
+  await ensureDbInitialized();
+  const client = getTursoClient();
+
+  const parentLoan = await getLoanById(loanId);
+  if (!parentLoan) throw new Error('Parent loan not found.');
+
+  const parentInsts = parentLoan.installments || [];
+  if (parentInsts.length <= 1) throw new Error('Cannot split a loan with only 1 installment.');
+  if (installmentIdsToExtract.length === 0 || installmentIdsToExtract.length >= parentInsts.length) {
+    throw new Error('Must extract at least 1 installment, and cannot extract all installments.');
+  }
+
+  const extractSet = new Set(installmentIdsToExtract);
+  const remainingInsts = parentInsts.filter((i) => !extractSet.has(i.id));
+  const extractedInsts = parentInsts.filter((i) => extractSet.has(i.id));
+
+  const newLoanId = await generateNextLoanId(extractedInsts[0]?.dueDate || parentLoan.startDate);
+  const now = new Date().toISOString().slice(0, 10);
+
+  const newTotalAmount = extractedInsts.reduce((sum, i) => sum + i.amountDue, 0);
+  const newStartDate = extractedInsts[0]?.dueDate || parentLoan.startDate;
+  const newFrequency = extractedInsts.length >= 20 ? 'Daily' : extractedInsts.length >= 2 ? 'Weekly' : 'Monthly';
+
+  const newHasOverdue = extractedInsts.some((r) => ['RET', 'RET NEFT', 'RET PASS', 'Overdue'].includes(String(r.status)));
+  const newAllPaid = extractedInsts.every((r) => ['PASS', 'NEFT', 'CASH', 'PAID', 'Paid'].includes(String(r.status)));
+  const newStatus = newHasOverdue ? 'Overdue' : newAllPaid ? 'Closed' : 'Active';
+
+  const statements: any[] = [
+    // 1. Create new loan row
+    {
+      sql: `INSERT INTO loans (id, customer_id, code_no, total_amount, start_date, installment_count, frequency, status, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      args: [
+        newLoanId,
+        parentLoan.customerId,
+        parentLoan.codeNo ? `${parentLoan.codeNo}-B` : `CL-${newLoanId.slice(-4)}`,
+        newTotalAmount,
+        newStartDate,
+        extractedInsts.length,
+        newFrequency,
+        newStatus,
+        now,
+      ],
+    },
+  ];
+
+  // 2. Reassign extracted installments to new loan
+  extractedInsts.forEach((inst, idx) => {
+    statements.push({
+      sql: 'UPDATE installments SET loan_id = ?, seq_no = ? WHERE id = ?',
+      args: [newLoanId, idx + 1, inst.id],
+    });
+  });
+
+  // 3. Re-index remaining installments in parent loan
+  remainingInsts.forEach((inst, idx) => {
+    statements.push({
+      sql: 'UPDATE installments SET seq_no = ? WHERE id = ?',
+      args: [idx + 1, inst.id],
+    });
+  });
+
+  await client.batch(statements, 'write');
+
+  // 4. Recompute parent loan totals and splits
+  const parentNewTotal = remainingInsts.reduce((sum, i) => sum + i.amountDue, 0);
+  const parentHasOverdue = remainingInsts.some((r) => ['RET', 'RET NEFT', 'RET PASS', 'Overdue'].includes(String(r.status)));
+  const parentAllPaid = remainingInsts.every((r) => ['PASS', 'NEFT', 'CASH', 'PAID', 'Paid'].includes(String(r.status)));
+  const parentFinalStatus = parentHasOverdue ? 'Overdue' : parentAllPaid ? 'Closed' : 'Active';
+
+  const recomputeStatements: any[] = [
+    {
+      sql: 'UPDATE loans SET total_amount = ?, installment_count = ?, status = ? WHERE id = ?',
+      args: [parentNewTotal, remainingInsts.length, parentFinalStatus, loanId],
+    },
+    { sql: 'DELETE FROM loan_company_splits WHERE loan_id = ?', args: [loanId] },
+    { sql: 'DELETE FROM loan_company_splits WHERE loan_id = ?', args: [newLoanId] },
+  ];
+
+  // Calculate splits for Parent Loan
+  const parentSplitsRes = await client.execute({
+    sql: `SELECT ics.company_id, SUM(ics.amount) as total_amt
+          FROM installment_company_splits ics
+          WHERE ics.installment_id IN (SELECT id FROM installments WHERE loan_id = ?)
+          GROUP BY ics.company_id`,
+    args: [loanId],
+  });
+
+  for (const row of parentSplitsRes.rows) {
+    const compId = String(row.company_id);
+    const amt = Number(row.total_amt || 0);
+    const splitPct = parentNewTotal > 0 ? Number(((amt / parentNewTotal) * 100).toFixed(2)) : 0;
+    recomputeStatements.push({
+      sql: `INSERT INTO loan_company_splits (id, loan_id, company_id, split_percent, split_amount)
+            VALUES (?, ?, ?, ?, ?)`,
+      args: [`LCS-${loanId}-${compId}`, loanId, compId, splitPct, amt],
+    });
+  }
+
+  // Calculate splits for New Loan
+  const newSplitsRes = await client.execute({
+    sql: `SELECT ics.company_id, SUM(ics.amount) as total_amt
+          FROM installment_company_splits ics
+          WHERE ics.installment_id IN (SELECT id FROM installments WHERE loan_id = ?)
+          GROUP BY ics.company_id`,
+    args: [newLoanId],
+  });
+
+  for (const row of newSplitsRes.rows) {
+    const compId = String(row.company_id);
+    const amt = Number(row.total_amt || 0);
+    const splitPct = newTotalAmount > 0 ? Number(((amt / newTotalAmount) * 100).toFixed(2)) : 0;
+    recomputeStatements.push({
+      sql: `INSERT INTO loan_company_splits (id, loan_id, company_id, split_percent, split_amount)
+            VALUES (?, ?, ?, ?, ?)`,
+      args: [`LCS-${newLoanId}-${compId}`, newLoanId, compId, splitPct, amt],
+    });
+  }
+
+  await client.batch(recomputeStatements, 'write');
+
+  await logAudit({
+    actorId: 'ADM-1001',
+    actorName: 'System Administrator',
+    actorRoleId: 0,
+    action: 'Split Loan',
+    target: `Split Loan ${loanId} into ${newLoanId} (${parentLoan.customerName})`,
+    beforeVal: `Original: ₹${parentLoan.totalAmount.toLocaleString('en-IN')}, EMIs: ${parentInsts.length}`,
+    afterVal: `Retained: ₹${parentNewTotal.toLocaleString('en-IN')} (${remainingInsts.length} EMIs), New: ₹${newTotalAmount.toLocaleString('en-IN')} (${extractedInsts.length} EMIs)`,
+    isSensitive: true,
+  });
+
+  const updatedParent = await getLoanById(loanId);
+  const createdNew = await getLoanById(newLoanId);
+
+  return { parentLoan: updatedParent!, newLoan: createdNew! };
+}
+
+/**
+ * Commits a reviewed import plan atomically into Turso.
+ */
+export async function commitReviewedImport(
+  planRows: {
+    decision: 'CONTINUATION' | 'NEW_LOAN';
+    targetLoanId?: string;
+    raw: {
+      date: string;
+      codeNo?: string;
+      place?: string;
+      clientName: string;
+      depName?: string;
+      chqNo?: string;
+      amount: number;
+      status?: string;
+      splits: Record<string, number>;
+      remarks?: string;
+    };
+  }[]
+): Promise<{ success: boolean; continuationsCount: number; newLoansCount: number; totalCommitted: number }> {
+  await ensureDbInitialized();
+  const client = getTursoClient();
+
+  const companies = await getCompanies();
+  const companyCodeMap = new Map(companies.map((c) => [c.shortCode.toUpperCase(), c]));
+  const companyIdMap = new Map(companies.map((c) => [c.id, c]));
+
+  // Ensure all customers exist
+  const existingLoans = await getLoans();
+  const customerNameMap = new Map<string, string>(); // normalized client -> customer_id
+  existingLoans.forEach((l) => {
+    customerNameMap.set(l.customerName.toUpperCase(), l.customerId);
+  });
+
+  const now = new Date().toISOString().slice(0, 10);
+  const statements: any[] = [];
+
+  let continuationsCount = 0;
+  let newLoansCount = 0;
+
+  // Track new loans to generate IDs
+  const newLoanGroups = new Map<string, typeof planRows>(); // key -> rows
+
+  for (const item of planRows) {
+    if (item.decision === 'CONTINUATION' && item.targetLoanId) {
+      continuationsCount++;
+      const targetLoan = existingLoans.find((l) => l.id === item.targetLoanId);
+      const seqNo = (targetLoan?.installments?.length || 0) + 1;
+      const instId = `INST-${item.raw.date.slice(0, 4)}-${String(Date.now() + Math.floor(Math.random() * 100000)).slice(-6)}`;
+
+      statements.push({
+        sql: `INSERT INTO installments (id, loan_id, seq_no, due_date, amount_due, status, recd_date, chq_no, place, dep_name, remarks, created_at)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        args: [
+          instId,
+          item.targetLoanId,
+          seqNo,
+          item.raw.date,
+          item.raw.amount,
+          item.raw.status || 'PENDING',
+          ['PASS', 'NEFT', 'CASH', 'PAID'].includes(String(item.raw.status).toUpperCase()) ? item.raw.date : null,
+          item.raw.chqNo || null,
+          item.raw.place || targetLoan?.place || 'CHENNAI',
+          item.raw.depName || null,
+          item.raw.remarks || null,
+          now,
+        ],
+      });
+
+      // Splits
+      for (const [code, amt] of Object.entries(item.raw.splits || {})) {
+        if (amt > 0) {
+          const comp = companyCodeMap.get(code.toUpperCase()) || companyIdMap.get(code);
+          if (comp) {
+            statements.push({
+              sql: `INSERT INTO installment_company_splits (id, installment_id, company_id, amount) VALUES (?, ?, ?, ?)`,
+              args: [`ICS-${instId}-${comp.shortCode}`, instId, comp.id, amt],
+            });
+          }
+        }
+      }
+    } else {
+      // Group new loans by client
+      const key = `${item.raw.clientName.toUpperCase()}_${item.raw.amount}_${item.raw.depName || 'NODEP'}`;
+      if (!newLoanGroups.has(key)) newLoanGroups.set(key, []);
+      newLoanGroups.get(key)!.push(item);
+    }
+  }
+
+  // Create new loans
+  for (const [key, items] of newLoanGroups.entries()) {
+    newLoansCount++;
+    const first = items[0].raw;
+    const loanStartDate = first.date;
+    const newLoanId = await generateNextLoanId(loanStartDate);
+    const totalAmt = items.reduce((sum, i) => sum + Number(i.raw.amount || 0), 0);
+
+    let customerId = customerNameMap.get(first.clientName.toUpperCase());
+    if (!customerId) {
+      // Create new customer
+      const countCustRes = await client.execute('SELECT COUNT(*) as count FROM customers');
+      customerId = `CUST-${String(Number(countCustRes.rows[0].count) + 1).padStart(4, '0')}`;
+      statements.push({
+        sql: `INSERT INTO customers (id, name, place, phone, created_at) VALUES (?, ?, ?, ?, ?)`,
+        args: [customerId, first.clientName.toUpperCase(), first.place || 'CHENNAI', '+91 98400 00000', now],
+      });
+      customerNameMap.set(first.clientName.toUpperCase(), customerId);
+    }
+
+    const frequency = items.length >= 20 ? 'Daily' : items.length >= 2 ? 'Weekly' : 'Monthly';
+
+    statements.push({
+      sql: `INSERT INTO loans (id, customer_id, code_no, total_amount, start_date, installment_count, frequency, status, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      args: [newLoanId, customerId, first.codeNo || `CL-${newLoanId.slice(-4)}`, totalAmt, loanStartDate, items.length, frequency, 'Active', now],
+    });
+
+    const companyTotals = new Map<string, number>();
+
+    items.forEach((item, idx) => {
+      const instId = `INST-${item.raw.date.slice(0, 4)}-${String(Date.now() + idx + Math.floor(Math.random() * 100000)).slice(-6)}`;
+
+      statements.push({
+        sql: `INSERT INTO installments (id, loan_id, seq_no, due_date, amount_due, status, recd_date, chq_no, place, dep_name, remarks, created_at)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        args: [
+          instId,
+          newLoanId,
+          idx + 1,
+          item.raw.date,
+          item.raw.amount,
+          item.raw.status || 'PENDING',
+          ['PASS', 'NEFT', 'CASH', 'PAID'].includes(String(item.raw.status).toUpperCase()) ? item.raw.date : null,
+          item.raw.chqNo || null,
+          item.raw.place || 'CHENNAI',
+          item.raw.depName || null,
+          item.raw.remarks || null,
+          now,
+        ],
+      });
+
+      for (const [code, amt] of Object.entries(item.raw.splits || {})) {
+        if (amt > 0) {
+          const comp = companyCodeMap.get(code.toUpperCase()) || companyIdMap.get(code);
+          if (comp) {
+            companyTotals.set(comp.id, (companyTotals.get(comp.id) || 0) + amt);
+            statements.push({
+              sql: `INSERT INTO installment_company_splits (id, installment_id, company_id, amount) VALUES (?, ?, ?, ?)`,
+              args: [`ICS-${instId}-${comp.shortCode}`, instId, comp.id, amt],
+            });
+          }
+        }
+      }
+    });
+
+    for (const [compId, compAmt] of companyTotals.entries()) {
+      const splitPct = totalAmt > 0 ? Number(((compAmt / totalAmt) * 100).toFixed(2)) : 0;
+      statements.push({
+        sql: `INSERT INTO loan_company_splits (id, loan_id, company_id, split_percent, split_amount) VALUES (?, ?, ?, ?, ?)`,
+        args: [`LCS-${newLoanId}-${compId}`, newLoanId, compId, splitPct, compAmt],
+      });
+    }
+  }
+
+  // Execute in batches
+  const BATCH_SIZE = 100;
+  for (let i = 0; i < statements.length; i += BATCH_SIZE) {
+    const b = statements.slice(i, i + BATCH_SIZE);
+    await client.batch(b, 'write');
+  }
+
+  // Recalculate totals for target loans that received continuations
+  const uniqueTargetLoanIds = Array.from(new Set(planRows.filter((p) => p.decision === 'CONTINUATION' && p.targetLoanId).map((p) => p.targetLoanId!)));
+  for (const tid of uniqueTargetLoanIds) {
+    const allInstRes = await client.execute({
+      sql: 'SELECT amount_due, status FROM installments WHERE loan_id = ?',
+      args: [tid],
+    });
+    const newTot = allInstRes.rows.reduce((sum, r) => sum + Number(r.amount_due || 0), 0);
+    const hasOverdue = allInstRes.rows.some((r) => ['RET', 'RET NEFT', 'RET PASS', 'Overdue'].includes(String(r.status)));
+    const allPaid = allInstRes.rows.every((r) => ['PASS', 'NEFT', 'CASH', 'PAID', 'Paid'].includes(String(r.status)));
+    const pStatus = hasOverdue ? 'Overdue' : allPaid ? 'Closed' : 'Active';
+
+    await client.execute({
+      sql: 'UPDATE loans SET total_amount = ?, installment_count = ?, status = ? WHERE id = ?',
+      args: [newTot, allInstRes.rows.length, pStatus, tid],
+    });
+  }
+
+  await logAudit({
+    actorId: 'ADM-1001',
+    actorName: 'System Administrator',
+    actorRoleId: 0,
+    action: 'Spreadsheet Import Committed',
+    target: `Imported ${planRows.length} Rows`,
+    beforeVal: '-',
+    afterVal: `${continuationsCount} Continuations Appended, ${newLoansCount} New Loans Created`,
+    isSensitive: true,
+  });
+
+  return {
+    success: true,
+    continuationsCount,
+    newLoansCount,
+    totalCommitted: planRows.length,
+  };
+}
+
 // ==========================================
 // Historical July 2026 Grid Service
 // ==========================================
@@ -688,16 +1171,6 @@ export async function getHistoricalReceipts(filters?: {
     const isMismatch = splitSum > 0 && Math.abs(amount - splitSum) > 0.01;
     if (isMismatch) mismatchCount++;
 
-    // Check for ad-hoc others
-    let othersVal = splits['OTHERS'] || 0;
-    let othersName: string | undefined;
-    for (const [k, v] of Object.entries(splits)) {
-      if (['TATVA', 'BHAVANA'].includes(k) && v > 0) {
-        othersVal = v;
-        othersName = k;
-      }
-    }
-
     receiptRows.push({
       sNo: sNoCounter++,
       date: String(r.due_date || ''),
@@ -709,19 +1182,22 @@ export async function getHistoricalReceipts(filters?: {
       amount,
       status: (r.status as any) || 'PENDING',
       recdDate: r.recd_date ? String(r.recd_date) : null,
-      pass: splits['PASS'],
-      ala: splits['ALA'],
-      ig: splits['IG'],
-      gs: splits['GS'],
-      mars: splits['MARS'],
-      tg: splits['TG'],
-      fin: splits['FIN'],
-      mm: splits['MM'],
-      cs: splits['CS'],
-      mc: splits['MC'],
-      taSS: splits['TA (SS)'],
-      others: othersVal > 0 ? othersVal : undefined,
-      othersName: othersName || (othersVal > 0 ? 'OTHERS' : undefined),
+      pass: splits['PASS'] || splits['PASS ENTERPRISES'],
+      kars: splits['KARS'] || splits['KARS ENTERPRISES'],
+      ig: splits['IG'] || splits['INFIN GROUP'] || splits['INFIN'],
+      ine: splits['INE'] || splits['INFINITY ENTERPRISES'],
+      ins: splits['INS'] || splits['INNOVATIVE SOLUTIONS'] || splits['INNOVATE SOLUTIONS'],
+      mars: splits['MARS'] || splits['MARS SOLUTION'],
+      mm: splits['MM'] || splits['MM ASSOCIATES'],
+      tg: splits['TG'] || splits['TRIVENI GROUP'] || splits['TREVINI GROUP'],
+      gs: splits['GS'] || splits['GLOBAL SOLITAIRE'] || splits['GLOBAL SOLITARE'],
+      ala: splits['ALA'] || splits['ALAGESH'],
+      fin: splits['FIN'] || splits['FINCUBE VENTURES'],
+      cs: splits['CS'] || splits['CS ASSOCIATES'],
+      mc: splits['MC'] || splits['M CHINNIAH'],
+      tatva: splits['TATVA'] || splits['TATVA ENTERPRISES'],
+      bhavna: splits['BHAVNA'] || splits['BHAVANA'] || splits['BHAVANA CORP'],
+      taSS: splits['TA (SS)'] || splits['TA'] || splits['THIRUCHENDURAON ASSOCIATE'],
       remarks: r.remarks ? String(r.remarks) : undefined,
       loanId: String(r.loan_id),
       installmentId: iid,

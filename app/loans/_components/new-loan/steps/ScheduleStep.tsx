@@ -70,10 +70,13 @@ export const ScheduleStep: React.FC<ScheduleStepProps> = ({
             <tr className="bg-[#240F1D] border-b border-[#3D1A2C] text-slate-300 font-mono">
               <th className="p-3 w-12 text-center">#</th>
               <th className="p-3 w-32">Due Date</th>
-              <th className="p-3 w-36">Installment (₹)</th>
+              <th className="p-3 w-36 text-right font-bold text-[#EED8A1]">Installment (₹)</th>
               {selectedCompanies.map((c) => (
-                <th key={c.id} className="p-3 font-bold text-[#EED8A1] min-w-[120px]">
-                  {c.shortCode}
+                <th key={c.id} className="p-3 font-bold text-[#EED8A1] min-w-[150px] text-right">
+                  <div className="text-xs font-bold text-white leading-tight">{c.name}</div>
+                  <div className={`text-[10px] font-mono font-normal mt-0.5 ${c.isOutsideParty ? 'text-purple-300' : 'text-emerald-300'}`}>
+                    {c.shortCode} • {c.isOutsideParty ? 'Outside' : 'ASR'}
+                  </div>
                 </th>
               ))}
               <th className="p-3 w-20 text-center">Status</th>
@@ -95,7 +98,12 @@ export const ScheduleStep: React.FC<ScheduleStepProps> = ({
                           prev.map((r) => (r.seqNo === row.seqNo ? { ...r, dueDate: newDate } : r))
                         );
                       }}
-                      className="bg-[#240F1D] border border-[#3D1A2C] rounded px-2 py-1 text-xs text-slate-200"
+                      onClick={(e) => {
+                        try {
+                          (e.target as any).showPicker?.();
+                        } catch {}
+                      }}
+                      className="bg-[#240F1D] border border-[#3D1A2C] rounded px-2.5 py-1 text-xs font-mono text-slate-200 cursor-pointer [appearance:textfield] [&::-webkit-inner-spin-button]:hidden [&::-webkit-calendar-picker-indicator]:cursor-pointer"
                     />
                   </td>
                   <td className="p-2.5">
@@ -117,7 +125,7 @@ export const ScheduleStep: React.FC<ScheduleStepProps> = ({
                           min="0"
                           value={val || ''}
                           onChange={(e) => handleCellSplitChange(row.seqNo, c.shortCode, Number(e.target.value))}
-                          className="w-full bg-[#1F0B18] border border-[#3D1A2C] rounded px-2 py-1 text-xs text-right text-slate-200"
+                          className="w-full bg-[#1F0B18] border border-[#3D1A2C] rounded px-2 py-1 text-xs text-right text-slate-200 font-semibold"
                         />
                       </td>
                     );
@@ -140,6 +148,31 @@ export const ScheduleStep: React.FC<ScheduleStepProps> = ({
               );
             })}
           </tbody>
+
+          {/* Schedule Column Totals Footer */}
+          <tfoot className="bg-[#240F1D] border-t-2 border-[#C5A059]/40 font-mono text-xs font-bold text-slate-200">
+            <tr>
+              <td className="p-2.5 text-center text-slate-400">TOTAL</td>
+              <td className="p-2.5 text-slate-400 font-normal">{scheduleRows.length} EMIs</td>
+              <td className="p-2.5 text-right font-extrabold text-[#EED8A1]">
+                ₹{scheduledTotal.toLocaleString('en-IN')}
+              </td>
+              {selectedCompanies.map((c) => {
+                const compSum = scheduleRows.reduce(
+                  (sum, r) => sum + (Number(r.companySplits[c.shortCode]) || 0),
+                  0
+                );
+                return (
+                  <td key={c.id} className="p-2.5 text-right font-bold text-amber-300">
+                    ₹{compSum.toLocaleString('en-IN')}
+                  </td>
+                );
+              })}
+              <td className="p-2.5 text-center text-[10px] text-emerald-400">
+                {isStep4Valid ? '✓ BAL' : 'DIFF'}
+              </td>
+            </tr>
+          </tfoot>
         </table>
       </div>
 
@@ -153,9 +186,9 @@ export const ScheduleStep: React.FC<ScheduleStepProps> = ({
       >
         <div className="flex items-center gap-2">
           {isStep4Valid ? (
-            <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+            <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
           ) : (
-            <AlertCircle className="w-5 h-5 text-rose-400" />
+            <AlertCircle className="w-5 h-5 text-rose-400 shrink-0" />
           )}
           <div>
             <span className="font-bold block">
@@ -164,7 +197,7 @@ export const ScheduleStep: React.FC<ScheduleStepProps> = ({
             <span className="text-[10px] opacity-75 block">
               ({numberToWordsINR(scheduledTotal)})
             </span>
-            <span className="text-[11px] opacity-80 mt-0.5 block">
+            <span className="text-[11px] opacity-80 mt-0.5 block font-sans">
               {isStep4Valid
                 ? 'All installments and company splits are perfectly balanced.'
                 : !isScheduledTotalBalanced
@@ -173,7 +206,7 @@ export const ScheduleStep: React.FC<ScheduleStepProps> = ({
             </span>
           </div>
         </div>
-        <span className="font-bold text-sm">
+        <span className="font-bold text-xs uppercase px-2.5 py-1 rounded bg-black/40 border border-current">
           {isStep4Valid ? 'BALANCED' : 'REBALANCE REQUIRED'}
         </span>
       </div>

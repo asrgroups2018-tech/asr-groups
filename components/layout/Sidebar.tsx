@@ -42,19 +42,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpenMobile, onCloseMobile })
 
   const allNavItems = [
     { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard className="w-4 h-4" /> },
-    {
-      id: 'administration',
-      label: 'Administration',
-      icon: <ShieldCheck className="w-4 h-4 text-amber-400" />,
-    },
     { id: 'loans', label: 'Loans', icon: <CreditCard className="w-4 h-4" /> },
     { id: 'customers', label: 'Customers', icon: <Users className="w-4 h-4" /> },
     { id: 'companies', label: 'Companies', icon: <Building2 className="w-4 h-4" /> },
-    { id: 'collections', label: 'Collections', icon: <Coins className="w-4 h-4" /> },
-    { id: 'income', label: 'Income', icon: <TrendingUp className="w-4 h-4" /> },
-    { id: 'expenses', label: 'Expenses', icon: <Receipt className="w-4 h-4" /> },
-    { id: 'salary', label: 'Salary & Payroll', icon: <Banknote className="w-4 h-4" /> },
-    { id: 'agents', label: 'Agents', icon: <Briefcase className="w-4 h-4" /> },
+    // Temporarily hidden modules (reserved for future activation)
+    // { id: 'collections', label: 'Collections', icon: <Coins className="w-4 h-4" /> },
+    // { id: 'income', label: 'Income', icon: <TrendingUp className="w-4 h-4" /> },
+    // { id: 'expenses', label: 'Expenses', icon: <Receipt className="w-4 h-4" /> },
+    // { id: 'salary', label: 'Salary & Payroll', icon: <Banknote className="w-4 h-4" /> },
+    // { id: 'agents', label: 'Agents', icon: <Briefcase className="w-4 h-4" /> },
     { id: 'reports', label: 'Reports', icon: <FileBarChart className="w-4 h-4" /> },
     { id: 'schedule', label: 'Schedule', icon: <CalendarDays className="w-4 h-4" /> },
     {
@@ -65,6 +61,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpenMobile, onCloseMobile })
       badgeClass: 'bg-[#C5A059] text-slate-950 font-bold',
     },
     { id: 'settings', label: 'Settings', icon: <Settings className="w-4 h-4" /> },
+    {
+      id: 'administration',
+      label: 'Administration',
+      icon: <ShieldCheck className="w-4 h-4 text-amber-400" />,
+    },
   ];
 
   // Dynamic filter: Role 0 sees all. Other roles see only modules where 'view' permission is allowed!

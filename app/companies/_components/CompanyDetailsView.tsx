@@ -39,12 +39,25 @@ export const CompanyDetailsView: React.FC = () => {
   }
 
   // Find all loans this company has funded
+  const codeUpper = company.shortCode?.toUpperCase() || '';
+  const nameUpper = company.name?.toUpperCase() || '';
+
   const companyLoans = loans.filter((l) =>
-    (l.splits || []).some((s) => s.companyId === company.id || s.companyCode === company.shortCode)
+    (l.splits || []).some(
+      (s) =>
+        s.companyId === company.id ||
+        (s.companyCode && s.companyCode.toUpperCase() === codeUpper) ||
+        (s.companyName && s.companyName.toUpperCase() === nameUpper)
+    )
   );
 
   const totalFunded = companyLoans.reduce((sum, l) => {
-    const split = (l.splits || []).find((s) => s.companyId === company.id || s.companyCode === company.shortCode);
+    const split = (l.splits || []).find(
+      (s) =>
+        s.companyId === company.id ||
+        (s.companyCode && s.companyCode.toUpperCase() === codeUpper) ||
+        (s.companyName && s.companyName.toUpperCase() === nameUpper)
+    );
     return sum + (split ? split.splitAmount : 0);
   }, 0);
 

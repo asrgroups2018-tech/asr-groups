@@ -110,7 +110,10 @@ export type AuditActionType =
   | 'Updated Loan'
   | 'Updated Installment'
   | 'Imported July Dataset'
-  | 'Edited Sheet Row';
+  | 'Edited Sheet Row'
+  | 'Merged Loans'
+  | 'Split Loan'
+  | 'Spreadsheet Import Committed';
 
 export interface AuditLogEntry {
   id: string; // e.g. "AUD-9402"
@@ -293,7 +296,7 @@ export interface Installment {
 
 // 6. Loan (Client-level Aggregated Entity)
 export interface Loan {
-  id: string; // e.g. "LOAN-2026-001"
+  id: string; // e.g. "LN20260001"
   customerId: string;
   customerName: string;
   place?: string;
@@ -322,20 +325,24 @@ export interface HistoricalReceiptRow {
   chqNo: string;
   amount: number;
   status: CollectionStatus;
-  recdDate: string | null;
+  recdDate?: string | null;
   pass?: number;
-  ala?: number;
+  kars?: number;
+  infin?: number;
+  ine?: number;
+  ins?: number;
   ig?: number;
-  gs?: number;
   mars?: number;
-  tg?: number;
-  fin?: number;
   mm?: number;
+  tg?: number;
+  gs?: number;
+  ala?: number;
+  fin?: number;
   cs?: number;
   mc?: number;
+  tatva?: number;
+  bhavna?: number;
   taSS?: number;
-  others?: number;
-  othersName?: string;
   remarks?: string;
   loanId?: string;
   installmentId?: string;
