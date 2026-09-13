@@ -6,32 +6,37 @@ export async function POST(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await context.params;
+    const { id: loanId } = await context.params;
     const body = await req.json();
-    const { sNo, status, newDate, newDueDate, reason } = body;
+    const { installmentId, status, recdDate, amountDue, dueDate, chqNo, depName, place, remarks, companySplits } = body;
 
-    if (typeof sNo !== 'number') {
+    if (!installmentId) {
       return NextResponse.json(
-        { success: false, error: 'Installment sNo is required.' },
+        { success: false, error: 'Installment ID is required.' },
         { status: 400 }
       );
     }
 
-    let updated = null;
-    if (newDate) {
-      updated = db.updateLoanInstallmentDate(id, sNo, newDate, newDueDate, reason);
-    } else if (status) {
-      updated = db.updateLoanInstallmentStatus(id, sNo, status);
-    }
+    const updated = await db.updateLoanInstallment(installmentId, {
+      status,
+      recdDate,
+      amountDue: amountDue !== undefined ? Number(amountDue) : undefined,
+      dueDate,
+      chqNo,
+      depName,
+      place,
+      remarks,
+      companySplits,
+    });
 
     if (!updated) {
       return NextResponse.json(
-        { success: false, error: 'Loan or installment not found.' },
+        { success: false, error: 'Installment not found.' },
         { status: 404 }
       );
     }
 
-    return NextResponse.json({ success: true, data: updated });
+    return NextResponse.json({ success: true, data: updated, loanId });
   } catch (err: any) {
     return NextResponse.json({ success: false, error: err.message }, { status: 500 });
   }

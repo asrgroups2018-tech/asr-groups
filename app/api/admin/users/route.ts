@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
     const statusParam = searchParams.get('status');
     const queryParam = searchParams.get('query');
 
-    const users = db.getUsers({
+    const users = await db.getUsers({
       roleId: roleIdParam ? Number(roleIdParam) : undefined,
       status: statusParam || undefined,
       query: queryParam || undefined,
@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const newUser = db.createUser(body);
+    const newUser = await db.createUser(body);
     return NextResponse.json({ success: true, data: newUser }, { status: 201 });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
@@ -47,7 +47,7 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'User ID is required.' }, { status: 400 });
     }
 
-    const updated = db.updateUser(body.id, body);
+    const updated = await db.updateUser(body.id, body);
     if (!updated) {
       return NextResponse.json({ success: false, error: 'User not found.' }, { status: 404 });
     }
@@ -69,7 +69,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Check if trying to delete a Super Admin — only allow if another Super Admin exists
-    const allUsers = db.getUsers({});
+    const allUsers = await db.getUsers({});
     const targetUser = allUsers.find((u) => u.id === id);
 
     if (targetUser && targetUser.assignedRoleIds.includes(0)) {
@@ -84,7 +84,7 @@ export async function DELETE(request: NextRequest) {
       }
     }
 
-    const deleted = db.deleteUser(id);
+    const deleted = await db.deleteUser(id);
     if (!deleted) {
       return NextResponse.json({ success: false, error: 'User not found.' }, { status: 404 });
     }

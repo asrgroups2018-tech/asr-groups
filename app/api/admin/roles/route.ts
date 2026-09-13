@@ -4,7 +4,7 @@ import { db } from '@/lib/server/db';
 // GET /api/admin/roles
 export async function GET() {
   try {
-    const roles = db.getRoles();
+    const roles = await db.getRoles();
     return NextResponse.json({ success: true, data: roles });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const newRole = db.createRole({
+    const newRole = await db.createRole({
       name: body.name,
       code: body.code,
       description: body.description || '',
@@ -52,7 +52,7 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    const updated = db.updateRole(Number(body.id), body);
+    const updated = await db.updateRole(Number(body.id), body);
     if (!updated) {
       return NextResponse.json({ success: false, error: 'Role not found.' }, { status: 404 });
     }

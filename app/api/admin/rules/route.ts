@@ -4,7 +4,7 @@ import { db } from '@/lib/server/db';
 // GET /api/admin/rules
 export async function GET() {
   try {
-    const rules = db.getApprovalRules();
+    const rules = await db.getApprovalRules();
     return NextResponse.json({ success: true, data: rules });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const newRule = db.createApprovalRule({
+    const newRule = await db.createApprovalRule({
       changeType: body.changeType,
       description: body.description || '',
       whoCanRaise: body.whoCanRaise,
@@ -46,7 +46,7 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Rule ID is required.' }, { status: 400 });
     }
 
-    const updated = db.updateApprovalRule(body.id, body);
+    const updated = await db.updateApprovalRule(body.id, body);
     if (!updated) {
       return NextResponse.json({ success: false, error: 'Rule not found.' }, { status: 404 });
     }
@@ -67,7 +67,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Rule ID parameter is required.' }, { status: 400 });
     }
 
-    const deleted = db.deleteApprovalRule(id);
+    const deleted = await db.deleteApprovalRule(id);
     if (!deleted) {
       return NextResponse.json({ success: false, error: 'Rule not found.' }, { status: 404 });
     }

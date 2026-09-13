@@ -4,7 +4,7 @@ import { db } from '@/lib/server/db';
 // POST /api/admin/backup
 export async function POST() {
   try {
-    const timestamp = db.triggerBackup();
+    const timestamp = await db.triggerBackup();
     return NextResponse.json({
       success: true,
       message: 'Encrypted snapshot created successfully.',

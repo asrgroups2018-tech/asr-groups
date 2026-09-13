@@ -3,7 +3,7 @@
 import React from 'react';
 import { useApp } from '@/lib/store';
 import { ShieldCheck, ShieldAlert, Sparkles, UserCheck } from 'lucide-react';
-import { RoleBadge } from '@/components/common/RoleBadge';
+import { RoleBadge } from '@/components/ui/RoleBadge';
 
 export const RoleRibbon: React.FC = () => {
   const { simulatedRoleId, currentActor, setSimulatedRoleId, roles } = useApp();

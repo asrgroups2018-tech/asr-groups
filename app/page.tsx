@@ -4,16 +4,18 @@ import React, { useState } from 'react';
 import { AppProvider, useApp } from '@/lib/store';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { TopNav } from '@/components/layout/TopNav';
-import { AdminSection } from '@/components/admin/AdminSection';
-import { LoansListView } from '@/components/loans/LoansListView';
-import { LoanDetailsView } from '@/components/loans/LoanDetailsView';
-import { CustomersListView } from '@/components/customers/CustomersListView';
-import { CustomerDetailsView } from '@/components/customers/CustomerDetailsView';
-import { CompaniesListView } from '@/components/companies/CompaniesListView';
-import { CompanyDetailsView } from '@/components/companies/CompanyDetailsView';
-import { ScheduleView } from '@/components/schedule/ScheduleView';
-import { UnderDevelopmentView } from '@/components/common/UnderDevelopmentView';
-import { ToastContainer } from '@/components/common/Toast';
+import { AdminSection } from '@/app/administration/_components/AdminSection';
+import { DashboardView } from '@/app/dashboard/_components/DashboardView';
+import { LoansListView } from '@/app/loans/_components/LoansListView';
+import { LoanDetailsView } from '@/app/loans/_components/LoanDetailsView';
+import { CustomersListView } from '@/app/customers/_components/CustomersListView';
+import { CustomerDetailsView } from '@/app/customers/_components/CustomerDetailsView';
+import { CompaniesListView } from '@/app/companies/_components/CompaniesListView';
+import { CompanyDetailsView } from '@/app/companies/_components/CompanyDetailsView';
+import { ScheduleView } from '@/app/schedule/_components/ScheduleView';
+import { HistoricalSheetView } from '@/app/historical-sheet/_components/HistoricalSheetView';
+import { UnderDevelopmentView } from '@/components/ui/UnderDevelopmentView';
+import { ToastContainer } from '@/components/ui/Toast';
 
 function ERPContent() {
   const {
@@ -39,6 +41,7 @@ function ERPContent() {
 
         {/* Dynamic Viewport */}
         <div className="flex-1 min-h-0">
+          {activeMainTab === 'dashboard' && <DashboardView />}
           {activeMainTab === 'administration' && <AdminSection />}
           {activeMainTab === 'loans' && (
             <main className="p-4 sm:p-8 max-w-7xl w-full mx-auto space-y-6">
@@ -60,7 +63,12 @@ function ERPContent() {
               <ScheduleView />
             </main>
           )}
-          {!['administration', 'loans', 'customers', 'companies', 'schedule'].includes(activeMainTab) && (
+          {activeMainTab === 'historical-sheet' && (
+            <main className="p-4 sm:p-8 max-w-[100vw] w-full mx-auto space-y-6">
+              <HistoricalSheetView />
+            </main>
+          )}
+          {!['dashboard', 'administration', 'loans', 'customers', 'companies', 'schedule', 'historical-sheet'].includes(activeMainTab) && (
             <UnderDevelopmentView moduleName={activeMainTab} />
           )}
         </div>

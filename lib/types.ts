@@ -30,19 +30,19 @@ export interface UserSession {
 export interface User {
   id: string; // e.g., "USR-1001"
   name: string;
-  username?: string; // Login username for non-admin users (e.g., "rubesh.k", "agent.ravi")
-  email: string; // Login identifier for Admin users; notification email for others
+  username?: string; // Login username for non-admin users
+  email: string;
   phone: string;
-  tempPassword?: string; // Initial or reset password provided to user
-  loginMethod?: 'email' | 'username'; // 'email' for Admin (Role 0, 1), 'username' for all others
+  tempPassword?: string;
+  loginMethod?: 'email' | 'username';
   avatar?: string;
   initials: string;
-  assignedRoleIds: RoleId[]; // Multi-role support!
-  primaryRoleId: RoleId; // Default landing & primary role
+  assignedRoleIds: RoleId[];
+  primaryRoleId: RoleId;
   status: UserStatus;
   department: string;
   designation: string;
-  joinedDate: string; // e.g. "2024-01-15"
+  joinedDate: string;
   createdAt: string;
   lastLogin: string;
   address?: string;
@@ -84,8 +84,8 @@ export interface ApprovalRule {
   changeType: ChangeType;
   description: string;
   whoCanRaise: RoleId[];
-  whoMustApprove: RoleId; // Minimum role level needed to approve
-  amountThreshold: number; // ₹ amount (0 for no monetary threshold)
+  whoMustApprove: RoleId;
+  amountThreshold: number;
   autoApproveBelow: boolean;
   isActive: boolean;
   createdAt: string;
@@ -105,11 +105,16 @@ export type AuditActionType =
   | 'Updated Settings'
   | 'Triggered Backup'
   | 'Modified Shareholder Split'
-  | 'Updated Approval Rule';
+  | 'Updated Approval Rule'
+  | 'Created Loan'
+  | 'Updated Loan'
+  | 'Updated Installment'
+  | 'Imported July Dataset'
+  | 'Edited Sheet Row';
 
 export interface AuditLogEntry {
   id: string; // e.g. "AUD-9402"
-  timestamp: string; // e.g. "2026-08-07 09:14"
+  timestamp: string;
   actorId: string;
   actorName: string;
   actorRoleId: RoleId;
@@ -125,12 +130,13 @@ export interface AuditLogEntry {
 export interface ShareholderCompany {
   id: string;
   name: string;
-  registrationNumber: string;
+  registrationNumber?: string;
   percentage: number;
-  contactPerson: string;
-  email: string;
-  phone: string;
-  isPrimary: boolean;
+  contactPerson?: string;
+  email?: string;
+  phone?: string;
+  isPrimary?: boolean;
+  directorName?: string;
 }
 
 export interface CompanyProfile {
@@ -143,9 +149,11 @@ export interface CompanyProfile {
   registeredAddress: string;
   baseCurrency: string;
   currencySymbol: string;
-  financialYearStart: string; // e.g. "01-April"
+  financialYearStart: string;
   supportEmail: string;
   supportPhone: string;
+  tradeName?: string;
+  website?: string;
 }
 
 export interface SecurityPolicy {
@@ -157,6 +165,10 @@ export interface SecurityPolicy {
   enforce2FA: boolean;
   ipAllowlist: string[];
   maxLoginAttempts: number;
+  maxFailedLogins?: number;
+  enforce2FAForRoles?: number[];
+  ipWhitelist?: string;
+  passwordMinLength?: number;
 }
 
 export interface SystemSettingsState {
@@ -171,6 +183,10 @@ export interface SystemSettingsState {
     darkModePreview: boolean;
     multiBranchSupport: boolean;
     strictIpWhitelist: boolean;
+    emailNotifications?: boolean;
+    smsGateway?: boolean;
+    autoDailyBackups?: boolean;
+    strictAuditMode?: boolean;
   };
   lastBackupTimestamp: string;
   backupStatus: 'Idle' | 'InProgress' | 'Completed' | 'Failed';
@@ -191,101 +207,144 @@ export type UserDetailsTab =
   | 'security';
 
 // ==========================================
-// ASR Intermediary Business Domain Models
+// ASR Normalized Business Domain Models
 // ==========================================
 
-// 1. Customer = The Investor / Financier
-export interface CustomerInvestor {
-  id: string; // e.g., "CUST-101"
-  companyName?: string; // Optional enterprise name
-  fullName: string; // Required investor name
+// 1. Customer = The Borrower (party in CLIENT NAME)
+export interface Customer {
+  id: string; // e.g. "CUST-1001"
+  name: string; // Client / Borrower name (e.g. "ABI ASSOCIATES")
+  place: string; // City / Branch (e.g. "CHENNAI", "CBE")
   phone: string;
-  email: string;
-  address?: string;
-  status: 'Active' | 'Pending' | 'Inactive';
-  totalInvested: number; // Total ₹ capital provided across all loans
-  totalReturns: number; // Total ₹ profit received to date
-  activeLoansCount: number;
+  createdAt: string;
+  totalBorrowed?: number; // Cumulative ₹ borrowed across all loans
+  totalRepaid?: number; // Total ₹ successfully repaid
+  outstandingAmount?: number; // Total remaining ₹
+  activeLoansCount?: number;
+  status?: 'Active' | 'Overdue' | 'Closed' | 'Pending';
+}
+
+// 2. Company = Funding Entity (ASR own or Outside-party)
+export interface Company {
+  id: string; // e.g. "COMP-PASS", "COMP-CS"
+  name: string; // Full Company Name
+  shortCode: string; // Short ticker code (PASS, ALA, IG, GS, MARS, TG, FIN, MM, CS, MC, TA (SS), TATVA, etc.)
+  isOutsideParty: boolean; // false = ASR Group Own, true = Outside-Party
+  totalFunded?: number; // Total ₹ capital provided across all loans
+  totalCollected?: number; // Total ₹ collected back
+  outstandingAmount?: number; // Total principal/interest still due to this company
+  activeLoansCount?: number;
   createdAt: string;
 }
 
-// 2. Company = The Borrowing Business
-export interface BorrowerCompany {
-  id: string; // e.g., "COMP-101"
-  companyName: string; // Required business name
-  contactPerson: string;
-  phone: string;
-  email?: string;
-  address: string;
-  area: string; // e.g. "Ambattur Industrial Estate", "Guindy"
-  defaultInterestRate?: number; // Optional; interest configured per loan
-  bankDetails?: {
-    bankName: string;
-    accountNumber: string;
-    ifsc: string;
-  };
-  totalBorrowed: number; // Cumulative ₹ borrowed
-  outstandingAmount: number; // Current principal + interest due
-  activeLoansCount: number;
-  onTimeRepaymentRate: number; // % (e.g. 96%)
-  status: 'Active' | 'Under Review' | 'Blacklisted';
-  createdAt: string;
+// 3. Loan Overall Contribution Ratio
+export interface LoanCompanySplit {
+  id: string;
+  loanId: string;
+  companyId: string;
+  companyCode: string;
+  companyName: string;
+  isOutsideParty?: boolean;
+  splitPercent: number; // e.g. 50%
+  splitAmount: number; // e.g. ₹5,00,000
 }
 
-// 3. Loans & Syndicated Multi-Party Tranches
-export interface LoanCustomerShare {
+// 4. Per-Installment Per-Company Share
+export interface InstallmentCompanySplit {
+  id?: string;
+  installmentId?: string;
+  companyId: string;
+  companyCode: string;
+  amount: number; // e.g. ₹1,00,000
+}
+
+export type CollectionStatus =
+  | 'PASS'
+  | 'NEFT'
+  | 'CASH'
+  | 'CLS'
+  | 'PENDING'
+  | 'RET'
+  | 'RET NEFT'
+  | 'RET PASS'
+  | 'CS'
+  | 'Paid'
+  | 'Overdue'
+  | 'Rescheduled';
+
+// 5. Installment (Individual scheduled EMI)
+export interface Installment {
+  id: string; // e.g. "INST-1001"
+  loanId: string;
+  seqNo: number; // 1, 2, 3...
+  dueDate: string; // ISO "YYYY-MM-DD" or formatted date
+  amountDue: number; // Total amount customer owes for this installment
+  status: CollectionStatus; // PASS, NEFT, CASH, CLS, PENDING, RET, etc.
+  recdDate?: string | null; // Date payment was actually received
+  chqNo?: string; // Cheque number or reference text ("NEFT", "CS", "000194")
+  place?: string; // Place (e.g. "CHENNAI", "CBE")
+  depName?: string; // Deposit account company name
+  remarks?: string;
+  companySplits: Record<string, number>; // companyCode -> amount (e.g. { "PASS": 100000, "ALA": 100000 })
+  createdAt: string;
+  isMismatch?: boolean;
+  mismatchDiff?: number;
+}
+
+// 6. Loan (Client-level Aggregated Entity)
+export interface Loan {
+  id: string; // e.g. "LOAN-2026-001"
   customerId: string;
   customerName: string;
-  sharePercentage: number; // e.g. 100% or 60%
-  shareAmount: number; // e.g. ₹1,20,00,000
-}
-
-export interface LoanCompanySplit {
-  companyId: string;
-  companyName: string;
-  percentage: number; // e.g. 40%
-  amount: number; // e.g. ₹80,00,000 (Full Principal)
-  interestRate: number; // e.g. 24% p.a. (2% per month)
-  monthlyInterest: number; // Monthly interest cut (e.g. ₹1,60,000)
-  totalDuePerMonth: number; // Principal + Monthly Interest (e.g. ₹81,60,000)
-  monthlyEmi?: number;
-}
-
-export interface RepaymentInstallment {
-  sNo: number;
-  date: string; // Formatted date e.g. "10-Oct-2026" (editable)
-  dueDate?: string; // Standard ISO "YYYY-MM-DD" for date inputs
-  particulars: string; // "Month #1 Cycle (Full Principal + Interest)"
-  principalAmount: number; // Full principal amount (e.g. ₹2,00,000)
-  interestAmount: number; // Month interest amount (e.g. ₹4,000)
-  totalAmount: number; // Principal + Month Interest (e.g. ₹2,04,000)
-  companyShares: Record<string, number>; // companyId -> total cycle payment (Principal + Interest)
-  companyPrincipalShares?: Record<string, number>;
-  companyInterestShares?: Record<string, number>;
-  status: 'Paid' | 'Pending' | 'Overdue' | 'Rescheduled';
-  paidDate?: string;
-  rescheduledReason?: string;
-}
-
-export interface IntermediaryLoan {
-  id: string; // e.g., "LOAN-2026-001"
-  totalAmount: number; // e.g. ₹2,00,00,000
-  disbursedDate: string;
-  tenureMonths: number; // e.g. 12
-  frequency: 'Monthly' | 'Weekly';
-  defaultInterestRate: number; // e.g. 24%
-  asrCommissionRate: number; // e.g. 4% (ASR Income)
-
-  // Multi-party details
-  customers: LoanCustomerShare[]; // Investors who provided capital
-  companies: LoanCompanySplit[]; // Borrowers who received tranches
-
-  // Live financial calculations
-  totalInterestExpected: number;
-  asrIncome: number; // ASR platform commission cut
-  customerNetProfit: number; // Profit returned to investors
-
-  status: 'Active' | 'Disbursed' | 'Closed' | 'Draft';
-  schedule: RepaymentInstallment[];
+  place?: string;
+  codeNo?: string; // Reference/display code (e.g. "TN0019") - NOT a unique key
+  totalAmount: number; // Sum of all installment amounts
+  startDate: string;
+  installmentCount: number; // e.g. 2, 4, 12
+  frequency: 'Weekly' | 'Monthly';
+  status: 'Active' | 'On Track' | 'Overdue' | 'Closed' | 'Draft';
   createdAt: string;
+  splits: LoanCompanySplit[]; // Company contribution percentages & amounts
+  installments: Installment[]; // List of all EMIs for this loan
+  nextDueDate?: string;
+  totalCollected?: number;
+  totalOutstanding?: number;
 }
+
+// 7. Historical July 2026 Receipt Row (for Excel Grid & Import)
+export interface HistoricalReceiptRow {
+  sNo: number;
+  date: string; // "YYYY-MM-DD"
+  codeNo: string;
+  place: string;
+  clientName: string;
+  depName: string;
+  chqNo: string;
+  amount: number;
+  status: CollectionStatus;
+  recdDate: string | null;
+  pass?: number;
+  ala?: number;
+  ig?: number;
+  gs?: number;
+  mars?: number;
+  tg?: number;
+  fin?: number;
+  mm?: number;
+  cs?: number;
+  mc?: number;
+  taSS?: number;
+  others?: number;
+  othersName?: string;
+  remarks?: string;
+  loanId?: string;
+  installmentId?: string;
+  isMismatch?: boolean;
+  mismatchDiff?: number;
+}
+
+// Aliases for compatibility
+export type CustomerInvestor = Customer;
+export type BorrowerCompany = Company;
+export type IntermediaryLoan = Loan;
+export type RepaymentInstallment = Installment;

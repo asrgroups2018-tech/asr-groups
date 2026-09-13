@@ -16,6 +16,7 @@ import {
   Briefcase,
   FileBarChart,
   CalendarDays,
+  FileSpreadsheet,
   CheckSquare,
   Settings,
   ChevronRight,

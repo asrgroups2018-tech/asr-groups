@@ -4,7 +4,7 @@ import { db } from '@/lib/server/db';
 // GET /api/admin/settings
 export async function GET() {
   try {
-    const settings = db.getSystemSettings();
+    const settings = await db.getSystemSettings();
     return NextResponse.json({ success: true, data: settings });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
@@ -33,7 +33,7 @@ export async function PUT(request: NextRequest) {
       }
     }
 
-    const updated = db.updateSystemSettings(body);
+    const updated = await db.updateSystemSettings(body);
     return NextResponse.json({ success: true, data: updated });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });

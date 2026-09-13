@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
     const action = searchParams.get('action');
     const sensitiveOnly = searchParams.get('sensitive') === 'true';
 
-    let logs = db.getAuditLogs();
+    let logs = await db.getAuditLogs();
 
     if (actorId) {
       logs = logs.filter((l) => l.actorId === actorId || l.actorName.includes(actorId));
@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
     const ip = request.headers.get('x-forwarded-for') || '127.0.0.1';
     const userAgent = request.headers.get('user-agent') || 'Browser Client';
 
-    const newLog = db.logAudit({
+    const newLog = await db.logAudit({
       actorId: body.actorId || 'ADM-1001',
       actorName: body.actorName || 'System Administrator',
       actorRoleId: body.actorRoleId !== undefined ? body.actorRoleId : 0,

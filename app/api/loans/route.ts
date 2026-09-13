@@ -2,39 +2,38 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/server/db';
 
 export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url);
-  const q = searchParams.get('q') || undefined;
-  const loans = db.getLoans(q);
-  return NextResponse.json({ success: true, data: loans });
-}
-
-export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    if (!body.totalAmount || !body.customers?.length || !body.companies?.length) {
-      return NextResponse.json(
-        { success: false, error: 'Total amount, customer(s), and company split(s) are required.' },
-        { status: 400 }
-      );
-    }
-    const created = db.createLoan(body);
-    return NextResponse.json({ success: true, data: created });
+    const { searchParams } = new URL(req.url);
+    const q = searchParams.get('q') || undefined;
+    const loans = await db.getLoans(q);
+    return NextResponse.json({ success: true, data: loans });
   } catch (err: any) {
     return NextResponse.json({ success: false, error: err.message }, { status: 500 });
   }
 }
 
-export async function PUT(req: NextRequest) {
+export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    if (!body.id) {
-      return NextResponse.json({ success: false, error: 'Loan ID required.' }, { status: 400 });
+
+    if (!body.customerId || !body.totalAmount || !body.installments?.length) {
+      return NextResponse.json(
+        { success: false, error: 'Customer, total amount, and installments are required.' },
+        { status: 400 }
+      );
     }
-    const updated = db.updateLoan(body.id, body.updates);
-    if (!updated) {
-      return NextResponse.json({ success: false, error: 'Loan not found.' }, { status: 404 });
-    }
-    return NextResponse.json({ success: true, data: updated });
+
+    const created = await db.createLoan({
+      customerId: body.customerId,
+      codeNo: body.codeNo,
+      totalAmount: Number(body.totalAmount),
+      startDate: body.startDate || new Date().toISOString().slice(0, 10),
+      frequency: body.frequency || 'Monthly',
+      splits: body.splits || [],
+      installments: body.installments || [],
+    });
+
+    return NextResponse.json({ success: true, data: created });
   } catch (err: any) {
     return NextResponse.json({ success: false, error: err.message }, { status: 500 });
   }
@@ -47,7 +46,7 @@ export async function DELETE(req: NextRequest) {
     if (!id) {
       return NextResponse.json({ success: false, error: 'Loan ID required.' }, { status: 400 });
     }
-    const success = db.deleteLoan(id);
+    const success = await db.deleteLoan(id);
     return NextResponse.json({ success });
   } catch (err: any) {
     return NextResponse.json({ success: false, error: err.message }, { status: 500 });
