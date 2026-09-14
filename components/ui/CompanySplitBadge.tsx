@@ -103,15 +103,15 @@ export const CompanySplitBadge: React.FC<CompanySplitBadgeProps> = ({
       <div
         className={`inline-flex items-center gap-1 font-mono font-bold rounded-md border transition-all duration-150 cursor-pointer select-none ${sizeClasses} ${
           isOutside
-            ? 'bg-amber-50 text-amber-900 border-amber-200/90 hover:bg-amber-100 hover:border-amber-400 hover:shadow-xs'
-            : 'bg-[#701A35]/10 text-[#701A35] border-[#701A35]/25 hover:bg-[#701A35]/18 hover:border-[#701A35]/50 hover:shadow-xs'
+            ? 'bg-amber-100/90 text-amber-950 border-amber-300 hover:bg-amber-200 hover:border-amber-500 shadow-2xs'
+            : 'bg-[#701A35]/12 text-[#701A35] border-[#701A35]/30 hover:bg-[#701A35]/20 hover:border-[#701A35] shadow-2xs'
         }`}
       >
         <span className="tracking-tight">{split.companyCode}</span>
         {percent > 0 && (
           <span
-            className={`font-semibold opacity-90 ${
-              isOutside ? 'text-amber-700' : 'text-[#701A35]'
+            className={`font-semibold opacity-95 ${
+              isOutside ? 'text-amber-800' : 'text-[#701A35]'
             }`}
           >
             {percent}%

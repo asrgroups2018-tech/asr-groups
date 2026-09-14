@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect } from 'react';
-import { AppProvider, useApp } from '@/lib/store';
+import { useApp } from '@/lib/store';
 import { AppShell } from '@/components/layout/AppShell';
 import { AdminSection } from '@/app/administration/_components/AdminSection';
 
@@ -19,10 +19,8 @@ function UsersAdminContent() {
 
 export default function AdminUsersPage() {
   return (
-    <AppProvider>
-      <AppShell>
-        <UsersAdminContent />
-      </AppShell>
-    </AppProvider>
+    <AppShell>
+      <UsersAdminContent />
+    </AppShell>
   );
 }

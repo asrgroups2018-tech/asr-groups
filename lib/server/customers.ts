@@ -86,7 +86,15 @@ export async function getCustomers(query?: string): Promise<Customer[]> {
 
 export async function getCustomerById(id: string): Promise<Customer | null> {
   const list = await getCustomers();
-  return list.find((c) => c.id === id || c.name.toLowerCase() === id.toLowerCase()) || null;
+  const cleanId = String(id || '').trim().toLowerCase();
+  return (
+    list.find(
+      (c) =>
+        c.id.toLowerCase() === cleanId ||
+        c.name.toLowerCase() === cleanId ||
+        (c.codeNo && c.codeNo.toLowerCase() === cleanId)
+    ) || null
+  );
 }
 
 export async function createCustomer(data: { name: string; place?: string; codeNo?: string; phone?: string }): Promise<Customer> {

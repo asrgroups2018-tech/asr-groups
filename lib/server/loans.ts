@@ -167,7 +167,15 @@ export async function getLoans(query?: string): Promise<Loan[]> {
 
 export async function getLoanById(id: string): Promise<Loan | null> {
   const list = await getLoans();
-  return list.find((l) => l.id === id || l.customerName.toLowerCase() === id.toLowerCase()) || null;
+  const cleanId = String(id || '').trim().toLowerCase();
+  return (
+    list.find(
+      (l) =>
+        l.id.toLowerCase() === cleanId ||
+        l.customerName.toLowerCase() === cleanId ||
+        (l.codeNo && l.codeNo.toLowerCase() === cleanId)
+    ) || null
+  );
 }
 
 export async function generateNextLoanId(startDateOrYear?: string | number): Promise<string> {

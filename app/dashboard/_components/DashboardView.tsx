@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { useApp } from '@/lib/store';
 import {
   CreditCard,
@@ -47,6 +48,7 @@ function parseDateString(dStr: string | null | undefined): Date | null {
 }
 
 export const DashboardView: React.FC = () => {
+  const router = useRouter();
   const {
     dashboardData,
     loans,
@@ -71,6 +73,15 @@ export const DashboardView: React.FC = () => {
       let pendingCount = 0;
       let unclassifiedCount = 0;
 
+      let passCount = 0;
+      let passAmount = 0;
+      let neftCount = 0;
+      let neftAmount = 0;
+      let cashCount = 0;
+      let cashAmount = 0;
+      let bouncedAmount = 0;
+      let pendingAmount = 0;
+
       loans.forEach((l) => {
         (l.installments || []).forEach((ins) => {
           totalInstallments++;
@@ -81,12 +92,24 @@ export const DashboardView: React.FC = () => {
           if (['PASS', 'NEFT', 'CASH', 'PAID'].includes(st)) {
             totalRecovered += amt;
             settledCount++;
+            if (st.includes('NEFT')) {
+              neftCount++;
+              neftAmount += amt;
+            } else if (st.includes('CASH')) {
+              cashCount++;
+              cashAmount += amt;
+            } else {
+              passCount++;
+              passAmount += amt;
+            }
           } else if (['RET', 'RET NEFT', 'RET PASS'].includes(st)) {
             bouncedCount++;
+            bouncedAmount += amt;
           } else if (['CLS', 'CS'].includes(st)) {
             unclassifiedCount++;
           } else {
             pendingCount++;
+            pendingAmount += amt;
           }
         });
       });
@@ -110,6 +133,15 @@ export const DashboardView: React.FC = () => {
         settledPercent: totalInstallments > 0 ? Number(((settledCount / totalInstallments) * 100).toFixed(1)) : 0,
         bouncedPercent: totalInstallments > 0 ? Number(((bouncedCount / totalInstallments) * 100).toFixed(1)) : 0,
         unclassifiedPercent: totalInstallments > 0 ? Number(((unclassifiedCount / totalInstallments) * 100).toFixed(1)) : 0,
+        pendingPercent: totalInstallments > 0 ? Number(((pendingCount / totalInstallments) * 100).toFixed(1)) : 0,
+        passCount,
+        passAmount,
+        neftCount,
+        neftAmount,
+        cashCount,
+        cashAmount,
+        bouncedAmount,
+        pendingAmount,
       };
     }
 
@@ -128,6 +160,15 @@ export const DashboardView: React.FC = () => {
       settledPercent: 0,
       bouncedPercent: 0,
       unclassifiedPercent: 0,
+      pendingPercent: 0,
+      passCount: 0,
+      passAmount: 0,
+      neftCount: 0,
+      neftAmount: 0,
+      cashCount: 0,
+      cashAmount: 0,
+      bouncedAmount: 0,
+      pendingAmount: 0,
     };
   }, [loans]);
 
@@ -419,13 +460,13 @@ export const DashboardView: React.FC = () => {
                 <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block font-mono">
                   Total Capital Recovered
                 </span>
-                <div className="flex items-baseline gap-2 flex-wrap">
+                <div className="flex items-center gap-2 flex-wrap">
                   <MoneyDisplay
                     amount={portfolioMetrics.totalRecovered}
                     size="2xl"
                     amountClassName="text-emerald-400 tracking-tight"
                   />
-                  <span className="text-[10px] text-emerald-300 bg-emerald-950/60 border border-emerald-500/30 px-1.5 py-0.5 rounded font-mono">
+                  <span className="inline-flex items-center justify-center text-[10px] text-emerald-300 bg-emerald-950/60 border border-emerald-500/30 px-1.5 py-0.5 rounded font-mono font-bold leading-none">
                     {portfolioMetrics.collectionRate}%
                   </span>
                 </div>
@@ -548,78 +589,131 @@ export const DashboardView: React.FC = () => {
       {/* ─── Graphical Band: Portfolio Health Donut + Sparkline + Company Distribution ─── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Card 1: Portfolio Installment Health Breakdown */}
-        <div className="bg-white p-6 rounded-2xl border border-[#E6E1D6] shadow-xs space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-bold text-slate-900 font-serif flex items-center gap-2">
-              <PieIcon className="w-4 h-4 text-[#701A35]" /> Installment Health (All-Time)
-            </h3>
-            <span className="text-xs font-mono font-bold text-slate-500">
-              {portfolioMetrics.totalInstallments} Total EMIs
-            </span>
-          </div>
-
-          {/* Health Distribution Progress Bar */}
-          <div className="space-y-2 pt-2">
-            <div className="h-4 w-full bg-slate-100 rounded-full overflow-hidden flex">
-              <div
-                style={{ width: `${portfolioMetrics.settledPercent}%` }}
-                className="bg-emerald-500 h-full"
-                title={`Settled / Paid: ${portfolioMetrics.settledCount}`}
-              />
-              <div
-                style={{ width: `${portfolioMetrics.bouncedPercent}%` }}
-                className="bg-rose-500 h-full"
-                title={`Returned / Bounced: ${portfolioMetrics.bouncedCount}`}
-              />
-              <div
-                style={{ width: `${portfolioMetrics.unclassifiedPercent}%` }}
-                className="bg-slate-400 h-full"
-                title={`Unclassified: ${portfolioMetrics.unclassifiedCount}`}
-              />
-              <div
-                style={{
-                  width: `${Math.max(
-                    0,
-                    100 - portfolioMetrics.settledPercent - portfolioMetrics.bouncedPercent - portfolioMetrics.unclassifiedPercent
-                  )}%`,
-                }}
-                className="bg-amber-400 h-full"
-                title={`Pending: ${portfolioMetrics.pendingCount}`}
-              />
+        <div className="bg-white p-6 rounded-2xl border border-[#E6E1D6] shadow-xs flex flex-col justify-between space-y-4">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-bold text-slate-900 font-serif flex items-center gap-2">
+                <PieIcon className="w-4 h-4 text-[#701A35]" /> Installment Health (All-Time)
+              </h3>
+              <span className="text-xs font-mono font-bold text-slate-600 bg-slate-100 px-2.5 py-0.5 rounded-full border border-slate-200">
+                {portfolioMetrics.totalInstallments} Total EMIs
+              </span>
             </div>
 
-            <div className="grid grid-cols-4 gap-1.5 pt-2 text-center font-mono">
-              <div className="p-2 bg-emerald-50 rounded-lg border border-emerald-100">
-                <span className="text-[9px] text-emerald-800 block">SETTLED</span>
-                <span className="font-bold text-emerald-700 text-xs">{portfolioMetrics.settledCount}</span>
+            {/* Health Distribution Progress Bar */}
+            <div className="space-y-2">
+              <div className="h-3.5 w-full bg-slate-100 rounded-full overflow-hidden flex shadow-inner">
+                <div
+                  style={{ width: `${portfolioMetrics.settledPercent}%` }}
+                  className="bg-emerald-500 h-full transition-all duration-300"
+                  title={`Settled: ${portfolioMetrics.settledCount} (${portfolioMetrics.settledPercent}%)`}
+                />
+                <div
+                  style={{ width: `${portfolioMetrics.bouncedPercent}%` }}
+                  className="bg-rose-500 h-full transition-all duration-300"
+                  title={`Returned: ${portfolioMetrics.bouncedCount} (${portfolioMetrics.bouncedPercent}%)`}
+                />
+                <div
+                  style={{ width: `${portfolioMetrics.unclassifiedPercent}%` }}
+                  className="bg-slate-400 h-full transition-all duration-300"
+                  title={`Unclassified: ${portfolioMetrics.unclassifiedCount} (${portfolioMetrics.unclassifiedPercent}%)`}
+                />
+                <div
+                  style={{
+                    width: `${Math.max(
+                      0,
+                      100 - portfolioMetrics.settledPercent - portfolioMetrics.bouncedPercent - portfolioMetrics.unclassifiedPercent
+                    )}%`,
+                  }}
+                  className="bg-amber-400 h-full transition-all duration-300"
+                  title={`Pending: ${portfolioMetrics.pendingCount}`}
+                />
               </div>
-              <div className="p-2 bg-rose-50 rounded-lg border border-rose-100">
-                <span className="text-[9px] text-rose-800 block">RETURNED</span>
-                <span className="font-bold text-rose-700 text-xs">{portfolioMetrics.bouncedCount}</span>
+
+              <div className="grid grid-cols-4 gap-1.5 pt-1 text-center font-mono">
+                <div className="p-2 bg-emerald-50 rounded-xl border border-emerald-100/80">
+                  <span className="text-[9px] font-bold text-emerald-800 block">SETTLED</span>
+                  <span className="font-bold text-emerald-700 text-xs block mt-0.5">{portfolioMetrics.settledCount}</span>
+                </div>
+                <div className="p-2 bg-rose-50 rounded-xl border border-rose-100/80">
+                  <span className="text-[9px] font-bold text-rose-800 block">RETURNED</span>
+                  <span className="font-bold text-rose-700 text-xs block mt-0.5">{portfolioMetrics.bouncedCount}</span>
+                </div>
+                <div className="p-2 bg-amber-50 rounded-xl border border-amber-100/80">
+                  <span className="text-[9px] font-bold text-amber-800 block">PENDING</span>
+                  <span className="font-bold text-amber-700 text-xs block mt-0.5">{portfolioMetrics.pendingCount}</span>
+                </div>
+                <div className="p-2 bg-slate-100 rounded-xl border border-slate-200/80">
+                  <span className="text-[9px] font-bold text-slate-700 block">UNCLASS</span>
+                  <span className="font-bold text-slate-700 text-xs block mt-0.5">{portfolioMetrics.unclassifiedCount}</span>
+                </div>
               </div>
-              <div className="p-2 bg-amber-50 rounded-lg border border-amber-100">
-                <span className="text-[9px] text-amber-800 block">PENDING</span>
-                <span className="font-bold text-amber-700 text-xs">{portfolioMetrics.pendingCount}</span>
+            </div>
+
+            {/* Settled Payment Channels */}
+            <div className="pt-3 border-t border-[#EDE8DF] space-y-2">
+              <div className="flex items-center justify-between text-xs font-mono">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                  Settled Payment Modes
+                </span>
+                <span className="text-[10px] text-emerald-700 font-bold">
+                  {portfolioMetrics.settledCount} Cleared EMIs
+                </span>
               </div>
-              <div className="p-2 bg-slate-100 rounded-lg border border-slate-200">
-                <span className="text-[9px] text-slate-700 block">UNCLASS</span>
-                <span className="font-bold text-slate-700 text-xs">{portfolioMetrics.unclassifiedCount}</span>
+
+              <div className="space-y-1.5 text-xs font-mono">
+                <div className="flex items-center justify-between p-2 bg-[#FAF8F5] rounded-xl border border-[#EDE8DF]">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-emerald-600 shrink-0" />
+                    <span className="text-slate-700 font-semibold text-[11px]">Cheque (PASS)</span>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <span className="text-slate-500 text-[11px]">{portfolioMetrics.passCount} EMIs</span>
+                    <MoneyDisplay amount={portfolioMetrics.passAmount} size="xs" amountClassName="text-slate-900 font-bold" />
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between p-2 bg-[#FAF8F5] rounded-xl border border-[#EDE8DF]">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-blue-600 shrink-0" />
+                    <span className="text-slate-700 font-semibold text-[11px]">Bank Transfer (NEFT)</span>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <span className="text-slate-500 text-[11px]">{portfolioMetrics.neftCount} EMIs</span>
+                    <MoneyDisplay amount={portfolioMetrics.neftAmount} size="xs" amountClassName="text-slate-900 font-bold" />
+                  </div>
+                </div>
+
+                {portfolioMetrics.cashCount > 0 && (
+                  <div className="flex items-center justify-between p-2 bg-[#FAF8F5] rounded-xl border border-[#EDE8DF]">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-amber-600 shrink-0" />
+                      <span className="text-slate-700 font-semibold text-[11px]">Cash Collections</span>
+                    </div>
+                    <div className="flex items-center gap-2.5">
+                      <span className="text-slate-500 text-[11px]">{portfolioMetrics.cashCount} EMIs</span>
+                      <MoneyDisplay amount={portfolioMetrics.cashAmount} size="xs" amountClassName="text-slate-900 font-bold" />
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
 
-          {/* Sparkline Trend */}
-          <div className="pt-3 border-t border-[#E6E1D6] space-y-1.5">
+          {/* Recovery Trajectory Sparkline */}
+          <div className="pt-3 border-t border-[#EDE8DF] space-y-2">
             <div className="flex items-center justify-between text-xs">
-              <span className="text-slate-500">Recovery Trajectory</span>
-              <span className="font-mono font-bold text-emerald-600">{portfolioMetrics.collectionRate}% Peak</span>
+              <span className="text-slate-600 font-medium">Recovery Trajectory</span>
+              <span className="font-mono font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100">
+                {portfolioMetrics.collectionRate}% Peak
+              </span>
             </div>
-            <div className="flex items-end gap-1.5 h-10 pt-2">
+            <div className="flex items-end gap-1.5 h-10 pt-1">
               {sparkline.map((val, i) => (
                 <div key={i} className="flex-1 flex flex-col items-center gap-1">
                   <div
                     style={{ height: `${(val / 100) * 32}px` }}
-                    className="w-full bg-[#701A35] hover:bg-[#C5A059] transition-all rounded-xs"
+                    className="w-full bg-[#701A35] hover:bg-[#C5A059] transition-all rounded-xs cursor-default"
                     title={`Trajectory Point ${i + 1}: ${val}%`}
                   />
                 </div>
@@ -656,6 +750,7 @@ export const DashboardView: React.FC = () => {
                   key={c.shortCode}
                   onClick={() => {
                     setActiveMainTab('companies');
+                    router.push('/companies');
                   }}
                   className="space-y-1 cursor-pointer hover:bg-slate-50/80 p-1.5 -mx-1.5 rounded-xl transition-colors"
                 >
@@ -743,7 +838,10 @@ export const DashboardView: React.FC = () => {
                 <Calendar className="w-4 h-4 text-[#701A35]" /> Due in {filterLabel}
               </h3>
               <button
-                onClick={() => setActiveMainTab('schedule')}
+                onClick={() => {
+                  setActiveMainTab('schedule');
+                  router.push('/schedule');
+                }}
                 className="text-xs text-[#701A35] hover:underline font-semibold cursor-pointer"
               >
                 View Schedule
@@ -773,6 +871,7 @@ export const DashboardView: React.FC = () => {
                     onClick={() => {
                       setSelectedLoanId(item.loanId);
                       setActiveMainTab('loans');
+                      router.push(`/loans/${item.loanId}`);
                     }}
                     className="py-2.5 px-2 flex items-center justify-between cursor-pointer hover:bg-slate-50 text-xs font-mono transition-colors rounded-xl"
                   >

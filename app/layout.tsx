@@ -17,6 +17,8 @@ export const metadata: Metadata = {
   },
 };
 
+import { ClientProviders } from "@/components/providers/ClientProviders";
+
 export default function RootLayout({
   children,
 }: {
@@ -25,7 +27,9 @@ export default function RootLayout({
   return (
     <html lang="en" className={`h-full antialiased ${ubuntu.variable}`}>
       <body className="min-h-full flex flex-col bg-[#F8F6F1] text-slate-900 font-sans">
-        {children}
+        <ClientProviders>
+          {children}
+        </ClientProviders>
       </body>
     </html>
   );

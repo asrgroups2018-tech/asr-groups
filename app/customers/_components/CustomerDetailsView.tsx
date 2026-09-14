@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { useRouter } from 'next/navigation';
 import { useApp } from '@/lib/store';
 import {
   Users,
@@ -14,6 +15,7 @@ import { StatusPill } from '@/components/ui/StatusPill';
 import { MoneyDisplay } from '@/components/ui/MoneyDisplay';
 
 export const CustomerDetailsView: React.FC = () => {
+  const router = useRouter();
   const {
     customers,
     selectedCustomerId,
@@ -21,18 +23,41 @@ export const CustomerDetailsView: React.FC = () => {
     loans,
     setSelectedLoanId,
     setActiveMainTab,
+    isLoading,
   } = useApp();
 
-  const customer = customers.find((c) => c.id === selectedCustomerId);
+  const cleanSelectedId = String(selectedCustomerId || '').trim().toLowerCase();
+  const customer = customers.find(
+    (c) =>
+      c.id.toLowerCase() === cleanSelectedId ||
+      c.name.toLowerCase() === cleanSelectedId ||
+      (c.codeNo && c.codeNo.toLowerCase() === cleanSelectedId)
+  );
 
   if (!customer) {
+    if (isLoading) {
+      return (
+        <div className="space-y-6 animate-pulse">
+          <div className="h-24 bg-slate-200 rounded-2xl w-full" />
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="h-28 bg-slate-200 rounded-xl" />
+            <div className="h-28 bg-slate-200 rounded-xl" />
+            <div className="h-28 bg-slate-200 rounded-xl" />
+          </div>
+          <div className="h-64 bg-slate-200 rounded-2xl w-full" />
+        </div>
+      );
+    }
     return (
       <div className="p-8 text-center bg-white rounded-2xl border border-[#E6E1D6]">
         <Users className="w-10 h-10 text-slate-300 mx-auto mb-2" />
         <h3 className="text-sm font-bold text-slate-800">Customer Not Found</h3>
         <button
-          onClick={() => setSelectedCustomerId(null)}
-          className="mt-3 px-4 py-1.5 text-xs font-bold text-white bg-[#701A35] rounded-xl"
+          onClick={() => {
+            setSelectedCustomerId(null);
+            router.push('/customers');
+          }}
+          className="mt-3 px-4 py-1.5 text-xs font-bold text-white bg-[#701A35] rounded-xl cursor-pointer"
         >
           Return to Customers
         </button>
@@ -51,7 +76,10 @@ export const CustomerDetailsView: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-5 rounded-2xl border border-[#E6E1D6] shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
         <div className="flex items-center gap-3">
           <button
-            onClick={() => setSelectedCustomerId(null)}
+            onClick={() => {
+              setSelectedCustomerId(null);
+              router.push('/customers');
+            }}
             className="p-2 rounded-xl text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer border border-slate-200"
             title="Back to Customers List"
           >
@@ -213,6 +241,7 @@ export const CustomerDetailsView: React.FC = () => {
                           onClick={() => {
                             setSelectedLoanId(l.id);
                             setActiveMainTab('loans');
+                            router.push(`/loans/${l.id}`);
                           }}
                           className="px-2.5 py-1 text-xs font-bold text-[#701A35] hover:bg-[#701A35] hover:text-white rounded-lg border border-[#701A35]/30 transition-all flex items-center gap-1 ml-auto cursor-pointer"
                         >

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { useApp } from '@/lib/store';
 import { Customer } from '@/lib/types';
 import {
@@ -14,11 +15,13 @@ import { AddCustomerModal } from './AddCustomerModal';
 import { MoneyDisplay } from '@/components/ui/MoneyDisplay';
 
 export const CustomersListView: React.FC = () => {
+  const router = useRouter();
   const {
     customers,
     selectedCustomerId,
     setSelectedCustomerId,
     loans,
+    isLoading,
   } = useApp();
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -57,7 +60,10 @@ export const CustomersListView: React.FC = () => {
       render: (c) => (
         <div className="min-w-0">
           <button
-            onClick={() => setSelectedCustomerId(c.id)}
+            onClick={() => {
+              setSelectedCustomerId(c.id);
+              router.push(`/customers/${c.id}`);
+            }}
             className="font-bold text-[#701A35] hover:underline text-xs block text-left cursor-pointer transition-colors"
           >
             {c.name}
@@ -118,7 +124,10 @@ export const CustomersListView: React.FC = () => {
       render: (c) => (
         <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
           <button
-            onClick={() => setSelectedCustomerId(c.id)}
+            onClick={() => {
+              setSelectedCustomerId(c.id);
+              router.push(`/customers/${c.id}`);
+            }}
             className="p-1.5 rounded-lg text-slate-500 hover:text-[#701A35] hover:bg-[#FAF8F5] transition-colors cursor-pointer"
             title="View Details"
           >
@@ -134,7 +143,10 @@ export const CustomersListView: React.FC = () => {
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
           <h4
-            onClick={() => setSelectedCustomerId(c.id)}
+            onClick={() => {
+              setSelectedCustomerId(c.id);
+              router.push(`/customers/${c.id}`);
+            }}
             className="text-sm font-bold text-slate-900 truncate hover:text-[#701A35] cursor-pointer"
           >
             {c.name}
@@ -167,7 +179,10 @@ export const CustomersListView: React.FC = () => {
 
       <div className="flex items-center justify-end pt-1">
         <button
-          onClick={() => setSelectedCustomerId(c.id)}
+          onClick={() => {
+            setSelectedCustomerId(c.id);
+            router.push(`/customers/${c.id}`);
+          }}
           className="w-full py-1.5 px-3 text-xs font-semibold text-[#701A35] bg-[#FAF5ED] hover:bg-[#F3ECE0] border border-[#E2D2B0] rounded-xl flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
         >
           <Eye className="w-3.5 h-3.5" />
@@ -176,6 +191,20 @@ export const CustomersListView: React.FC = () => {
       </div>
     </div>
   );
+
+  if (isLoading && (!customers || customers.length === 0)) {
+    return (
+      <div className="space-y-6 animate-pulse">
+        <div className="h-24 bg-slate-200 rounded-2xl w-full" />
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="h-28 bg-slate-200 rounded-xl" />
+          <div className="h-28 bg-slate-200 rounded-xl" />
+          <div className="h-28 bg-slate-200 rounded-xl" />
+        </div>
+        <div className="h-80 bg-slate-200 rounded-2xl w-full" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200">

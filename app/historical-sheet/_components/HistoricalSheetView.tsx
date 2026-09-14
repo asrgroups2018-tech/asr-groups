@@ -23,7 +23,7 @@ import { MoneyDisplay } from '@/components/ui/MoneyDisplay';
 import { numberToWordsINR } from '@/lib/utils/formatCurrency';
 
 export const HistoricalSheetView: React.FC = () => {
-  const { receipts, fetchReceipts, updateHistoricalReceipt, showToast, isSavingReceipt } = useApp();
+  const { receipts, fetchReceipts, updateHistoricalReceipt, showToast, isSavingReceipt, isLoading } = useApp();
 
   const [categoryFilter, setCategoryFilter] = useState<'ALL' | 'ASR_ONLY' | 'OUTSIDE_ONLY'>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
@@ -132,6 +132,16 @@ export const HistoricalSheetView: React.FC = () => {
   // Company columns to show based on outsideCategory filter
   const showAsrCols = categoryFilter === 'ALL' || categoryFilter === 'ASR_ONLY';
   const showOutsideCols = categoryFilter === 'ALL' || categoryFilter === 'OUTSIDE_ONLY';
+
+  if (isLoading && (!receipts || receipts.length === 0)) {
+    return (
+      <div className="p-4 sm:p-8 max-w-[100vw] space-y-5 animate-pulse">
+        <div className="h-24 bg-slate-200 rounded-2xl w-full" />
+        <div className="h-14 bg-slate-200 rounded-2xl w-full" />
+        <div className="h-96 bg-slate-200 rounded-2xl w-full" />
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 sm:p-8 max-w-[100vw] space-y-5 animate-in fade-in duration-200">

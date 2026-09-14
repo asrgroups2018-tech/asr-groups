@@ -148,8 +148,8 @@ export async function getUserById(id: string): Promise<User | null> {
   await ensureDbInitialized();
   const client = getTursoClient();
   const result = await client.execute({
-    sql: 'SELECT * FROM users WHERE id = ?',
-    args: [id],
+    sql: 'SELECT * FROM users WHERE id = ? COLLATE NOCASE OR LOWER(email) = LOWER(?)',
+    args: [id, id],
   });
   if (result.rows.length === 0) return null;
   return mapUserRow(result.rows[0]);

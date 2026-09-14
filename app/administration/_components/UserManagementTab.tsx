@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { useApp } from '@/lib/store';
 import { User, RoleId } from '@/lib/types';
 import {
@@ -26,6 +27,7 @@ import { DeleteUserModal } from './modals/DeleteUserModal';
 type FilterChip = 'all' | 'staff' | 'customers' | 'pending' | 'suspended';
 
 export const UserManagementTab: React.FC = () => {
+  const router = useRouter();
   const {
     users,
     roles,
@@ -76,6 +78,7 @@ export const UserManagementTab: React.FC = () => {
   const handleRowClick = (user: User) => {
     setSelectedUserId(user.id);
     setUserDetailsTab('roles');
+    router.push(`/administration/users/${user.id}`);
   };
 
   const handleBulkActivate = () => {

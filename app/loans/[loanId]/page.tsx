@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, use } from 'react';
-import { AppProvider, useApp } from '@/lib/store';
+import { useApp } from '@/lib/store';
 import { AppShell } from '@/components/layout/AppShell';
 import { LoanDetailsView } from '@/app/loans/_components/LoanDetailsView';
 
@@ -26,10 +26,8 @@ export default function LoanDetailPage({ params }: { params: Promise<{ loanId: s
   const resolvedParams = use(params);
 
   return (
-    <AppProvider>
-      <AppShell>
-        <LoanDetailContent loanId={resolvedParams.loanId} />
-      </AppShell>
-    </AppProvider>
+    <AppShell>
+      <LoanDetailContent loanId={resolvedParams.loanId} />
+    </AppShell>
   );
 }

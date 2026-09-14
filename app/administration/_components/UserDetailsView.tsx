@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { useApp } from '@/lib/store';
 import { RoleId, UserDetailsTab, ModuleAction, User } from '@/lib/types';
 import { MODULES_DATA } from '@/lib/seedData';
@@ -34,6 +35,7 @@ import { DataTable, ColumnDef } from '@/components/ui/DataTable';
 import { AuditLogEntry } from '@/lib/types';
 
 export const UserDetailsView: React.FC = () => {
+  const router = useRouter();
   const {
     users,
     roles,
@@ -51,7 +53,13 @@ export const UserDetailsView: React.FC = () => {
     showToast,
   } = useApp();
 
-  const user = users.find((u) => u.id === selectedUserId) || users[0];
+  const cleanSelectedId = String(selectedUserId || '').trim().toLowerCase();
+  const user =
+    users.find(
+      (u) =>
+        u.id.toLowerCase() === cleanSelectedId ||
+        (u.email && u.email.toLowerCase() === cleanSelectedId)
+    ) || users[0];
 
   // Local draft states for Roles & Access tab
   const [draftRoleIds, setDraftRoleIds] = useState<RoleId[]>(user.assignedRoleIds);
@@ -208,7 +216,10 @@ export const UserDetailsView: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <button
-            onClick={() => setSelectedUserId(null)}
+            onClick={() => {
+              setSelectedUserId(null);
+              router.push('/administration/users');
+            }}
             className="p-2 rounded-xl bg-white hover:bg-slate-100 border border-[#E6E1D6] text-slate-700 transition-colors shadow-2xs cursor-pointer"
             title="Back to User Management"
           >
@@ -225,7 +236,10 @@ export const UserDetailsView: React.FC = () => {
         </div>
 
         <button
-          onClick={() => setSelectedUserId(null)}
+          onClick={() => {
+            setSelectedUserId(null);
+            router.push('/administration/users');
+          }}
           className="text-xs font-semibold text-[#701A35] hover:text-[#5C142B] self-start sm:self-center hover:underline cursor-pointer"
         >
           ← Back to User Management

@@ -107,7 +107,15 @@ export async function getCompanies(): Promise<Company[]> {
 
 export async function getCompanyById(id: string): Promise<Company | null> {
   const list = await getCompanies();
-  return list.find((c) => c.id === id || c.shortCode.toUpperCase() === id.toUpperCase()) || null;
+  const cleanId = String(id || '').trim().toLowerCase();
+  return (
+    list.find(
+      (c) =>
+        c.id.toLowerCase() === cleanId ||
+        c.shortCode.toLowerCase() === cleanId ||
+        c.name.toLowerCase() === cleanId
+    ) || null
+  );
 }
 
 export async function createCompany(data: { name: string; shortCode: string; isOutsideParty?: boolean }): Promise<Company> {

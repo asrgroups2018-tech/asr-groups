@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { useApp } from '@/lib/store';
 import { Company } from '@/lib/types';
 import {
@@ -13,11 +14,13 @@ import { AddCompanyModal } from './AddCompanyModal';
 import { MoneyDisplay } from '@/components/ui/MoneyDisplay';
 
 export const CompaniesListView: React.FC = () => {
+  const router = useRouter();
   const {
     companies,
     loans,
     selectedCompanyId,
     setSelectedCompanyId,
+    isLoading,
   } = useApp();
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -119,7 +122,10 @@ export const CompaniesListView: React.FC = () => {
       render: (c) => (
         <div className="min-w-0">
           <button
-            onClick={() => setSelectedCompanyId(c.id)}
+            onClick={() => {
+              setSelectedCompanyId(c.id);
+              router.push(`/companies/${c.id}`);
+            }}
             className="font-bold text-[#701A35] hover:underline text-xs block text-left cursor-pointer transition-colors"
           >
             {c.name}
@@ -183,7 +189,10 @@ export const CompaniesListView: React.FC = () => {
       render: (c) => (
         <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
           <button
-            onClick={() => setSelectedCompanyId(c.id)}
+            onClick={() => {
+              setSelectedCompanyId(c.id);
+              router.push(`/companies/${c.id}`);
+            }}
             className="p-1.5 rounded-lg text-slate-500 hover:text-[#701A35] hover:bg-[#FAF8F5] transition-colors cursor-pointer"
             title="View Details"
           >
@@ -203,7 +212,10 @@ export const CompaniesListView: React.FC = () => {
               {c.shortCode}
             </span>
             <h4
-              onClick={() => setSelectedCompanyId(c.id)}
+              onClick={() => {
+                setSelectedCompanyId(c.id);
+                router.push(`/companies/${c.id}`);
+              }}
               className="text-sm font-bold text-slate-900 truncate hover:text-[#701A35] cursor-pointer"
             >
               {c.name}
@@ -240,7 +252,10 @@ export const CompaniesListView: React.FC = () => {
           Funded Loans: <strong className="text-slate-800 font-mono">{c.activeLoansCount || 0}</strong>
         </span>
         <button
-          onClick={() => setSelectedCompanyId(c.id)}
+          onClick={() => {
+            setSelectedCompanyId(c.id);
+            router.push(`/companies/${c.id}`);
+          }}
           className="py-1 px-3 text-xs font-semibold text-[#701A35] bg-[#FAF5ED] hover:bg-[#F3ECE0] border border-[#E2D2B0] rounded-lg flex items-center gap-1 cursor-pointer transition-colors"
         >
           <Eye className="w-3.5 h-3.5" />
@@ -249,6 +264,20 @@ export const CompaniesListView: React.FC = () => {
       </div>
     </div>
   );
+
+  if (isLoading && (!companies || companies.length === 0)) {
+    return (
+      <div className="space-y-6 animate-pulse">
+        <div className="h-24 bg-slate-200 rounded-2xl w-full" />
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="h-28 bg-slate-200 rounded-xl" />
+          <div className="h-28 bg-slate-200 rounded-xl" />
+          <div className="h-28 bg-slate-200 rounded-xl" />
+        </div>
+        <div className="h-80 bg-slate-200 rounded-2xl w-full" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200">

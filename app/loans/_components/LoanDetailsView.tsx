@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useApp } from '@/lib/store';
 import {
   CreditCard,
@@ -31,6 +32,7 @@ const COMPANY_COLORS = [
 ];
 
 export const LoanDetailsView: React.FC = () => {
+  const router = useRouter();
   const {
     loans,
     selectedLoanId,
@@ -41,21 +43,44 @@ export const LoanDetailsView: React.FC = () => {
     setSelectedCompanyId,
     setActiveMainTab,
     showToast,
+    isLoading,
   } = useApp();
 
   const [activeTab, setActiveTab] = useState<'overview' | 'schedule'>('overview');
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
-  const loan = loans.find((l) => l.id === selectedLoanId);
+  const cleanSelectedId = String(selectedLoanId || '').trim().toLowerCase();
+  const loan = loans.find(
+    (l) =>
+      l.id.toLowerCase() === cleanSelectedId ||
+      (l.codeNo && l.codeNo.toLowerCase() === cleanSelectedId) ||
+      l.customerName.toLowerCase() === cleanSelectedId
+  );
 
   if (!loan) {
+    if (isLoading) {
+      return (
+        <div className="space-y-6 animate-pulse">
+          <div className="h-28 bg-slate-200 rounded-2xl w-full" />
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="h-28 bg-slate-200 rounded-2xl" />
+            <div className="h-28 bg-slate-200 rounded-2xl" />
+            <div className="h-28 bg-slate-200 rounded-2xl" />
+          </div>
+          <div className="h-64 bg-slate-200 rounded-2xl w-full" />
+        </div>
+      );
+    }
     return (
       <div className="p-8 text-center bg-white rounded-2xl border border-[#E6E1D6]">
         <CreditCard className="w-10 h-10 text-slate-300 mx-auto mb-2" />
         <h3 className="text-sm font-bold text-slate-800">Loan Record Not Found</h3>
         <button
-          onClick={() => setSelectedLoanId(null)}
-          className="mt-3 px-4 py-1.5 text-xs font-bold text-white bg-[#701A35] rounded-xl"
+          onClick={() => {
+            setSelectedLoanId(null);
+            router.push('/loans');
+          }}
+          className="mt-3 px-4 py-1.5 text-xs font-bold text-white bg-[#701A35] rounded-xl cursor-pointer"
         >
           Return to Loans
         </button>
@@ -77,7 +102,10 @@ export const LoanDetailsView: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-5 rounded-2xl border border-[#E6E1D6] shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
         <div className="flex items-center gap-3">
           <button
-            onClick={() => setSelectedLoanId(null)}
+            onClick={() => {
+              setSelectedLoanId(null);
+              router.push('/loans');
+            }}
             className="p-2 rounded-xl text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer border border-slate-200"
             title="Back to Loans List"
           >
@@ -119,9 +147,10 @@ export const LoanDetailsView: React.FC = () => {
               if (confirm(`Delete loan for ${loan.customerName}?`)) {
                 deleteLoan(loan.id);
                 setSelectedLoanId(null);
+                router.push('/loans');
               }
             }}
-            className="p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 transition-colors"
+            className="p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 transition-colors cursor-pointer"
             title="Delete Loan"
           >
             <Trash2 className="w-4 h-4" />

@@ -64,8 +64,8 @@ export const ImportReviewModal: React.FC<ImportReviewModalProps> = ({ isOpen, on
         }
 
         // Date parsing
-        let dateStr = '2026-08-01';
-        const dVal = cleanObj['DATE'];
+        let dateStr = new Date().toISOString().slice(0, 10);
+        const dVal = cleanObj['DATE'] || cleanObj['DUE DATE'] || cleanObj['START DATE'] || cleanObj['RECD DATE'];
         if (typeof dVal === 'number') {
           const utc_days = Math.floor(dVal - 25569);
           const dInfo = new Date(utc_days * 86400 * 1000);
@@ -105,18 +105,37 @@ export const ImportReviewModal: React.FC<ImportReviewModalProps> = ({ isOpen, on
           }
         }
 
+        const clientName =
+          cleanObj['CLIENT NAME'] ||
+          cleanObj['CUSTOMER NAME'] ||
+          cleanObj['CLIENT'] ||
+          cleanObj['CUSTOMER'] ||
+          cleanObj['NAME'] ||
+          cleanObj['PARTY'] ||
+          cleanObj['BORROWER'] ||
+          `Party #${idx + 1}`;
+
+        const amount = Number(
+          cleanObj['AMOUNT'] ||
+          cleanObj[' AMOUNT '] ||
+          cleanObj['AMOUNT DUE'] ||
+          cleanObj['TOTAL'] ||
+          cleanObj['LOAN AMOUNT'] ||
+          0
+        );
+
         return {
-          sNo: cleanObj['S.NO'] || idx + 1,
+          sNo: cleanObj['S.NO'] || cleanObj['SNO'] || cleanObj['#'] || idx + 1,
           date: dateStr,
-          codeNo: cleanObj['CODE NO'] || undefined,
-          place: cleanObj['PLACE'] || 'CHENNAI',
-          clientName: cleanObj['CLIENT NAME'] || 'Unknown Client',
-          depName: cleanObj['DEP NAME'] || undefined,
-          chqNo: cleanObj['CHQ NO'] ? String(cleanObj['CHQ NO']) : undefined,
-          amount: Number(cleanObj[' AMOUNT '] || cleanObj['AMOUNT'] || 0),
-          status: cleanObj[' STATUS '] || cleanObj['STATUS'] || 'PENDING',
+          codeNo: cleanObj['CODE NO'] || cleanObj['CODE'] || cleanObj['CODE NUMBER'] || undefined,
+          place: cleanObj['PLACE'] || cleanObj['BRANCH'] || cleanObj['CITY'] || 'CHENNAI',
+          clientName,
+          depName: cleanObj['DEP NAME'] || cleanObj['DEPOSIT NAME'] || cleanObj['BANK'] || cleanObj['ACCOUNT'] || undefined,
+          chqNo: cleanObj['CHQ NO'] || cleanObj['CHEQUE NO'] || cleanObj['CHEQUE'] || cleanObj['REF NO'] ? String(cleanObj['CHQ NO'] || cleanObj['CHEQUE NO'] || cleanObj['CHEQUE'] || cleanObj['REF NO']) : undefined,
+          amount,
+          status: cleanObj['STATUS'] || cleanObj[' STATUS '] || cleanObj['COLLECTION STATUS'] || 'PENDING',
           splits,
-          remarks: cleanObj['REMARKS'] || undefined,
+          remarks: cleanObj['REMARKS'] || cleanObj['NOTES'] || cleanObj['REMARK'] || undefined,
         };
       });
 
@@ -129,7 +148,7 @@ export const ImportReviewModal: React.FC<ImportReviewModalProps> = ({ isOpen, on
 
       const resJson = await res.json();
       if (!resJson.success) {
-        throw new Error(resJson.error || 'Failed to analyze rows.');
+        throw new Error(resJson.error || 'Failed to match import rows.');
       }
 
       setMatchResult(resJson.data);
@@ -182,7 +201,7 @@ export const ImportReviewModal: React.FC<ImportReviewModalProps> = ({ isOpen, on
       });
 
       await refreshAll();
-      showToast('Import Successful', `${resJson.data.totalCommitted} installments committed to database.`, 'success');
+      showToast('Import Successful', `${resJson.data.totalCommitted} rows updated in database.`, 'success');
       setStep('SUCCESS');
     } catch (err: any) {
       showToast('Commit Error', err.message, 'error');
@@ -216,10 +235,10 @@ export const ImportReviewModal: React.FC<ImportReviewModalProps> = ({ isOpen, on
             </div>
             <div>
               <h2 className="text-lg font-bold text-slate-900 font-serif">
-                Spreadsheet Loan Continuation & Import Review
+                Import Spreadsheet
               </h2>
               <p className="text-xs text-slate-500">
-                Automatic Signature-Based Matching (Amount + Split + Dep Name)
+                Upload Excel or CSV file to import and sync records
               </p>
             </div>
           </div>
@@ -244,10 +263,10 @@ export const ImportReviewModal: React.FC<ImportReviewModalProps> = ({ isOpen, on
                   <Upload className="w-8 h-8" />
                 </div>
                 <h3 className="text-base font-bold text-slate-900 font-serif">
-                  Select or Drop Monthly Receipt Spreadsheet
+                  Select or Drop Spreadsheet File
                 </h3>
                 <p className="text-xs text-slate-500 mt-1.5 max-w-sm">
-                  Upload Excel (.xlsx, .xls) or CSV files (e.g. August 2026 dataset).
+                  Supports Excel (.xlsx, .xls) or CSV files
                 </p>
                 <span className="mt-4 px-4 py-2 bg-[#701A35] text-white text-xs font-bold rounded-xl shadow-xs inline-flex items-center gap-1.5">
                   Browse Files
@@ -264,7 +283,7 @@ export const ImportReviewModal: React.FC<ImportReviewModalProps> = ({ isOpen, on
               {isProcessingFile && (
                 <div className="flex items-center justify-center gap-2 text-xs font-semibold text-slate-600 animate-pulse">
                   <div className="w-4 h-4 rounded-full border-2 border-[#701A35] border-t-transparent animate-spin" />
-                  <span>Analyzing signatures and matching against existing loans...</span>
+                  <span>Processing spreadsheet and matching loan records...</span>
                 </div>
               )}
             </div>

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, use } from 'react';
-import { AppProvider, useApp } from '@/lib/store';
+import { useApp } from '@/lib/store';
 import { AppShell } from '@/components/layout/AppShell';
 import { CustomerDetailsView } from '@/app/customers/_components/CustomerDetailsView';
 
@@ -26,10 +26,8 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ custo
   const resolvedParams = use(params);
 
   return (
-    <AppProvider>
-      <AppShell>
-        <CustomerDetailContent customerId={resolvedParams.customerId} />
-      </AppShell>
-    </AppProvider>
+    <AppShell>
+      <CustomerDetailContent customerId={resolvedParams.customerId} />
+    </AppShell>
   );
 }

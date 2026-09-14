@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 import { useApp } from '@/lib/store';
 import {
   Menu,
@@ -17,24 +18,22 @@ interface TopNavProps {
 }
 
 export const TopNav: React.FC<TopNavProps> = ({ onOpenMobileMenu }) => {
+  const pathname = usePathname();
   const {
-    activeMainTab,
-    activeAdminTab,
-    selectedUserId,
     users,
+    loans,
+    customers,
+    companies,
     currentActor,
     simulatedRoleId,
     setSimulatedRoleId,
     roles,
     showToast,
+    isLoading,
   } = useApp();
 
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
-
-  const selectedUser = selectedUserId
-    ? users.find((u) => u.id === selectedUserId)
-    : null;
 
   // Close dropdown on click outside
   useEffect(() => {
@@ -47,24 +46,87 @@ export const TopNav: React.FC<TopNavProps> = ({ onOpenMobileMenu }) => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Capitalize tab name for breadcrumbs
-  const tabTitles: Record<string, string> = {
-    overview: 'Overview',
-    users: 'User Management',
-    roles: 'Role Management',
-    audit: 'Audit Log',
-    settings: 'System Settings',
+  // Compute breadcrumbs synchronously from Next.js pathname to eliminate any visual flash on refresh
+  const getBreadcrumbs = () => {
+    if (!pathname || pathname === '/' || pathname === '/dashboard') {
+      return ['Dashboard'];
+    }
+
+    const segments = pathname.split('/').filter(Boolean);
+    const first = segments[0]?.toLowerCase();
+
+    if (first === 'administration') {
+      const sub = segments[1]?.toLowerCase();
+      if (!sub) return ['Administration', 'Overview'];
+      if (sub === 'users') {
+        const userId = segments[2];
+        if (userId) {
+          const user = users.find((u) => u.id.toLowerCase() === userId.toLowerCase());
+          return ['Administration', 'Users', user ? user.name : userId.toUpperCase()];
+        }
+        return ['Administration', 'User Management'];
+      }
+      if (sub === 'roles') return ['Administration', 'Role Management'];
+      if (sub === 'audit-log' || sub === 'audit') return ['Administration', 'Audit Log'];
+      if (sub === 'settings') return ['Administration', 'System Settings'];
+      return ['Administration'];
+    }
+
+    if (first === 'loans') {
+      const loanId = segments[1];
+      if (loanId) {
+        const loan = loans.find(
+          (l) => l.id.toLowerCase() === loanId.toLowerCase() || l.codeNo?.toLowerCase() === loanId.toLowerCase()
+        );
+        return ['Loans', loan ? `${loan.id} (${loan.customerName})` : loanId.toUpperCase()];
+      }
+      return ['Loans'];
+    }
+
+    if (first === 'customers') {
+      const custId = segments[1];
+      if (custId) {
+        const cust = customers.find(
+          (c) => c.id.toLowerCase() === custId.toLowerCase() || c.name.toLowerCase() === decodeURIComponent(custId).toLowerCase()
+        );
+        return ['Customers', cust ? cust.name : decodeURIComponent(custId)];
+      }
+      return ['Customers'];
+    }
+
+    if (first === 'companies') {
+      const compId = segments[1];
+      if (compId) {
+        const comp = companies.find(
+          (c) =>
+            c.id.toLowerCase() === compId.toLowerCase() ||
+            c.shortCode?.toLowerCase() === compId.toLowerCase() ||
+            c.name?.toLowerCase() === decodeURIComponent(compId).toLowerCase()
+        );
+        return ['Companies', comp ? comp.name : decodeURIComponent(compId)];
+      }
+      return ['Companies'];
+    }
+
+    if (first === 'schedule') return ['Schedule'];
+    if (first === 'reports') return ['Reports'];
+    if (first === 'requests') return ['Requests & Approvals'];
+    if (first === 'settings') return ['Settings'];
+    if (first === 'historical-sheet') return ['Historical Sheet'];
+
+    return [first.charAt(0).toUpperCase() + first.slice(1)];
   };
 
-  const breadcrumbSection =
-    activeMainTab === 'administration'
-      ? selectedUser
-        ? `Administration > Users > ${selectedUser.name}`
-        : `Administration > ${tabTitles[activeAdminTab] || 'Overview'}`
-      : activeMainTab.charAt(0).toUpperCase() + activeMainTab.slice(1);
+  const breadcrumbs = getBreadcrumbs();
 
   return (
-    <header className="bg-white border-b border-[#EBE7DF] sticky top-0 z-30 px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
+    <header className="bg-white border-b border-[#EBE7DF] sticky top-0 z-30 px-4 sm:px-6 py-3 flex items-center justify-between gap-4 relative">
+      {/* Top Progress Loading Bar */}
+      {isLoading && (
+        <div className="absolute top-0 left-0 right-0 h-0.5 bg-[#C5A059] overflow-hidden z-50">
+          <div className="w-full h-full bg-[#701A35] animate-pulse" />
+        </div>
+      )}
       {/* Left: Mobile Toggle & Breadcrumbs */}
       <div className="flex items-center gap-3">
         <button
@@ -75,30 +137,37 @@ export const TopNav: React.FC<TopNavProps> = ({ onOpenMobileMenu }) => {
           <Menu className="w-5 h-5" />
         </button>
 
-        <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">
+        <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 flex-wrap">
           <span className="text-slate-400">ASR Groups</span>
-          <span>›</span>
-          <span className="text-slate-900 font-bold tracking-tight">
-            {breadcrumbSection}
-          </span>
+          {breadcrumbs.map((crumb, idx) => (
+            <React.Fragment key={idx}>
+              <span className="text-slate-300">›</span>
+              <span
+                className={
+                  idx === breadcrumbs.length - 1
+                    ? 'text-slate-900 font-bold tracking-tight'
+                    : 'text-slate-500 font-medium'
+                }
+              >
+                {crumb}
+              </span>
+            </React.Fragment>
+          ))}
         </div>
       </div>
 
       {/* Right: Notifications & Profile */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 sm:gap-3">
         {/* Notification Bell */}
         <div className="relative">
           <button
             onClick={() =>
-              showToast('Notifications', 'You have 5 pending approval workflows awaiting review.', 'info')
+              showToast('Notifications', 'No new unread notifications.', 'info')
             }
             className="p-2 rounded-xl text-slate-600 hover:bg-slate-100 relative transition-colors cursor-pointer"
-            title="5 Pending Approvals"
+            title="Notifications"
           >
             <Bell className="w-4 h-4" />
-            <span className="absolute top-1 right-1 w-4 h-4 rounded-full bg-amber-500 text-slate-950 font-bold text-[9px] flex items-center justify-center font-mono">
-              5
-            </span>
           </button>
         </div>
 

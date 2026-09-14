@@ -23,8 +23,8 @@ export const RoleRibbon: React.FC = () => {
         <div className="h-3.5 w-px bg-slate-700 hidden sm:block" />
 
         <div className="flex items-center gap-1.5">
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold tracking-wider animate-pulse">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-[10px] font-bold tracking-wider">
+            <span className="w-1.5 h-1.5 rounded-full bg-indigo-400" />
             ADMIN MODE
           </span>
           <span className="text-slate-400 text-[11px] hidden md:inline">

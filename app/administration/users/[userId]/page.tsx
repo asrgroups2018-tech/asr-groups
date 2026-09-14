@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, use } from 'react';
-import { AppProvider, useApp } from '@/lib/store';
+import { useApp } from '@/lib/store';
 import { AppShell } from '@/components/layout/AppShell';
 import { UserDetailsView } from '@/app/administration/_components/UserDetailsView';
 
@@ -27,10 +27,8 @@ export default function AdminUserDetailPage({ params }: { params: Promise<{ user
   const resolvedParams = use(params);
 
   return (
-    <AppProvider>
-      <AppShell>
-        <UserDetailAdminContent userId={resolvedParams.userId} />
-      </AppShell>
-    </AppProvider>
+    <AppShell>
+      <UserDetailAdminContent userId={resolvedParams.userId} />
+    </AppShell>
   );
 }

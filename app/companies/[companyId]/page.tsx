@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, use } from 'react';
-import { AppProvider, useApp } from '@/lib/store';
+import { useApp } from '@/lib/store';
 import { AppShell } from '@/components/layout/AppShell';
 import { CompanyDetailsView } from '@/app/companies/_components/CompanyDetailsView';
 
@@ -26,10 +26,8 @@ export default function CompanyDetailPage({ params }: { params: Promise<{ compan
   const resolvedParams = use(params);
 
   return (
-    <AppProvider>
-      <AppShell>
-        <CompanyDetailContent companyId={resolvedParams.companyId} />
-      </AppShell>
-    </AppProvider>
+    <AppShell>
+      <CompanyDetailContent companyId={resolvedParams.companyId} />
+    </AppShell>
   );
 }

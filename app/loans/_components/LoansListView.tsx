@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useMemo, useRef, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useApp } from '@/lib/store';
 import { Loan, Installment } from '@/lib/types';
 import {
@@ -23,12 +24,15 @@ import {
   X,
   Filter,
   Layers,
+  Download,
+  FileText,
 } from 'lucide-react';
 import { StatusPill } from '@/components/ui/StatusPill';
 import { CompanySplitBadge } from '@/components/ui/CompanySplitBadge';
 import { NewLoanModal } from '@/app/loans/_components/new-loan/NewLoanModal';
 import { EditLoanExcelModal } from './EditLoanExcelModal';
 import { ImportReviewModal } from './ImportReviewModal';
+import { exportLoansToExcel, exportLoansToPDF } from '@/lib/utils/exportLoansLedger';
 import { DateRangePicker, DateRangeValue, getCurrentMonthRange } from '@/components/ui/DateRangePicker';
 import { MoneyDisplay } from '@/components/ui/MoneyDisplay';
 
@@ -58,18 +62,22 @@ type SortField = 'customerName' | 'id' | 'startDate' | 'totalAmount' | 'installm
 type SortDirection = 'asc' | 'desc';
 
 export const LoansListView: React.FC = () => {
+  const router = useRouter();
   const {
     loans,
     setSelectedLoanId,
     deleteLoan,
     updateLoanInstallment,
     showToast,
+    isLoading,
   } = useApp();
 
   // Modals state
   const [isWizardOpen, setIsWizardOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [selectedEditLoan, setSelectedEditLoan] = useState<Loan | null>(null);
+  const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
+  const exportMenuRef = useRef<HTMLDivElement>(null);
 
   // Filters state
   const [searchQuery, setSearchQuery] = useState('');
@@ -96,11 +104,14 @@ export const LoansListView: React.FC = () => {
     return new Set(loans.length > 0 ? [loans[0].id] : []);
   });
 
-  // Close client dropdown on outside click
+  // Close dropdowns on outside click
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (clientDropdownRef.current && !clientDropdownRef.current.contains(e.target as Node)) {
         setIsClientDropdownOpen(false);
+      }
+      if (exportMenuRef.current && !exportMenuRef.current.contains(e.target as Node)) {
+        setIsExportMenuOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -282,6 +293,20 @@ export const LoansListView: React.FC = () => {
     [totalPortfolioAmount, totalCollectedAmount]
   );
 
+  const formattedDateRangeLabel = useMemo(() => {
+    if (dateRange.startDate && dateRange.endDate) {
+      return `${dateRange.startDate} to ${dateRange.endDate}`;
+    }
+    if (dateRange.presetLabel && dateRange.presetLabel !== 'all') {
+      return dateRange.presetLabel === 'currentMonth'
+        ? 'This Month'
+        : dateRange.presetLabel === 'lastMonth'
+        ? 'Last Month'
+        : dateRange.presetLabel;
+    }
+    return 'All Dates';
+  }, [dateRange]);
+
   const renderSortIndicator = (field: SortField) => {
     if (sortField !== field) {
       return <ArrowUpDown className="w-3 h-3 text-slate-400 opacity-60 ml-1 inline-block" />;
@@ -293,20 +318,39 @@ export const LoansListView: React.FC = () => {
     );
   };
 
+  if (isLoading && (!loans || loans.length === 0)) {
+    return (
+      <div className="space-y-6 animate-pulse">
+        <div className="h-28 bg-slate-200 rounded-2xl w-full" />
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="h-28 bg-slate-200 rounded-2xl" />
+          <div className="h-28 bg-slate-200 rounded-2xl" />
+          <div className="h-28 bg-slate-200 rounded-2xl" />
+        </div>
+        <div className="h-14 bg-slate-200 rounded-2xl w-full" />
+        <div className="space-y-3">
+          <div className="h-24 bg-slate-200 rounded-2xl w-full" />
+          <div className="h-24 bg-slate-200 rounded-2xl w-full" />
+          <div className="h-24 bg-slate-200 rounded-2xl w-full" />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
       {/* Top Header Card with Actions */}
-      <div className="bg-white p-6 rounded-2xl border border-[#E6E1D6] shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-xl bg-[#701A35]/10 border border-[#701A35]/20 flex items-center justify-center text-[#701A35]">
+            <div className="w-10 h-10 rounded-xl bg-[#701A35] text-[#EED8A1] shadow-sm flex items-center justify-center">
               <CreditCard className="w-5 h-5" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-slate-900 font-serif">
+              <h1 className="text-xl font-bold text-slate-950 font-serif">
                 Client Loans & Payment Schedules
               </h1>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-slate-600 font-medium mt-0.5">
                 Manage borrower facilities, continuation imports, payment schedules, and partner company splits
               </p>
             </div>
@@ -315,10 +359,54 @@ export const LoansListView: React.FC = () => {
 
         {/* Header Action Buttons */}
         <div className="flex items-center gap-2 flex-wrap">
+          {/* Export Button & Dropdown Menu */}
+          <div className="relative" ref={exportMenuRef}>
+            <button
+              onClick={() => setIsExportMenuOpen((prev) => !prev)}
+              className="px-3.5 py-2 text-xs font-bold text-slate-800 bg-white hover:bg-slate-50 border border-slate-300 rounded-xl transition-all shadow-2xs flex items-center gap-1.5 cursor-pointer"
+              title="Export filtered loans"
+            >
+              <Download className="w-4 h-4 text-emerald-700" />
+              <span>Export</span>
+              <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+            </button>
+
+            {/* Dropdown Options: Export to Excel and Export to PDF */}
+            {isExportMenuOpen && (
+              <div className="absolute right-0 mt-2 w-52 bg-white rounded-xl border border-slate-200 shadow-xl p-1.5 z-40 animate-in fade-in slide-in-from-top-2">
+                {/* Option 1: Excel */}
+                <button
+                  onClick={() => {
+                    exportLoansToExcel(filteredAndSortedLoans, formattedDateRangeLabel);
+                    showToast('Excel Exported', 'Full loan structure spreadsheet downloaded successfully.', 'success');
+                    setIsExportMenuOpen(false);
+                  }}
+                  className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-900 transition-colors cursor-pointer group text-left"
+                >
+                  <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+                  <span className="font-medium">Export to Excel</span>
+                </button>
+
+                {/* Option 2: PDF */}
+                <button
+                  onClick={() => {
+                    exportLoansToPDF(filteredAndSortedLoans, formattedDateRangeLabel);
+                    showToast('PDF Exported', 'Executive PDF report downloaded successfully.', 'success');
+                    setIsExportMenuOpen(false);
+                  }}
+                  className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-xs font-semibold text-slate-700 hover:bg-[#FAF5ED] hover:text-[#701A35] transition-colors cursor-pointer group text-left"
+                >
+                  <FileText className="w-4 h-4 text-[#701A35]" />
+                  <span className="font-medium">Export to PDF</span>
+                </button>
+              </div>
+            )}
+          </div>
+
           {/* Import Monthly Spreadsheet Button */}
           <button
             onClick={() => setIsImportModalOpen(true)}
-            className="px-3.5 py-2 text-xs font-semibold text-slate-800 bg-[#F4F1EA] hover:bg-[#EBE6DC] border border-[#E6E1D6] rounded-xl transition-all shadow-2xs flex items-center gap-1.5 cursor-pointer"
+            className="px-3.5 py-2 text-xs font-bold text-slate-800 bg-white hover:bg-slate-50 border border-slate-300 rounded-xl transition-all shadow-2xs flex items-center gap-1.5 cursor-pointer"
             title="Upload and match monthly receipt spreadsheet (e.g. August 2026)"
           >
             <FileSpreadsheet className="w-4 h-4 text-[#701A35]" />
@@ -328,7 +416,7 @@ export const LoansListView: React.FC = () => {
           {/* New Loan Button */}
           <button
             onClick={() => setIsWizardOpen(true)}
-            className="px-4 py-2 text-xs font-bold text-slate-950 bg-[#C5A059] hover:bg-[#D4AF37] active:scale-98 rounded-xl transition-all shadow-sm flex items-center gap-1.5 cursor-pointer shrink-0"
+            className="px-4 py-2 text-xs font-bold text-slate-950 bg-gradient-to-r from-amber-400 via-amber-300 to-[#C5A059] hover:from-amber-300 hover:to-amber-400 active:scale-98 rounded-xl transition-all shadow-sm flex items-center gap-1.5 cursor-pointer shrink-0"
           >
             <Plus className="w-4 h-4 font-bold" />
             <span>New Loan</span>
@@ -337,58 +425,58 @@ export const LoansListView: React.FC = () => {
       </div>
 
       {/* 3 High-Impact KPI Badges */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div className="bg-white p-4 rounded-xl border border-[#E6E1D6] shadow-2xs">
-          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider font-mono">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+        <div className="bg-white p-4.5 rounded-2xl border-2 border-slate-200/90 shadow-sm hover:border-slate-300 transition-all">
+          <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider font-mono">
             {dateRange.startDate ? 'Filtered Loan Amount' : 'Total Portfolio Amount'}
           </span>
-          <div className="mt-1">
+          <div className="mt-1.5">
             <MoneyDisplay
               amount={totalPortfolioAmount}
               size="xl"
-              amountClassName="text-slate-900 font-bold block"
+              amountClassName="text-slate-950 font-black text-2xl block tracking-tight"
             />
           </div>
-          <span className="text-[10px] text-slate-400 mt-0.5 block">
-            Across {filteredAndSortedLoans.length} loan facilities
+          <span className="text-[11px] text-slate-500 font-medium mt-1 block">
+            Across <strong className="text-slate-800">{filteredAndSortedLoans.length}</strong> loan facilities
           </span>
         </div>
 
-        <div className="bg-emerald-50/70 p-4 rounded-xl border border-emerald-200 shadow-2xs">
-          <span className="text-[11px] font-bold text-emerald-800 uppercase tracking-wider font-mono">
+        <div className="bg-gradient-to-br from-emerald-100/90 via-emerald-50 to-white p-4.5 rounded-2xl border-2 border-emerald-300 shadow-sm hover:border-emerald-400 transition-all">
+          <span className="text-[11px] font-bold text-emerald-900 uppercase tracking-wider font-mono">
             Total Amount Collected
           </span>
-          <div className="mt-1">
+          <div className="mt-1.5">
             <MoneyDisplay
               amount={totalCollectedAmount}
               size="xl"
-              amountClassName="text-emerald-700 font-bold block"
+              amountClassName="text-emerald-700 font-black text-2xl block tracking-tight"
             />
           </div>
-          <span className="text-[10px] text-emerald-600 mt-0.5 block">
+          <span className="text-[11px] text-emerald-800 font-bold mt-1 block">
             {totalPortfolioAmount > 0 ? ((totalCollectedAmount / totalPortfolioAmount) * 100).toFixed(1) : 0}% recovery rate
           </span>
         </div>
 
-        <div className="bg-[#FAF5ED] p-4 rounded-xl border border-[#E2D2B0] shadow-2xs">
-          <span className="text-[11px] font-bold text-[#701A35] uppercase tracking-wider font-mono">
+        <div className="bg-gradient-to-br from-rose-100/90 via-rose-50 to-white p-4.5 rounded-2xl border-2 border-rose-300 shadow-sm hover:border-rose-400 transition-all">
+          <span className="text-[11px] font-bold text-rose-900 uppercase tracking-wider font-mono">
             Total Balance Due
           </span>
-          <div className="mt-1">
+          <div className="mt-1.5">
             <MoneyDisplay
               amount={totalOutstandingAmount}
               size="xl"
-              amountClassName="text-[#701A35] font-bold block"
+              amountClassName="text-[#701A35] font-black text-2xl block tracking-tight"
             />
           </div>
-          <span className="text-[10px] text-amber-800 mt-0.5 block">
+          <span className="text-[11px] text-rose-700 font-bold mt-1 block">
             Pending collection
           </span>
         </div>
       </div>
 
       {/* Filters Bar: Multi-Select Client Dropdown, Text Search, Date Range Picker, Status Tabs */}
-      <div className="bg-white p-4 rounded-xl border border-[#E6E1D6] shadow-2xs flex flex-col xl:flex-row xl:items-end justify-between gap-3">
+      <div className="bg-white p-4.5 rounded-2xl border border-slate-200 shadow-sm flex flex-col xl:flex-row xl:items-end justify-between gap-3.5">
         <div className="flex flex-col sm:flex-row sm:items-end gap-3 flex-1 flex-wrap">
           {/* Multi-Select Client Filter Dropdown */}
           <div className="relative min-w-[220px]" ref={clientDropdownRef}>
@@ -398,11 +486,11 @@ export const LoansListView: React.FC = () => {
             <button
               type="button"
               onClick={() => setIsClientDropdownOpen((prev) => !prev)}
-              className="w-full bg-[#FBF9F5] border border-[#E6E1D6] hover:border-[#701A35] rounded-xl px-3 py-2 text-xs text-slate-800 flex items-center justify-between transition-colors cursor-pointer text-left"
+              className="w-full bg-white border border-slate-300 hover:border-[#701A35] rounded-xl px-3 py-2 text-xs text-slate-900 font-semibold flex items-center justify-between transition-colors cursor-pointer text-left shadow-2xs"
             >
               <div className="flex items-center gap-1.5 truncate">
                 <Filter className="w-3.5 h-3.5 text-[#701A35] shrink-0" />
-                <span className="font-semibold truncate">
+                <span className="font-bold truncate">
                   {selectedClients.size === 0
                     ? 'All Clients'
                     : selectedClients.size === 1
@@ -410,12 +498,12 @@ export const LoansListView: React.FC = () => {
                     : `${selectedClients.size} Clients Selected`}
                 </span>
               </div>
-              <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${isClientDropdownOpen ? 'rotate-180' : ''}`} />
+              <ChevronDown className={`w-3.5 h-3.5 text-slate-500 transition-transform ${isClientDropdownOpen ? 'rotate-180' : ''}`} />
             </button>
 
             {/* Dropdown Menu */}
             {isClientDropdownOpen && (
-              <div className="absolute top-full left-0 mt-1.5 w-80 bg-white border border-[#E6E1D6] rounded-2xl shadow-xl z-50 p-3 space-y-2.5 animate-in fade-in-50 zoom-in-95 duration-100">
+              <div className="absolute top-full left-0 mt-1.5 w-80 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 p-3 space-y-2.5 animate-in fade-in-50 zoom-in-95 duration-100">
                 {/* Search inside dropdown */}
                 <div className="relative">
                   <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
@@ -424,13 +512,13 @@ export const LoansListView: React.FC = () => {
                     placeholder="Search clients..."
                     value={clientSearchQuery}
                     onChange={(e) => setClientSearchQuery(e.target.value)}
-                    className="w-full bg-[#FBF9F5] border border-[#E6E1D6] rounded-lg pl-8 pr-2.5 py-1.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-hidden focus:border-[#701A35]"
+                    className="w-full bg-white border border-slate-300 rounded-lg pl-8 pr-2.5 py-1.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-hidden focus:border-[#701A35]"
                     autoFocus
                   />
                 </div>
 
                 {/* Quick actions */}
-                <div className="flex items-center justify-between text-[11px] px-1 font-semibold text-slate-500 border-b border-slate-100 pb-1.5">
+                <div className="flex items-center justify-between text-[11px] px-1 font-bold text-slate-600 border-b border-slate-100 pb-1.5">
                   <button
                     type="button"
                     onClick={selectAllClients}
@@ -448,7 +536,7 @@ export const LoansListView: React.FC = () => {
                 </div>
 
                 {/* Clients list */}
-                <div className="max-h-60 overflow-y-auto space-y-0.5 divide-y divide-slate-50">
+                <div className="max-h-60 overflow-y-auto space-y-0.5 divide-y divide-slate-100">
                   {filteredClientStats.length === 0 ? (
                     <div className="py-4 text-center text-xs text-slate-400">
                       No clients found matching "{clientSearchQuery}"
@@ -461,7 +549,7 @@ export const LoansListView: React.FC = () => {
                           key={name}
                           onClick={() => toggleClientSelection(name)}
                           className={`px-2.5 py-1.5 rounded-lg flex items-center justify-between text-xs cursor-pointer transition-colors ${
-                            isSelected ? 'bg-amber-50/80 font-bold text-amber-950' : 'hover:bg-[#FAF8F5] text-slate-700'
+                            isSelected ? 'bg-amber-100 text-amber-950 font-bold' : 'hover:bg-slate-100 text-slate-800'
                           }`}
                         >
                           <div className="flex items-center gap-2 truncate pr-2">
@@ -474,7 +562,7 @@ export const LoansListView: React.FC = () => {
                             />
                             <span className="truncate">{name}</span>
                           </div>
-                          <span className="text-[10px] font-mono text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded shrink-0">
+                          <span className="text-[10px] font-mono text-slate-600 bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded font-semibold shrink-0">
                             {count} loan{count > 1 ? 's' : ''}
                           </span>
                         </div>
@@ -488,7 +576,7 @@ export const LoansListView: React.FC = () => {
 
           {/* General Text Search */}
           <div className="relative flex-1 min-w-[200px] max-w-sm">
-            <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 font-mono mb-1 block">
+            <label className="text-[10px] font-bold uppercase tracking-wider text-slate-600 font-mono mb-1 block">
               Search Code / Place / Loan ID
             </label>
             <div className="relative">
@@ -498,7 +586,7 @@ export const LoansListView: React.FC = () => {
                 placeholder="Search loan ID, code, city..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-[#FBF9F5] border border-[#E6E1D6] rounded-xl pl-9 pr-3.5 py-2 text-xs text-slate-800 placeholder-slate-400 focus:outline-hidden focus:border-[#701A35]"
+                className="w-full bg-white border border-slate-300 hover:border-slate-400 rounded-xl pl-9 pr-3.5 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-hidden focus:border-[#701A35] shadow-2xs font-medium"
               />
             </div>
           </div>
@@ -512,15 +600,15 @@ export const LoansListView: React.FC = () => {
 
         {/* Status Filter Tabs & Expand/Collapse */}
         <div className="flex flex-wrap items-center gap-2 w-full xl:w-auto justify-between xl:justify-end shrink-0">
-          <div className="flex items-center bg-[#F4F1EA] p-1 rounded-lg border border-[#E6E1D6] text-xs font-semibold overflow-x-auto max-w-full">
+          <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs font-semibold overflow-x-auto max-w-full">
             {(['ALL', 'Active', 'Overdue', 'Closed'] as const).map((st) => (
               <button
                 key={st}
                 onClick={() => setStatusFilter(st)}
-                className={`px-3 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
                   statusFilter === st
-                    ? 'bg-white text-slate-900 shadow-xs font-bold'
-                    : 'text-slate-600 hover:text-slate-900'
+                    ? 'bg-[#701A35] text-white shadow-xs'
+                    : 'text-slate-700 hover:text-slate-950 hover:bg-slate-200/60'
                 }`}
               >
                 {st}
@@ -528,17 +616,17 @@ export const LoansListView: React.FC = () => {
             ))}
           </div>
 
-          <div className="flex items-center gap-1 border-l border-[#E6E1D6] pl-2">
+          <div className="flex items-center gap-1 border-l border-slate-200 pl-2">
             <button
               onClick={handleExpandAll}
-              className="px-2.5 py-1 text-[11px] font-mono bg-white border border-[#E6E1D6] rounded-md text-slate-600 hover:bg-[#FBF9F5] cursor-pointer"
+              className="px-2.5 py-1.5 text-[11px] font-bold font-mono bg-white border border-slate-300 rounded-lg text-slate-800 hover:bg-slate-50 cursor-pointer shadow-2xs"
               title="Expand all loan schedules"
             >
               Expand All
             </button>
             <button
               onClick={handleCollapseAll}
-              className="px-2.5 py-1 text-[11px] font-mono bg-white border border-[#E6E1D6] rounded-md text-slate-600 hover:bg-[#FBF9F5] cursor-pointer"
+              className="px-2.5 py-1.5 text-[11px] font-bold font-mono bg-white border border-slate-300 rounded-lg text-slate-800 hover:bg-slate-50 cursor-pointer shadow-2xs"
               title="Collapse all loan schedules"
             >
               Collapse All
@@ -550,13 +638,13 @@ export const LoansListView: React.FC = () => {
       {/* Selected Client Pill Chips & Active Filters Status Bar */}
       {(selectedClients.size > 0 || dateRange.startDate || searchQuery || statusFilter !== 'ALL') && (
         <div className="flex items-center gap-2 flex-wrap text-xs px-1">
-          <span className="text-slate-500 font-medium">Active Filters:</span>
+          <span className="text-slate-600 font-bold">Active Filters:</span>
 
           {/* Selected Clients Pills */}
           {Array.from(selectedClients).map((clientName) => (
             <span
               key={clientName}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-100/70 border border-amber-300 text-amber-950 font-semibold text-[11px]"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-100 border border-amber-300 text-amber-950 font-bold text-[11px] shadow-2xs"
             >
               <span>{clientName}</span>
               <button
@@ -572,7 +660,7 @@ export const LoansListView: React.FC = () => {
 
           {/* Date Range Pill */}
           {dateRange.startDate && (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#FAF5ED] border border-[#E2D2B0] text-[#701A35] font-mono text-[11px] font-bold">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-rose-50 border border-rose-300 text-[#701A35] font-mono text-[11px] font-bold shadow-2xs">
               <span>📅 {dateRange.startDate} – {dateRange.endDate}</span>
               <button
                 type="button"
@@ -587,7 +675,7 @@ export const LoansListView: React.FC = () => {
 
           {/* Search text pill */}
           {searchQuery && (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 border border-slate-200 text-slate-700 font-mono text-[11px] font-semibold">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 border border-slate-300 text-slate-800 font-mono text-[11px] font-bold shadow-2xs">
               <span>Search: "{searchQuery}"</span>
               <button
                 type="button"
@@ -602,7 +690,7 @@ export const LoansListView: React.FC = () => {
 
           {/* Status pill */}
           {statusFilter !== 'ALL' && (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 border border-slate-200 text-slate-700 text-[11px] font-semibold">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 border border-slate-300 text-slate-800 text-[11px] font-bold shadow-2xs">
               <span>Status: {statusFilter}</span>
               <button
                 type="button"
@@ -631,10 +719,10 @@ export const LoansListView: React.FC = () => {
       )}
 
       {/* Flat Per-Loan Table Grid with Clickable Sort Headers */}
-      <div className="bg-white rounded-2xl border border-[#E6E1D6] shadow-xs overflow-hidden">
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         {filteredAndSortedLoans.length === 0 ? (
           <div className="p-10 md:p-14 text-center space-y-4 max-w-lg mx-auto">
-            <div className="w-14 h-14 rounded-2xl bg-[#FAF5ED] border border-[#E2D2B0] flex items-center justify-center mx-auto text-[#701A35] shadow-xs">
+            <div className="w-14 h-14 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center mx-auto text-[#701A35] shadow-xs">
               <CalendarDays className="w-7 h-7" />
             </div>
             <div>
@@ -670,7 +758,7 @@ export const LoansListView: React.FC = () => {
                   setSearchQuery('');
                   setStatusFilter('ALL');
                 }}
-                className="px-4 py-2 bg-white border border-[#E6E1D6] hover:bg-[#FAF8F5] text-slate-800 text-xs font-bold rounded-xl shadow-2xs transition-all cursor-pointer"
+                className="px-4 py-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-800 text-xs font-bold rounded-xl shadow-2xs transition-all cursor-pointer"
               >
                 Reset All Filters
               </button>
@@ -694,7 +782,7 @@ export const LoansListView: React.FC = () => {
         ) : (
           <div>
             {/* Desktop Table Header (Visible on lg+) */}
-            <div className="hidden lg:grid grid-cols-12 gap-3 px-5 py-3.5 bg-[#FAF8F5] border-b border-[#E6E1D6] text-[11px] font-mono font-bold text-slate-600 uppercase tracking-wider select-none">
+            <div className="hidden lg:grid grid-cols-12 gap-3 px-5 py-3.5 bg-slate-100 border-b-2 border-slate-200 text-[11px] font-mono font-bold text-slate-700 uppercase tracking-wider select-none">
               {/* Client & Loan ID */}
               <div
                 onClick={() => handleSort('customerName')}
@@ -762,7 +850,7 @@ export const LoansListView: React.FC = () => {
             </div>
 
             {/* Desktop Table Rows (lg+) */}
-            <div className="hidden lg:block divide-y divide-[#EDE8DF]">
+            <div className="hidden lg:block divide-y divide-slate-200">
               {filteredAndSortedLoans.map((loan) => {
                 const isExpanded = expandedLoanIds.has(loan.id);
                 const { startTimestamp, endTimestamp } = dateTimestamps;
@@ -807,20 +895,20 @@ export const LoansListView: React.FC = () => {
                         </button>
                         <div className="min-w-0">
                           <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="font-bold text-slate-900 text-xs truncate hover:text-[#701A35]">
+                            <span className="font-bold text-slate-950 text-xs truncate hover:text-[#701A35]">
                               {loan.customerName}
                             </span>
                           </div>
                           <div className="flex items-center gap-2 mt-0.5">
-                            <span className="font-mono text-[10px] bg-[#FAF5ED] text-[#701A35] border border-[#E2D2B0] px-1.5 py-0.2 rounded font-bold">
+                            <span className="font-mono text-[10px] bg-[#701A35]/12 text-[#701A35] border border-[#701A35]/30 px-1.5 py-0.2 rounded font-bold">
                               {loan.id}
                             </span>
                             {loan.codeNo && (
-                              <span className="font-mono text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.2 rounded font-semibold">
+                              <span className="font-mono text-[10px] bg-slate-100 text-slate-800 border border-slate-300 px-1.5 py-0.2 rounded font-bold">
                                 {loan.codeNo}
                               </span>
                             )}
-                            <span className="text-[10px] text-slate-400 truncate">
+                            <span className="text-[10px] text-slate-500 font-medium truncate">
                               {loan.place || 'CHENNAI'}
                             </span>
                           </div>
@@ -832,20 +920,20 @@ export const LoansListView: React.FC = () => {
                         <MoneyDisplay
                           amount={loan.totalAmount}
                           size="sm"
-                          amountClassName="font-bold text-slate-900 text-xs block text-right"
+                          amountClassName="font-bold text-slate-950 text-xs block text-right"
                         />
-                        <span className="text-[10px] text-slate-400 block mt-0.5">
+                        <span className="text-[10px] text-slate-500 font-medium block mt-0.5">
                           ₹{(loan.totalCollected || 0).toLocaleString('en-IN')} collected
                         </span>
                       </div>
 
                       {/* EMI Count */}
                       <div className="col-span-1 text-center font-mono text-xs">
-                        <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 font-bold">
+                        <span className="px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-800 border border-indigo-200 font-bold">
                           {loan.installmentCount || loan.installments?.length || 0}
                         </span>
                         {hasDateFilter && inRangeCount > 0 && (
-                          <span className="block text-[9px] text-amber-700 font-semibold mt-0.5">
+                          <span className="block text-[9px] text-amber-800 font-bold mt-0.5">
                             {inRangeCount} in range
                           </span>
                         )}
@@ -858,12 +946,12 @@ export const LoansListView: React.FC = () => {
                             <CompanySplitBadge key={sp.id} split={sp} size="sm" />
                           ))
                         ) : (
-                          <span className="text-[10px] text-slate-400 font-mono">ASR Group</span>
+                          <span className="text-[10px] text-slate-500 font-mono font-semibold">ASR Group</span>
                         )}
                       </div>
 
                       {/* Next Due Date */}
-                      <div className="col-span-1 text-center font-mono text-[11px] text-slate-600">
+                      <div className="col-span-1 text-center font-mono text-[11px] text-slate-700 font-semibold">
                         {loan.nextDueDate || '—'}
                       </div>
 
@@ -879,7 +967,7 @@ export const LoansListView: React.FC = () => {
                             e.stopPropagation();
                             setSelectedEditLoan(loan);
                           }}
-                          className="p-1.5 text-slate-600 hover:text-[#701A35] hover:bg-[#FAF8F5] border border-slate-200 rounded-lg transition-colors cursor-pointer"
+                          className="p-1.5 text-slate-600 hover:text-[#701A35] hover:bg-slate-100 border border-slate-200 rounded-lg transition-colors cursor-pointer"
                           title="Edit Loan Schedule"
                         >
                           <Edit3 className="w-3.5 h-3.5 text-[#701A35]" />
@@ -889,8 +977,9 @@ export const LoansListView: React.FC = () => {
                           onClick={(e) => {
                             e.stopPropagation();
                             setSelectedLoanId(loan.id);
+                            router.push(`/loans/${loan.id}`);
                           }}
-                          className="p-1.5 text-slate-400 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                          className="p-1.5 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
                           title="View Loan Details"
                         >
                           <Eye className="w-3.5 h-3.5" />
@@ -913,28 +1002,28 @@ export const LoansListView: React.FC = () => {
 
                     {/* Accordion Expanded Sub-Table: Installments / EMIs */}
                     {isExpanded && (
-                      <div className="bg-[#FAF8F5] px-6 py-4 border-t border-[#E6E1D6] space-y-3">
+                      <div className="bg-slate-50/90 px-6 py-4 border-t-2 border-slate-200 space-y-3">
                         <div className="flex items-center justify-between">
-                          <span className="text-xs font-mono font-bold text-slate-700 uppercase tracking-wider flex items-center gap-2">
+                          <span className="text-xs font-mono font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
                             <Calendar className="w-3.5 h-3.5 text-[#701A35]" />
                             Payment Schedule ({loan.installments.length} EMIs)
                           </span>
                           <div className="flex items-center gap-2">
                             {hasDateFilter && (
-                              <span className="text-[11px] font-mono text-amber-800 bg-amber-100 border border-amber-300 px-2.5 py-0.5 rounded-lg font-bold">
+                              <span className="text-[11px] font-mono text-amber-900 bg-amber-100 border border-amber-300 px-2.5 py-0.5 rounded-lg font-bold">
                                 Highlighting dates in range ({dateRange.startDate} to {dateRange.endDate})
                               </span>
                             )}
-                            <span className="text-xs font-mono text-slate-500 bg-white px-2.5 py-1 rounded-lg border border-[#E6E1D6]">
-                              Loan ID: <strong className="text-slate-800">{loan.id}</strong>
+                            <span className="text-xs font-mono text-slate-700 bg-white px-2.5 py-1 rounded-lg border border-slate-300 font-semibold shadow-2xs">
+                              Loan ID: <strong className="text-[#701A35]">{loan.id}</strong>
                             </span>
                           </div>
                         </div>
 
-                        <div className="border border-[#E2DDD3] rounded-xl overflow-x-auto bg-white shadow-2xs">
+                        <div className="border border-slate-200 rounded-xl overflow-x-auto bg-white shadow-2xs">
                           <table className="w-full text-left border-collapse text-xs">
                             <thead>
-                              <tr className="bg-[#F4F1EA] border-b border-[#E2DDD3] text-[11px] font-mono font-bold text-slate-600">
+                              <tr className="bg-slate-100 border-b border-slate-200 text-[11px] font-mono font-bold text-slate-700">
                                 <th className="p-2.5 text-center w-12">#</th>
                                 <th className="p-2.5 w-28">Due Date</th>
                                 <th className="p-2.5 text-right w-32">Amount Due (₹)</th>
@@ -946,7 +1035,7 @@ export const LoansListView: React.FC = () => {
                                 <th className="p-2.5 text-center w-20">Action</th>
                               </tr>
                             </thead>
-                            <tbody className="divide-y divide-[#EDE8DF]">
+                            <tbody className="divide-y divide-slate-100">
                               {loan.installments.map((inst) => {
                                 const isPaid = ['PASS', 'NEFT', 'CASH', 'CLS', 'CS', 'Paid'].includes(inst.status);
                                 const dueD = parseToDate(inst.dueDate);
@@ -972,20 +1061,20 @@ export const LoansListView: React.FC = () => {
                                     key={inst.id}
                                     className={`font-mono transition-colors ${
                                       isInRange
-                                        ? 'bg-amber-50/80 border-l-4 border-amber-400 font-semibold text-amber-950'
+                                        ? 'bg-amber-100/70 border-l-4 border-amber-500 font-bold text-amber-950'
                                         : inst.isMismatch
-                                        ? 'bg-rose-50/50'
-                                        : 'hover:bg-[#FCFBF9]'
+                                        ? 'bg-rose-50/70'
+                                        : 'hover:bg-slate-50'
                                     }`}
                                   >
                                     <td className="p-2.5 text-center font-bold text-slate-500">
                                       #{inst.seqNo}
                                     </td>
-                                    <td className="p-2.5 text-slate-800 font-semibold">
+                                    <td className="p-2.5 text-slate-900 font-bold">
                                       <div className="flex items-center gap-1.5">
                                         <span>{inst.dueDate}</span>
                                         {isInRange && (
-                                          <span className="text-[9px] bg-amber-200 text-amber-900 px-1 py-0.2 rounded font-bold">
+                                          <span className="text-[9px] bg-amber-200 text-amber-950 px-1.5 py-0.2 rounded font-bold border border-amber-400">
                                             IN RANGE
                                           </span>
                                         )}
@@ -995,13 +1084,13 @@ export const LoansListView: React.FC = () => {
                                       <MoneyDisplay
                                         amount={inst.amountDue}
                                         size="sm"
-                                        amountClassName="font-bold text-slate-900 block text-right"
+                                        amountClassName="font-bold text-slate-950 block text-right"
                                       />
                                     </td>
                                     <td className="p-2.5 text-center">
                                       <StatusPill status={inst.status} size="sm" />
                                     </td>
-                                    <td className="p-2.5 text-slate-600">
+                                    <td className="p-2.5 text-slate-700 font-semibold">
                                       {inst.recdDate || '—'}
                                     </td>
                                     <td className="p-2.5">
@@ -1009,24 +1098,24 @@ export const LoansListView: React.FC = () => {
                                         {Object.entries(inst.companySplits || {}).map(([code, amt]) => (
                                           <span
                                             key={code}
-                                            className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-800 text-[10px] font-semibold border border-slate-200"
+                                            className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-900 text-[10px] font-bold border border-slate-300"
                                           >
                                             <strong>{code}:</strong> ₹{Number(amt).toLocaleString('en-IN')}
                                           </span>
                                         ))}
                                         {inst.isMismatch && (
-                                          <span className="px-1.5 py-0.5 rounded bg-rose-100 text-rose-700 text-[10px] font-bold border border-rose-300">
+                                          <span className="px-1.5 py-0.5 rounded bg-rose-100 text-rose-800 text-[10px] font-bold border border-rose-300">
                                             Diff ₹{inst.mismatchDiff}
                                           </span>
                                         )}
                                       </div>
                                     </td>
-                                    <td className="p-2.5 text-slate-500 text-[11px]">
+                                    <td className="p-2.5 text-slate-600 text-[11px] font-medium">
                                       {inst.chqNo ? `CHQ: ${inst.chqNo}` : ''}
                                       {inst.depName ? ` (DEP: ${inst.depName})` : ''}
                                       {!inst.chqNo && !inst.depName ? '—' : ''}
                                     </td>
-                                    <td className="p-2.5 text-slate-500 text-[11px] truncate max-w-[120px]">
+                                    <td className="p-2.5 text-slate-600 text-[11px] truncate max-w-[120px]">
                                       {inst.remarks || '—'}
                                     </td>
                                     <td className="p-2.5 text-center">
@@ -1038,12 +1127,12 @@ export const LoansListView: React.FC = () => {
                                               recdDate: new Date().toISOString().slice(0, 10),
                                             })
                                           }
-                                          className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-md text-[10px] font-bold shadow-2xs cursor-pointer"
+                                          className="px-2.5 py-1 bg-emerald-700 hover:bg-emerald-600 text-white rounded-md text-[10px] font-bold shadow-2xs cursor-pointer"
                                         >
                                           Mark Paid
                                         </button>
                                       ) : (
-                                        <span className="text-[10px] text-emerald-600 font-bold">Paid</span>
+                                        <span className="text-[10px] text-emerald-700 font-bold">Paid</span>
                                       )}
                                     </td>
                                   </tr>
@@ -1075,7 +1164,10 @@ export const LoansListView: React.FC = () => {
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
                         <h4
-                          onClick={() => setSelectedLoanId(loan.id)}
+                          onClick={() => {
+                            setSelectedLoanId(loan.id);
+                            router.push(`/loans/${loan.id}`);
+                          }}
                           className="text-sm font-bold text-slate-900 truncate hover:text-[#701A35] cursor-pointer"
                         >
                           {loan.customerName}
@@ -1186,7 +1278,10 @@ export const LoansListView: React.FC = () => {
 
                       <button
                         type="button"
-                        onClick={() => setSelectedLoanId(loan.id)}
+                        onClick={() => {
+                          setSelectedLoanId(loan.id);
+                          router.push(`/loans/${loan.id}`);
+                        }}
                         className="py-1.5 px-2.5 text-slate-600 hover:text-slate-900 border border-slate-200 rounded-xl flex items-center justify-center cursor-pointer transition-colors"
                         title="View Details"
                       >

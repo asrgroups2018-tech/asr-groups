@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { useApp } from '@/lib/store';
 import {
   CalendarDays,
@@ -20,11 +21,13 @@ import { StatusPill } from '@/components/ui/StatusPill';
 import { MoneyDisplay } from '@/components/ui/MoneyDisplay';
 
 export const ScheduleView: React.FC = () => {
+  const router = useRouter();
   const {
     loans,
     setSelectedLoanId,
     setActiveMainTab,
     updateLoanInstallment,
+    isLoading,
   } = useApp();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -100,6 +103,25 @@ export const ScheduleView: React.FC = () => {
     };
   }, [loans]);
 
+  if (isLoading && (!loans || loans.length === 0)) {
+    return (
+      <div className="space-y-6 animate-pulse">
+        <div className="h-24 bg-slate-200 rounded-2xl w-full" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="h-28 bg-slate-200 rounded-2xl" />
+          <div className="h-28 bg-slate-200 rounded-2xl" />
+          <div className="h-28 bg-slate-200 rounded-2xl" />
+          <div className="h-28 bg-slate-200 rounded-2xl" />
+        </div>
+        <div className="h-14 bg-slate-200 rounded-2xl w-full" />
+        <div className="space-y-3">
+          <div className="h-24 bg-slate-200 rounded-2xl w-full" />
+          <div className="h-24 bg-slate-200 rounded-2xl w-full" />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Page Header */}
@@ -121,6 +143,7 @@ export const ScheduleView: React.FC = () => {
         <button
           onClick={() => {
             setActiveMainTab('loans');
+            router.push('/loans');
           }}
           className="px-4 py-2 bg-[#701A35] hover:bg-[#5C142B] text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 self-start sm:self-auto cursor-pointer"
         >
@@ -336,6 +359,7 @@ export const ScheduleView: React.FC = () => {
                           e.stopPropagation();
                           setSelectedLoanId(loan.id);
                           setActiveMainTab('loans');
+                          router.push(`/loans/${loan.id}`);
                         }}
                         className="px-2.5 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:text-[#701A35] hover:border-[#701A35] text-xs font-bold transition-all flex items-center gap-1 cursor-pointer shrink-0"
                       >

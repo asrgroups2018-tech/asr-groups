@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { useRouter } from 'next/navigation';
 import { useApp } from '@/lib/store';
 import {
   Building2,
@@ -12,6 +13,7 @@ import { StatusPill } from '@/components/ui/StatusPill';
 import { MoneyDisplay } from '@/components/ui/MoneyDisplay';
 
 export const CompanyDetailsView: React.FC = () => {
+  const router = useRouter();
   const {
     companies,
     selectedCompanyId,
@@ -19,17 +21,40 @@ export const CompanyDetailsView: React.FC = () => {
     loans,
     setSelectedLoanId,
     setActiveMainTab,
+    isLoading,
   } = useApp();
 
-  const company = companies.find((c) => c.id === selectedCompanyId);
+  const cleanSelectedId = String(selectedCompanyId || '').trim().toLowerCase();
+  const company = companies.find(
+    (c) =>
+      c.id.toLowerCase() === cleanSelectedId ||
+      c.shortCode.toLowerCase() === cleanSelectedId ||
+      c.name.toLowerCase() === cleanSelectedId
+  );
 
   if (!company) {
+    if (isLoading) {
+      return (
+        <div className="space-y-6 animate-pulse">
+          <div className="h-24 bg-slate-200 rounded-2xl w-full" />
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="h-28 bg-slate-200 rounded-xl" />
+            <div className="h-28 bg-slate-200 rounded-xl" />
+            <div className="h-28 bg-slate-200 rounded-xl" />
+          </div>
+          <div className="h-64 bg-slate-200 rounded-2xl w-full" />
+        </div>
+      );
+    }
     return (
       <div className="bg-white rounded-2xl p-12 text-center border border-[#E6E1D6]">
         <Building2 className="w-12 h-12 text-slate-300 mx-auto mb-3" />
         <h2 className="text-base font-bold text-slate-800">Company Not Found</h2>
         <button
-          onClick={() => setSelectedCompanyId(null)}
+          onClick={() => {
+            setSelectedCompanyId(null);
+            router.push('/companies');
+          }}
           className="mt-4 px-4 py-2 bg-[#701A35] text-white text-xs font-bold rounded-xl cursor-pointer"
         >
           Back to Companies List
@@ -64,7 +89,10 @@ export const CompanyDetailsView: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-[#E6E1D6] shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
         <div className="flex items-center gap-3">
           <button
-            onClick={() => setSelectedCompanyId(null)}
+            onClick={() => {
+              setSelectedCompanyId(null);
+              router.push('/companies');
+            }}
             className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors cursor-pointer"
             title="Back to All Companies"
           >
@@ -231,6 +259,7 @@ export const CompanyDetailsView: React.FC = () => {
                             onClick={() => {
                               setSelectedLoanId(l.id);
                               setActiveMainTab('loans');
+                              router.push(`/loans/${l.id}`);
                             }}
                             className="px-2.5 py-1 text-xs font-bold text-[#701A35] hover:bg-[#701A35] hover:text-white rounded-lg border border-[#701A35]/30 transition-all flex items-center gap-1 ml-auto cursor-pointer"
                           >
