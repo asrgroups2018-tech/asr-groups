@@ -180,11 +180,11 @@ export const LoanDetailsView: React.FC = () => {
       </div>
 
       {/* ─── Sub-Tab Navigation Bar ─── */}
-      <div className="bg-white rounded-2xl border border-[#E6E1D6] p-1.5 flex items-center justify-between">
-        <div className="flex items-center gap-2">
+      <div className="bg-white rounded-2xl border border-[#E6E1D6] p-1.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-2xs">
+        <div className="flex items-center gap-1.5 overflow-x-auto max-w-full pb-0.5 sm:pb-0">
           <button
             onClick={() => setActiveTab('overview')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+            className={`flex-1 sm:flex-initial px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
               activeTab === 'overview'
                 ? 'bg-[#701A35] text-white shadow-xs'
                 : 'text-slate-600 hover:bg-slate-100'
@@ -194,13 +194,13 @@ export const LoanDetailsView: React.FC = () => {
           </button>
           <button
             onClick={() => setActiveTab('schedule')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+            className={`flex-1 sm:flex-initial px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer ${
               activeTab === 'schedule'
                 ? 'bg-[#701A35] text-white shadow-xs'
                 : 'text-slate-600 hover:bg-slate-100'
             }`}
           >
-            <FileSpreadsheet className="w-3.5 h-3.5" />
+            <FileSpreadsheet className="w-3.5 h-3.5 shrink-0" />
             <span>Payment Schedule</span>
             <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-slate-200 text-slate-800 font-mono">
               {totalPaidInstallments}/{totalInstallmentsCount}
@@ -210,7 +210,7 @@ export const LoanDetailsView: React.FC = () => {
 
         <button
           onClick={() => setIsEditModalOpen(true)}
-          className="px-3 py-1.5 text-xs font-bold text-[#701A35] hover:bg-[#FAF8F5] rounded-xl border border-slate-200 flex items-center gap-1.5 cursor-pointer"
+          className="w-full sm:w-auto px-3.5 py-2 text-xs font-bold text-[#701A35] bg-[#FAF5ED] hover:bg-[#F3ECE0] rounded-xl border border-[#E2D2B0] flex items-center justify-center gap-1.5 cursor-pointer transition-colors shadow-2xs"
         >
           <Edit3 className="w-3.5 h-3.5" />
           <span>Edit Loan & Schedule</span>
