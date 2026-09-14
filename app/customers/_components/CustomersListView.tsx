@@ -129,6 +129,54 @@ export const CustomersListView: React.FC = () => {
     },
   ];
 
+  const renderCustomerMobileCard = (c: Customer) => (
+    <div className="p-4 space-y-3 bg-white hover:bg-[#FAF8F5]/60 transition-colors">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <h4
+            onClick={() => setSelectedCustomerId(c.id)}
+            className="text-sm font-bold text-slate-900 truncate hover:text-[#701A35] cursor-pointer"
+          >
+            {c.name}
+          </h4>
+          <div className="flex items-center gap-2 mt-1 flex-wrap">
+            <span className="font-mono text-[10px] bg-[#FAF5ED] text-[#701A35] border border-[#E2D2B0] px-2 py-0.5 rounded font-bold">
+              {c.id}
+            </span>
+            <span className="text-xs text-slate-500 font-medium flex items-center gap-1 font-mono">
+              <MapPin className="w-3 h-3 text-slate-400" />
+              {c.place || 'CHENNAI'}
+            </span>
+          </div>
+        </div>
+        <div className="text-right shrink-0">
+          <span className="font-mono text-[11px] px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 font-bold">
+            {c.activeLoansCount || 0} {c.activeLoansCount === 1 ? 'Loan' : 'Loans'}
+          </span>
+        </div>
+      </div>
+
+      <div className="p-2.5 bg-[#FAF8F5] border border-[#E6E1D6] rounded-xl flex items-center justify-between">
+        <span className="text-xs text-slate-500 font-medium">Total Borrowed:</span>
+        <MoneyDisplay
+          amount={c.totalBorrowed || 0}
+          size="sm"
+          amountClassName="font-bold text-slate-900"
+        />
+      </div>
+
+      <div className="flex items-center justify-end pt-1">
+        <button
+          onClick={() => setSelectedCustomerId(c.id)}
+          className="w-full py-1.5 px-3 text-xs font-semibold text-[#701A35] bg-[#FAF5ED] hover:bg-[#F3ECE0] border border-[#E2D2B0] rounded-xl flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
+        >
+          <Eye className="w-3.5 h-3.5" />
+          <span>View Customer Profile</span>
+        </button>
+      </div>
+    </div>
+  );
+
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
       {/* ─── Top Control Bar ─── */}
@@ -139,12 +187,13 @@ export const CustomersListView: React.FC = () => {
               Customers
             </h1>
           </div>
-          <p className="text-xs text-slate-500 mt-1">
-            Manage borrowing clients and view their total loan portfolios
+          <p className="text-xs text-slate-500 mt-0.5">
+            Borrower Directory & Portfolio Overview
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        {/* Action Buttons */}
+        <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={() => setIsAddModalOpen(true)}
             className="px-4 py-2 text-xs font-bold text-white bg-[#701A35] hover:bg-[#5C142B] active:scale-98 rounded-xl transition-all shadow-xs flex items-center gap-1.5 cursor-pointer shrink-0"
@@ -220,6 +269,7 @@ export const CustomersListView: React.FC = () => {
           title="Customer Borrowers Registry"
           searchPlaceholder="Search client name or place..."
           exportFileName="ASR_Customer_Registry"
+          mobileCardRender={renderCustomerMobileCard}
         />
       )}
 

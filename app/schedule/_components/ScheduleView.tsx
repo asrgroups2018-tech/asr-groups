@@ -295,23 +295,23 @@ export const ScheduleView: React.FC = () => {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-6 justify-between lg:justify-end border-t lg:border-t-0 pt-3 lg:pt-0 border-slate-100">
-                      <div className="text-right">
+                    <div className="flex flex-wrap items-center gap-3 sm:gap-6 justify-between lg:justify-end border-t lg:border-t-0 pt-3 lg:pt-0 border-slate-100">
+                      <div className="text-left sm:text-right">
                         <span className="text-[10px] text-slate-400 uppercase font-mono block">
                           Total Amount
                         </span>
                         <MoneyDisplay
                           amount={loan.totalAmount}
                           size="sm"
-                          amountClassName="font-bold text-sm text-slate-900 block text-right"
+                          amountClassName="font-bold text-sm text-slate-900 block"
                         />
                       </div>
 
-                      <div className="min-w-[120px] text-right">
+                      <div className="min-w-[110px] text-right">
                         <span className="text-[10px] text-slate-400 uppercase font-mono block">
                           Settled: {paidCount}/{totalCycles}
                         </span>
-                        <div className="w-28 h-2 bg-slate-200 rounded-full overflow-hidden ml-auto mt-1">
+                        <div className="w-24 sm:w-28 h-2 bg-slate-200 rounded-full overflow-hidden ml-auto mt-1">
                           <div
                             style={{ width: `${percentPaid}%` }}
                             className="h-full bg-emerald-500 transition-all rounded-full"
@@ -320,7 +320,7 @@ export const ScheduleView: React.FC = () => {
                       </div>
 
                       {nextPending && (
-                        <div className="hidden sm:block text-right">
+                        <div className="text-right">
                           <span className="text-[10px] text-slate-400 uppercase font-mono block">
                             Next Due
                           </span>
@@ -350,7 +350,7 @@ export const ScheduleView: React.FC = () => {
                     <div className="p-4 sm:p-5 bg-white space-y-3 animate-in fade-in duration-150">
                       <div className="border border-[#E6E1D6] rounded-xl overflow-hidden shadow-2xs">
                         <div className="overflow-x-auto">
-                          <table className="w-full text-xs text-left border-collapse">
+                          <table className="w-full text-xs text-left border-collapse min-w-[600px]">
                             <thead className="bg-[#FAF8F5] border-b border-[#E6E1D6] text-[11px] font-mono text-slate-600">
                               <tr>
                                 <th className="p-2.5 border-r border-[#E6E1D6] w-12 text-center">EMI #</th>

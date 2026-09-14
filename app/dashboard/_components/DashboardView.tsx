@@ -343,8 +343,8 @@ export const DashboardView: React.FC = () => {
         </div>
 
         {/* Time Period Filter (Applies ONLY to Period-scoped cards & lists below) */}
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1.5 bg-white p-1 rounded-2xl border border-[#E6E1D6] shadow-2xs">
+        <div className="flex items-center gap-2 overflow-x-auto max-w-full pb-1 sm:pb-0">
+          <div className="flex items-center gap-1.5 bg-white p-1 rounded-2xl border border-[#E6E1D6] shadow-2xs whitespace-nowrap">
             {[
               { id: 'all', label: 'All Time' },
               { id: 'today', label: 'Today' },
@@ -357,7 +357,7 @@ export const DashboardView: React.FC = () => {
                 <button
                   key={f.id}
                   onClick={() => setTimeFilter(f.id as any)}
-                  className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
                     isActive
                       ? 'bg-[#701A35] text-white font-bold shadow-xs'
                       : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
@@ -376,9 +376,10 @@ export const DashboardView: React.FC = () => {
         <div className="absolute right-0 top-0 -mt-8 -mr-8 w-64 h-64 rounded-full bg-[#C5A059]/10 blur-3xl pointer-events-none" />
 
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="space-y-3">
+          <div className="space-y-4 w-full">
             <div className="flex items-center gap-2 text-[#C5A059] text-xs font-mono font-bold uppercase tracking-widest">
-              <Sparkles className="w-4 h-4" /> All-Time Portfolio Overview · Lifetime
+              <Sparkles className="w-4 h-4 shrink-0" />
+              <span>All-Time Portfolio Overview · Lifetime</span>
             </div>
 
             {/* Clear Side-by-Side Financial Hierarchy */}
@@ -418,7 +419,7 @@ export const DashboardView: React.FC = () => {
                 <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block font-mono">
                   Total Capital Recovered
                 </span>
-                <div className="flex items-baseline gap-2">
+                <div className="flex items-baseline gap-2 flex-wrap">
                   <MoneyDisplay
                     amount={portfolioMetrics.totalRecovered}
                     size="2xl"
@@ -438,8 +439,8 @@ export const DashboardView: React.FC = () => {
       </div>
 
       {/* ─── Period Scoped Header Tag ─── */}
-      <div className="flex items-center justify-between pt-2">
-        <div className="flex items-center gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-2 pt-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <span className="text-xs font-bold text-slate-900 font-serif">
             Operational Activity
           </span>

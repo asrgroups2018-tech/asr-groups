@@ -191,9 +191,9 @@ export const HistoricalSheetView: React.FC = () => {
 
       {/* ─── Filter & Search Bar with Category Toggle ─── */}
       <div className="bg-white p-4 rounded-xl border border-[#E6E1D6] shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-3">
-        <div className="flex items-center gap-3 flex-1">
+        <div className="flex flex-wrap items-center gap-3 flex-1 w-full">
           {/* Search box */}
-          <div className="relative flex-1 max-w-sm">
+          <div className="relative flex-1 min-w-[200px] max-w-sm">
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
@@ -208,7 +208,7 @@ export const HistoricalSheetView: React.FC = () => {
           </div>
 
           {/* Outside-Party Column Filter Toggle */}
-          <div className="flex items-center bg-[#F4F1EA] p-1 rounded-lg border border-[#E6E1D6] text-xs font-semibold">
+          <div className="flex items-center bg-[#F4F1EA] p-1 rounded-lg border border-[#E6E1D6] text-xs font-semibold overflow-x-auto max-w-full">
             {[
               { id: 'ALL', label: 'All Companies (16)' },
               { id: 'ASR_ONLY', label: 'ASR Group Own (10)' },
@@ -217,7 +217,7 @@ export const HistoricalSheetView: React.FC = () => {
               <button
                 key={f.id}
                 onClick={() => setCategoryFilter(f.id as any)}
-                className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${
+                className={`px-3 py-1 rounded-md text-xs font-semibold transition-all whitespace-nowrap cursor-pointer ${
                   categoryFilter === f.id
                     ? 'bg-[#701A35] text-white shadow-xs font-bold'
                     : 'text-slate-600 hover:text-slate-900'

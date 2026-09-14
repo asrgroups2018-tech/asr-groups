@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { formatINR, numberToWordsINR } from '@/lib/utils/formatCurrency';
 
 export interface MoneyDisplayProps {
@@ -30,6 +30,8 @@ export const MoneyDisplay: React.FC<MoneyDisplayProps> = ({
   const formattedAmount = formatINR(num);
   const words = numberToWordsINR(num);
 
+  const containerRef = useRef<HTMLSpanElement>(null);
+  const [isOpen, setIsOpen] = useState(false);
   const [dynamicAlign, setDynamicAlign] = useState<'left' | 'right' | 'center'>('center');
   const [dynamicPos, setDynamicPos] = useState<'top' | 'bottom'>('top');
 
@@ -45,18 +47,19 @@ export const MoneyDisplay: React.FC<MoneyDisplayProps> = ({
     custom: '',
   };
 
-  const handleMouseEnter = (e: React.MouseEvent<HTMLSpanElement>) => {
+  const updatePosition = useCallback((el: HTMLElement) => {
     if (typeof window === 'undefined') return;
 
-    const el = e.currentTarget;
     const rect = el.getBoundingClientRect();
     const windowWidth = window.innerWidth;
     const rightSpace = windowWidth - rect.right;
     const leftSpace = rect.left;
     const topSpace = rect.top;
 
-    // Check if inside a scrollable container with overflow
-    const scrollParent = el.closest('.overflow-y-auto, .overflow-auto, [class*="overflow-y"], [class*="overflow-auto"]');
+    // Check if inside a scrollable container
+    const scrollParent = el.closest(
+      '.overflow-y-auto, .overflow-auto, [class*="overflow-y"], [class*="overflow-auto"], .overflow-x-auto'
+    );
 
     if (scrollParent) {
       const parentRect = scrollParent.getBoundingClientRect();
@@ -64,27 +67,24 @@ export const MoneyDisplay: React.FC<MoneyDisplayProps> = ({
       const spaceRightInParent = parentRect.right - rect.right;
       const spaceLeftInParent = rect.left - parentRect.left;
 
-      // Vertical: if less than 85px from the top of the scroll container, open DOWNWARDS
       if (!tooltipPosition) {
-        if (spaceAboveInParent < 85) {
+        if (spaceAboveInParent < 90 || topSpace < 110) {
           setDynamicPos('bottom');
         } else {
           setDynamicPos('top');
         }
       }
 
-      // Horizontal: if close to right edge of scroll container
       if (!align) {
-        if (spaceRightInParent < 220 || rightSpace < 290) {
+        if (spaceRightInParent < 160 || rightSpace < 200) {
           setDynamicAlign('right');
-        } else if (spaceLeftInParent < 220 || leftSpace < 290) {
+        } else if (spaceLeftInParent < 160 || leftSpace < 200) {
           setDynamicAlign('left');
         } else {
           setDynamicAlign('center');
         }
       }
     } else {
-      // Standard viewport-based positioning
       if (!tooltipPosition) {
         if (topSpace < 120) {
           setDynamicPos('bottom');
@@ -94,16 +94,47 @@ export const MoneyDisplay: React.FC<MoneyDisplayProps> = ({
       }
 
       if (!align) {
-        if (rightSpace < 290) {
+        if (rightSpace < 220) {
           setDynamicAlign('right');
-        } else if (leftSpace < 290) {
+        } else if (leftSpace < 220) {
           setDynamicAlign('left');
         } else {
           setDynamicAlign('center');
         }
       }
     }
+  }, [align, tooltipPosition]);
+
+  const handleMouseEnter = () => {
+    if (containerRef.current) {
+      updatePosition(containerRef.current);
+    }
   };
+
+  const handleClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!showTooltip || !words) return;
+    if (containerRef.current) {
+      updatePosition(containerRef.current);
+    }
+    setIsOpen((prev) => !prev);
+  };
+
+  // Close on outside click
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleOutsideClick = (e: MouseEvent | TouchEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleOutsideClick);
+    document.addEventListener('touchstart', handleOutsideClick);
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+      document.removeEventListener('touchstart', handleOutsideClick);
+    };
+  }, [isOpen]);
 
   const currentPos = tooltipPosition || dynamicPos;
   const currentAlign = align || dynamicAlign;
@@ -116,43 +147,73 @@ export const MoneyDisplay: React.FC<MoneyDisplayProps> = ({
   };
 
   const alignNotchClasses: Record<string, string> = {
-    left: 'left-5',
-    right: 'right-5',
+    left: 'left-4',
+    right: 'right-4',
     center: 'left-1/2 -translate-x-1/2',
   };
 
   return (
     <span
+      ref={containerRef}
       onMouseEnter={handleMouseEnter}
-      className={`group/money relative inline-flex items-center cursor-help select-none ${className}`}
+      onClick={handleClick}
+      role="button"
+      tabIndex={0}
+      title={words ? `Click or tap to view: ${words}` : undefined}
+      className={`group/money relative inline-flex items-center cursor-pointer select-none active:scale-[0.98] transition-transform ${className}`}
     >
       <span
-        className={`font-mono transition-all decoration-dotted group-hover/money:underline underline-offset-4 decoration-[#C5A059]/70 ${sizeClasses[size] || ''} ${amountClassName}`}
+        className={`font-mono transition-all decoration-dotted underline decoration-[#C5A059]/50 sm:no-underline sm:group-hover/money:underline underline-offset-4 ${sizeClasses[size] || ''} ${amountClassName}`}
       >
-        {prefix}{formattedAmount}{suffix}
+        {prefix}
+        {formattedAmount}
+        {suffix}
       </span>
 
+      {/* Tooltip visible on Desktop Hover OR Mobile/Click Toggle */}
       {showTooltip && words && (
         <span
-          className={`pointer-events-none absolute hidden group-hover/money:flex flex-col z-[100] animate-in fade-in zoom-in-95 duration-150 ${alignBoxClasses[currentAlign]} ${
+          className={`absolute flex-col z-[150] transition-all duration-150 ${alignBoxClasses[currentAlign]} ${
             isTop ? 'bottom-full mb-2.5' : 'top-full mt-2.5'
+          } ${
+            isOpen
+              ? 'flex opacity-100 scale-100 pointer-events-auto'
+              : 'hidden group-hover/money:flex opacity-0 group-hover/money:opacity-100 group-hover/money:scale-100 scale-95 pointer-events-none'
           }`}
-          style={{ minWidth: '180px', maxWidth: '290px', width: 'max-content' }}
+          style={{
+            minWidth: '200px',
+            maxWidth: 'min(300px, 90vw)',
+            width: 'max-content',
+          }}
+          onClick={(e) => e.stopPropagation()}
         >
           {/* Main Card Content */}
-          <div className="relative z-10 px-3.5 py-2 bg-[#1A0B16] border border-[#C5A059]/70 rounded-xl shadow-2xl shadow-black/95 backdrop-blur-xl text-center w-full">
-            <div className="flex items-center justify-center gap-1.5 text-[9px] uppercase tracking-wider font-mono font-bold text-[#C5A059] mb-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#C5A059] animate-pulse shrink-0" />
-              <span>Amount in Words</span>
+          <div className="relative z-10 px-3.5 py-2.5 bg-[#1A0B16] border border-[#C5A059]/80 rounded-xl shadow-2xl shadow-black/95 backdrop-blur-xl text-center w-full">
+            <div className="flex items-center justify-between gap-1.5 text-[9px] uppercase tracking-wider font-mono font-bold text-[#C5A059] mb-1">
+              <div className="flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#C5A059] animate-pulse shrink-0" />
+                <span>Amount in Words</span>
+              </div>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsOpen(false);
+                }}
+                className="text-amber-200/60 hover:text-white text-xs px-1 sm:hidden cursor-pointer"
+                title="Close"
+              >
+                ✕
+              </button>
             </div>
-            <p className="text-xs font-sans font-medium text-amber-50/95 leading-snug whitespace-normal break-words text-center">
+            <p className="text-xs font-sans font-semibold text-amber-50 leading-snug whitespace-normal break-words text-center select-text">
               {words}
             </p>
           </div>
 
           {/* Pointer Notch */}
           <div
-            className={`absolute ${alignNotchClasses[currentAlign]} w-2.5 h-2.5 rotate-45 bg-[#1A0B16] border-[#C5A059]/70 ${
+            className={`absolute ${alignNotchClasses[currentAlign]} w-2.5 h-2.5 rotate-45 bg-[#1A0B16] border-[#C5A059]/80 ${
               isTop
                 ? '-bottom-1 border-r border-b relative z-20'
                 : '-top-1 border-l border-t relative z-20'
@@ -163,3 +224,4 @@ export const MoneyDisplay: React.FC<MoneyDisplayProps> = ({
     </span>
   );
 };
+

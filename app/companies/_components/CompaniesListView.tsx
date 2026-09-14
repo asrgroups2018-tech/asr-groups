@@ -194,8 +194,64 @@ export const CompaniesListView: React.FC = () => {
     },
   ];
 
+  const renderCompanyMobileCard = (c: Company) => (
+    <div className="p-4 space-y-3 bg-white hover:bg-[#FAF8F5]/60 transition-colors">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="font-mono text-xs font-bold px-2 py-0.5 rounded bg-[#FAF8F5] border border-[#E6E1D6] text-[#701A35]">
+              {c.shortCode}
+            </span>
+            <h4
+              onClick={() => setSelectedCompanyId(c.id)}
+              className="text-sm font-bold text-slate-900 truncate hover:text-[#701A35] cursor-pointer"
+            >
+              {c.name}
+            </h4>
+          </div>
+          <span className="text-[11px] text-slate-500 mt-1 block">
+            {c.isOutsideParty ? 'Outside Party Entity' : 'ASR Group Internal Entity'}
+          </span>
+        </div>
+        <div className="text-right shrink-0">
+          <span
+            className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+              c.isOutsideParty
+                ? 'bg-purple-50 text-purple-700 border-purple-200'
+                : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+            }`}
+          >
+            {c.isOutsideParty ? 'Outside Party' : 'ASR Group'}
+          </span>
+        </div>
+      </div>
+
+      <div className="p-2.5 bg-[#FAF8F5] border border-[#E6E1D6] rounded-xl flex items-center justify-between text-xs">
+        <span className="text-slate-500 font-medium">Total Capital Funded:</span>
+        <MoneyDisplay
+          amount={c.totalFunded || 0}
+          size="sm"
+          amountClassName="font-bold text-slate-900"
+        />
+      </div>
+
+      <div className="flex items-center justify-between text-xs text-slate-500 pt-1">
+        <span>
+          Funded Loans: <strong className="text-slate-800 font-mono">{c.activeLoansCount || 0}</strong>
+        </span>
+        <button
+          onClick={() => setSelectedCompanyId(c.id)}
+          className="py-1 px-3 text-xs font-semibold text-[#701A35] bg-[#FAF5ED] hover:bg-[#F3ECE0] border border-[#E2D2B0] rounded-lg flex items-center gap-1 cursor-pointer transition-colors"
+        >
+          <Eye className="w-3.5 h-3.5" />
+          <span>View Details</span>
+        </button>
+      </div>
+    </div>
+  );
+
   return (
-    <div className="space-y-5 animate-in fade-in duration-200">
+    <div className="space-y-6 animate-in fade-in duration-200">
       {/* ─── Top Control Bar ─── */}
       <div className="bg-white p-5 rounded-2xl border border-[#E6E1D6] shadow-[0_1px_3px_rgba(0,0,0,0.02)] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -204,12 +260,13 @@ export const CompaniesListView: React.FC = () => {
               Companies
             </h1>
           </div>
-          <p className="text-xs text-slate-500 mt-1">
-            Manage funding and deposit entities (ASR Group Own & Outside Parties)
+          <p className="text-xs text-slate-500 mt-0.5">
+            Internal Entities & Outside Investor Funding Sources
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        {/* Action Buttons */}
+        <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={() => setIsAddModalOpen(true)}
             className="px-4 py-2 text-xs font-bold text-white bg-[#701A35] hover:bg-[#5C142B] active:scale-98 rounded-xl transition-all shadow-xs flex items-center gap-1.5 cursor-pointer shrink-0"
@@ -220,7 +277,7 @@ export const CompaniesListView: React.FC = () => {
         </div>
       </div>
 
-      {/* ─── 3 High-Contrast Financial Totals ─── */}
+      {/* ─── 3 High-Impact Cards ─── */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div className="bg-white p-4 rounded-xl border border-[#E6E1D6] shadow-2xs">
           <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider font-mono">
@@ -233,7 +290,7 @@ export const CompaniesListView: React.FC = () => {
               amountClassName="text-slate-900 font-bold block"
             />
           </div>
-          <span className="text-[10px] text-slate-400 mt-0.5 block">Disbursed across all loans</span>
+          <span className="text-[10px] text-slate-400 mt-0.5 block">Sum across all 15 active partner splits</span>
         </div>
 
         <div className="bg-white p-4 rounded-xl border border-[#E6E1D6] shadow-2xs">
@@ -258,12 +315,12 @@ export const CompaniesListView: React.FC = () => {
       </div>
 
       {/* ─── Filter Toggle ─── */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 overflow-x-auto max-w-full pb-1">
         {(['ALL', 'ASR', 'OUTSIDE'] as const).map((f) => (
           <button
             key={f}
             onClick={() => setPartyFilter(f)}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors ${
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors whitespace-nowrap cursor-pointer ${
               partyFilter === f
                 ? 'bg-[#701A35] text-white'
                 : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
@@ -302,6 +359,7 @@ export const CompaniesListView: React.FC = () => {
           title="Funding & Deposit Companies Registry"
           searchPlaceholder="Search short code, company name..."
           exportFileName="ASR_Funding_Companies"
+          mobileCardRender={renderCompanyMobileCard}
         />
       )}
 

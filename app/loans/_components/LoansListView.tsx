@@ -511,13 +511,13 @@ export const LoansListView: React.FC = () => {
         </div>
 
         {/* Status Filter Tabs & Expand/Collapse */}
-        <div className="flex items-center gap-2 self-end xl:self-auto shrink-0">
-          <div className="flex items-center bg-[#F4F1EA] p-1 rounded-lg border border-[#E6E1D6] text-xs font-semibold">
+        <div className="flex flex-wrap items-center gap-2 w-full xl:w-auto justify-between xl:justify-end shrink-0">
+          <div className="flex items-center bg-[#F4F1EA] p-1 rounded-lg border border-[#E6E1D6] text-xs font-semibold overflow-x-auto max-w-full">
             {(['ALL', 'Active', 'Overdue', 'Closed'] as const).map((st) => (
               <button
                 key={st}
                 onClick={() => setStatusFilter(st)}
-                className={`px-3 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+                className={`px-3 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
                   statusFilter === st
                     ? 'bg-white text-slate-900 shadow-xs font-bold'
                     : 'text-slate-600 hover:text-slate-900'
@@ -648,10 +648,10 @@ export const LoansListView: React.FC = () => {
                     <span className="font-mono font-bold text-slate-800">
                       {dateRange.startDate} to {dateRange.endDate}
                     </span>
-                    ).
+                    ) or active filters.
                   </>
                 ) : (
-                  'No loans match your search or client filter criteria.'
+                  'No loans match the current search or filters.'
                 )}
               </p>
             </div>
@@ -692,9 +692,9 @@ export const LoansListView: React.FC = () => {
             </div>
           </div>
         ) : (
-          <div className="divide-y divide-[#EDE8DF]">
-            {/* Clickable Column Sort Headers */}
-            <div className="grid grid-cols-12 gap-3 px-5 py-3.5 bg-[#FAF8F5] border-b border-[#E6E1D6] text-[11px] font-mono font-bold text-slate-600 uppercase tracking-wider select-none">
+          <div>
+            {/* Desktop Table Header (Visible on lg+) */}
+            <div className="hidden lg:grid grid-cols-12 gap-3 px-5 py-3.5 bg-[#FAF8F5] border-b border-[#E6E1D6] text-[11px] font-mono font-bold text-slate-600 uppercase tracking-wider select-none">
               {/* Client & Loan ID */}
               <div
                 onClick={() => handleSort('customerName')}
@@ -761,308 +761,528 @@ export const LoansListView: React.FC = () => {
               </div>
             </div>
 
-            {/* Flat Loan Rows (1 Row = 1 Loan) */}
-            {filteredAndSortedLoans.map((loan) => {
-              const isExpanded = expandedLoanIds.has(loan.id);
-              const { startTimestamp, endTimestamp } = dateTimestamps;
-              const hasDateFilter = startTimestamp !== null && endTimestamp !== null;
+            {/* Desktop Table Rows (lg+) */}
+            <div className="hidden lg:block divide-y divide-[#EDE8DF]">
+              {filteredAndSortedLoans.map((loan) => {
+                const isExpanded = expandedLoanIds.has(loan.id);
+                const { startTimestamp, endTimestamp } = dateTimestamps;
+                const hasDateFilter = startTimestamp !== null && endTimestamp !== null;
 
-              // Check in-range installments count for this loan
-              const inRangeCount = hasDateFilter
-                ? (loan.installments || []).filter((inst) => {
-                    const dueD = parseToDate(inst.dueDate);
-                    const recdD = parseToDate(inst.recdDate);
-                    const dueMs = dueD ? dueD.getTime() : null;
-                    const recdMs = recdD ? recdD.getTime() : null;
-                    return (
-                      (dueMs !== null && dueMs >= startTimestamp && dueMs <= endTimestamp) ||
-                      (recdMs !== null && recdMs >= startTimestamp && recdMs <= endTimestamp)
-                    );
-                  }).length
-                : 0;
+                // Check in-range installments count for this loan
+                const inRangeCount = hasDateFilter
+                  ? (loan.installments || []).filter((inst) => {
+                      const dueD = parseToDate(inst.dueDate);
+                      const recdD = parseToDate(inst.recdDate);
+                      const dueMs = dueD ? dueD.getTime() : null;
+                      const recdMs = recdD ? recdD.getTime() : null;
+                      return (
+                        (dueMs !== null && dueMs >= startTimestamp && dueMs <= endTimestamp) ||
+                        (recdMs !== null && recdMs >= startTimestamp && recdMs <= endTimestamp)
+                      );
+                    }).length
+                  : 0;
 
-              return (
-                <div key={loan.id} className="transition-colors hover:bg-[#FCFBF9]">
-                  {/* Summary Row */}
-                  <div
-                    onClick={() => toggleExpand(loan.id)}
-                    className="grid grid-cols-12 gap-3 px-5 py-4 items-center cursor-pointer select-none"
-                  >
-                    {/* Client Name & Loan ID Badge */}
-                    <div className="col-span-4 sm:col-span-3 flex items-center gap-2 min-w-0">
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          toggleExpand(loan.id);
-                        }}
-                        className="p-1 rounded text-slate-400 hover:text-slate-800 hover:bg-slate-100 shrink-0 cursor-pointer"
-                      >
-                        {isExpanded ? (
-                          <ChevronDown className="w-4 h-4 text-[#701A35]" />
-                        ) : (
-                          <ChevronRight className="w-4 h-4" />
-                        )}
-                      </button>
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="font-bold text-slate-900 text-xs truncate hover:text-[#701A35]">
-                            {loan.customerName}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          <span className="font-mono text-[10px] bg-[#FAF5ED] text-[#701A35] border border-[#E2D2B0] px-1.5 py-0.2 rounded font-bold">
-                            {loan.id}
-                          </span>
-                          {loan.codeNo && (
-                            <span className="font-mono text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.2 rounded font-semibold">
-                              {loan.codeNo}
-                            </span>
+                return (
+                  <div key={loan.id} className="transition-colors hover:bg-[#FCFBF9]">
+                    {/* Summary Row */}
+                    <div
+                      onClick={() => toggleExpand(loan.id)}
+                      className="grid grid-cols-12 gap-3 px-5 py-4 items-center cursor-pointer select-none"
+                    >
+                      {/* Client Name & Loan ID Badge */}
+                      <div className="col-span-3 flex items-center gap-2 min-w-0">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleExpand(loan.id);
+                          }}
+                          className="p-1 rounded text-slate-400 hover:text-slate-800 hover:bg-slate-100 shrink-0 cursor-pointer"
+                        >
+                          {isExpanded ? (
+                            <ChevronDown className="w-4 h-4 text-[#701A35]" />
+                          ) : (
+                            <ChevronRight className="w-4 h-4" />
                           )}
-                          <span className="text-[10px] text-slate-400 truncate">
-                            {loan.place || 'CHENNAI'}
-                          </span>
+                        </button>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="font-bold text-slate-900 text-xs truncate hover:text-[#701A35]">
+                              {loan.customerName}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span className="font-mono text-[10px] bg-[#FAF5ED] text-[#701A35] border border-[#E2D2B0] px-1.5 py-0.2 rounded font-bold">
+                              {loan.id}
+                            </span>
+                            {loan.codeNo && (
+                              <span className="font-mono text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.2 rounded font-semibold">
+                                {loan.codeNo}
+                              </span>
+                            )}
+                            <span className="text-[10px] text-slate-400 truncate">
+                              {loan.place || 'CHENNAI'}
+                            </span>
+                          </div>
                         </div>
+                      </div>
+
+                      {/* Total Loan Amount */}
+                      <div className="col-span-2 text-right font-mono">
+                        <MoneyDisplay
+                          amount={loan.totalAmount}
+                          size="sm"
+                          amountClassName="font-bold text-slate-900 text-xs block text-right"
+                        />
+                        <span className="text-[10px] text-slate-400 block mt-0.5">
+                          ₹{(loan.totalCollected || 0).toLocaleString('en-IN')} collected
+                        </span>
+                      </div>
+
+                      {/* EMI Count */}
+                      <div className="col-span-1 text-center font-mono text-xs">
+                        <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 font-bold">
+                          {loan.installmentCount || loan.installments?.length || 0}
+                        </span>
+                        {hasDateFilter && inRangeCount > 0 && (
+                          <span className="block text-[9px] text-amber-700 font-semibold mt-0.5">
+                            {inRangeCount} in range
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Funding Companies Split Badges */}
+                      <div className="col-span-3 flex items-center gap-1.5 flex-wrap">
+                        {loan.splits && loan.splits.length > 0 ? (
+                          loan.splits.map((sp) => (
+                            <CompanySplitBadge key={sp.id} split={sp} size="sm" />
+                          ))
+                        ) : (
+                          <span className="text-[10px] text-slate-400 font-mono">ASR Group</span>
+                        )}
+                      </div>
+
+                      {/* Next Due Date */}
+                      <div className="col-span-1 text-center font-mono text-[11px] text-slate-600">
+                        {loan.nextDueDate || '—'}
+                      </div>
+
+                      {/* Status */}
+                      <div className="col-span-1 text-center">
+                        <StatusPill status={loan.status} size="sm" />
+                      </div>
+
+                      {/* Actions: Edit Excel, View Details, Delete */}
+                      <div className="col-span-1 text-right flex items-center justify-end gap-1">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedEditLoan(loan);
+                          }}
+                          className="p-1.5 text-slate-600 hover:text-[#701A35] hover:bg-[#FAF8F5] border border-slate-200 rounded-lg transition-colors cursor-pointer"
+                          title="Edit Loan Schedule"
+                        >
+                          <Edit3 className="w-3.5 h-3.5 text-[#701A35]" />
+                        </button>
+
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedLoanId(loan.id);
+                          }}
+                          className="p-1.5 text-slate-400 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                          title="View Loan Details"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                        </button>
+
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (confirm(`Delete loan ${loan.id} for ${loan.customerName}?`)) {
+                              deleteLoan(loan.id);
+                            }
+                          }}
+                          className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                          title="Delete Loan"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
                       </div>
                     </div>
 
-                    {/* Total Loan Amount */}
-                    <div className="col-span-3 sm:col-span-2 text-right font-mono">
-                      <MoneyDisplay
-                        amount={loan.totalAmount}
-                        size="sm"
-                        amountClassName="font-bold text-slate-900 text-xs block text-right"
-                      />
-                      <span className="text-[10px] text-slate-400 block mt-0.5">
-                        ₹{(loan.totalCollected || 0).toLocaleString('en-IN')} collected
-                      </span>
+                    {/* Accordion Expanded Sub-Table: Installments / EMIs */}
+                    {isExpanded && (
+                      <div className="bg-[#FAF8F5] px-6 py-4 border-t border-[#E6E1D6] space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-mono font-bold text-slate-700 uppercase tracking-wider flex items-center gap-2">
+                            <Calendar className="w-3.5 h-3.5 text-[#701A35]" />
+                            Payment Schedule ({loan.installments.length} EMIs)
+                          </span>
+                          <div className="flex items-center gap-2">
+                            {hasDateFilter && (
+                              <span className="text-[11px] font-mono text-amber-800 bg-amber-100 border border-amber-300 px-2.5 py-0.5 rounded-lg font-bold">
+                                Highlighting dates in range ({dateRange.startDate} to {dateRange.endDate})
+                              </span>
+                            )}
+                            <span className="text-xs font-mono text-slate-500 bg-white px-2.5 py-1 rounded-lg border border-[#E6E1D6]">
+                              Loan ID: <strong className="text-slate-800">{loan.id}</strong>
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="border border-[#E2DDD3] rounded-xl overflow-x-auto bg-white shadow-2xs">
+                          <table className="w-full text-left border-collapse text-xs">
+                            <thead>
+                              <tr className="bg-[#F4F1EA] border-b border-[#E2DDD3] text-[11px] font-mono font-bold text-slate-600">
+                                <th className="p-2.5 text-center w-12">#</th>
+                                <th className="p-2.5 w-28">Due Date</th>
+                                <th className="p-2.5 text-right w-32">Amount Due (₹)</th>
+                                <th className="p-2.5 text-center w-24">Status</th>
+                                <th className="p-2.5 w-28">Payment Date</th>
+                                <th className="p-2.5">Company Splits</th>
+                                <th className="p-2.5 w-28">Cheque / Deposit</th>
+                                <th className="p-2.5 w-32">Notes</th>
+                                <th className="p-2.5 text-center w-20">Action</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-[#EDE8DF]">
+                              {loan.installments.map((inst) => {
+                                const isPaid = ['PASS', 'NEFT', 'CASH', 'CLS', 'CS', 'Paid'].includes(inst.status);
+                                const dueD = parseToDate(inst.dueDate);
+                                const recdD = parseToDate(inst.recdDate);
+                                const dueMs = dueD ? dueD.getTime() : null;
+                                const recdMs = recdD ? recdD.getTime() : null;
+                                const isDueInRange =
+                                  startTimestamp !== null &&
+                                  endTimestamp !== null &&
+                                  dueMs !== null &&
+                                  dueMs >= startTimestamp &&
+                                  dueMs <= endTimestamp;
+                                const isRecdInRange =
+                                  startTimestamp !== null &&
+                                  endTimestamp !== null &&
+                                  recdMs !== null &&
+                                  recdMs >= startTimestamp &&
+                                  recdMs <= endTimestamp;
+                                const isInRange = isDueInRange || isRecdInRange;
+
+                                return (
+                                  <tr
+                                    key={inst.id}
+                                    className={`font-mono transition-colors ${
+                                      isInRange
+                                        ? 'bg-amber-50/80 border-l-4 border-amber-400 font-semibold text-amber-950'
+                                        : inst.isMismatch
+                                        ? 'bg-rose-50/50'
+                                        : 'hover:bg-[#FCFBF9]'
+                                    }`}
+                                  >
+                                    <td className="p-2.5 text-center font-bold text-slate-500">
+                                      #{inst.seqNo}
+                                    </td>
+                                    <td className="p-2.5 text-slate-800 font-semibold">
+                                      <div className="flex items-center gap-1.5">
+                                        <span>{inst.dueDate}</span>
+                                        {isInRange && (
+                                          <span className="text-[9px] bg-amber-200 text-amber-900 px-1 py-0.2 rounded font-bold">
+                                            IN RANGE
+                                          </span>
+                                        )}
+                                      </div>
+                                    </td>
+                                    <td className="p-2.5 text-right font-mono">
+                                      <MoneyDisplay
+                                        amount={inst.amountDue}
+                                        size="sm"
+                                        amountClassName="font-bold text-slate-900 block text-right"
+                                      />
+                                    </td>
+                                    <td className="p-2.5 text-center">
+                                      <StatusPill status={inst.status} size="sm" />
+                                    </td>
+                                    <td className="p-2.5 text-slate-600">
+                                      {inst.recdDate || '—'}
+                                    </td>
+                                    <td className="p-2.5">
+                                      <div className="flex items-center gap-1.5 flex-wrap">
+                                        {Object.entries(inst.companySplits || {}).map(([code, amt]) => (
+                                          <span
+                                            key={code}
+                                            className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-800 text-[10px] font-semibold border border-slate-200"
+                                          >
+                                            <strong>{code}:</strong> ₹{Number(amt).toLocaleString('en-IN')}
+                                          </span>
+                                        ))}
+                                        {inst.isMismatch && (
+                                          <span className="px-1.5 py-0.5 rounded bg-rose-100 text-rose-700 text-[10px] font-bold border border-rose-300">
+                                            Diff ₹{inst.mismatchDiff}
+                                          </span>
+                                        )}
+                                      </div>
+                                    </td>
+                                    <td className="p-2.5 text-slate-500 text-[11px]">
+                                      {inst.chqNo ? `CHQ: ${inst.chqNo}` : ''}
+                                      {inst.depName ? ` (DEP: ${inst.depName})` : ''}
+                                      {!inst.chqNo && !inst.depName ? '—' : ''}
+                                    </td>
+                                    <td className="p-2.5 text-slate-500 text-[11px] truncate max-w-[120px]">
+                                      {inst.remarks || '—'}
+                                    </td>
+                                    <td className="p-2.5 text-center">
+                                      {!isPaid ? (
+                                        <button
+                                          onClick={() =>
+                                            updateLoanInstallment(inst.id, {
+                                              status: 'PASS',
+                                              recdDate: new Date().toISOString().slice(0, 10),
+                                            })
+                                          }
+                                          className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-md text-[10px] font-bold shadow-2xs cursor-pointer"
+                                        >
+                                          Mark Paid
+                                        </button>
+                                      ) : (
+                                        <span className="text-[10px] text-emerald-600 font-bold">Paid</span>
+                                      )}
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Mobile & Tablet Card View (Hidden on lg+) */}
+            <div className="block lg:hidden divide-y divide-[#EDE8DF]">
+              {filteredAndSortedLoans.map((loan) => {
+                const isExpanded = expandedLoanIds.has(loan.id);
+                const collected = loan.totalCollected || 0;
+                const total = loan.totalAmount || 0;
+                const progress = total > 0 ? Math.min(100, Math.round((collected / total) * 100)) : 0;
+                const { startTimestamp, endTimestamp } = dateTimestamps;
+                const hasDateFilter = startTimestamp !== null && endTimestamp !== null;
+
+                return (
+                  <div key={loan.id} className="p-4 space-y-3 bg-white hover:bg-[#FAF8F5]/60 transition-colors">
+                    {/* Top Row: Borrower Name, Status & Expand Chevron */}
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <h4
+                          onClick={() => setSelectedLoanId(loan.id)}
+                          className="text-sm font-bold text-slate-900 truncate hover:text-[#701A35] cursor-pointer"
+                        >
+                          {loan.customerName}
+                        </h4>
+                        <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                          <span className="font-mono text-[10px] bg-[#FAF5ED] text-[#701A35] border border-[#E2D2B0] px-2 py-0.5 rounded font-bold">
+                            {loan.id}
+                          </span>
+                          {loan.codeNo && (
+                            <span className="font-mono text-[10px] bg-slate-100 text-slate-700 px-2 py-0.5 rounded font-semibold">
+                              {loan.codeNo}
+                            </span>
+                          )}
+                          <span className="text-[11px] text-slate-500 font-medium">
+                            📍 {loan.place || 'CHENNAI'}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <StatusPill status={loan.status} size="sm" />
+                        <button
+                          type="button"
+                          onClick={() => toggleExpand(loan.id)}
+                          className="p-1.5 rounded-lg border border-slate-200 text-slate-500 hover:text-slate-900 hover:bg-slate-100 cursor-pointer"
+                          title={isExpanded ? 'Collapse Schedule' : 'Expand Schedule'}
+                        >
+                          {isExpanded ? (
+                            <ChevronDown className="w-4 h-4 text-[#701A35]" />
+                          ) : (
+                            <ChevronRight className="w-4 h-4" />
+                          )}
+                        </button>
+                      </div>
                     </div>
 
-                    {/* EMI Count */}
-                    <div className="col-span-2 sm:col-span-1 text-center font-mono text-xs">
-                      <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 font-bold">
-                        {loan.installmentCount || loan.installments?.length || 0}
-                      </span>
-                      {hasDateFilter && inRangeCount > 0 && (
-                        <span className="block text-[9px] text-amber-700 font-semibold mt-0.5">
-                          {inRangeCount} in range
+                    {/* Financial Summary Card */}
+                    <div className="p-3 bg-[#FAF8F5] border border-[#E6E1D6] rounded-xl space-y-2">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-slate-500 font-medium">Loan Amount:</span>
+                        <MoneyDisplay
+                          amount={loan.totalAmount}
+                          size="md"
+                          amountClassName="font-bold text-slate-900"
+                        />
+                      </div>
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-slate-500 font-medium">Collected:</span>
+                        <div className="flex items-center gap-1.5">
+                          <MoneyDisplay
+                            amount={collected}
+                            size="sm"
+                            amountClassName="font-bold text-emerald-700"
+                          />
+                          <span className="text-[10px] text-emerald-800 bg-emerald-100 border border-emerald-200 px-1.5 py-0.2 rounded font-mono font-bold">
+                            {progress}%
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Progress bar */}
+                      <div className="h-1.5 w-full bg-slate-200 rounded-full overflow-hidden">
+                        <div
+                          style={{ width: `${progress}%` }}
+                          className="h-full bg-emerald-600 rounded-full transition-all"
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-between text-[11px] text-slate-500 pt-0.5">
+                        <span>
+                          EMIs: <strong className="text-slate-800 font-mono">{loan.installmentCount || loan.installments?.length || 0}</strong>
                         </span>
-                      )}
+                        <span>
+                          Next Due: <strong className="text-slate-800 font-mono">{loan.nextDueDate || '—'}</strong>
+                        </span>
+                      </div>
                     </div>
 
-                    {/* Funding Companies Split Badges */}
-                    <div className="hidden sm:flex sm:col-span-3 items-center gap-1.5 flex-wrap">
-                      {loan.splits && loan.splits.length > 0 ? (
-                        loan.splits.map((sp) => (
+                    {/* Company Splits */}
+                    {loan.splits && loan.splits.length > 0 && (
+                      <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+                        <span className="text-[10px] text-slate-400 font-mono uppercase">Funded:</span>
+                        {loan.splits.map((sp) => (
                           <CompanySplitBadge key={sp.id} split={sp} size="sm" />
-                        ))
-                      ) : (
-                        <span className="text-[10px] text-slate-400 font-mono">ASR Group</span>
-                      )}
-                    </div>
+                        ))}
+                      </div>
+                    )}
 
-                    {/* Next Due Date */}
-                    <div className="hidden sm:block sm:col-span-1 text-center font-mono text-[11px] text-slate-600">
-                      {loan.nextDueDate || '—'}
-                    </div>
-
-                    {/* Status */}
-                    <div className="col-span-2 sm:col-span-1 text-center">
-                      <StatusPill status={loan.status} size="sm" />
-                    </div>
-
-                    {/* Actions: Edit Excel, View Details, Delete */}
-                    <div className="col-span-1 text-right flex items-center justify-end gap-1">
-
-                      {/* Excel Style Edit Button */}
+                    {/* Actions Bar */}
+                    <div className="flex items-center justify-between pt-1 gap-2">
                       <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedEditLoan(loan);
-                        }}
-                        className="p-1.5 text-slate-600 hover:text-[#701A35] hover:bg-[#FAF8F5] border border-slate-200 rounded-lg transition-colors cursor-pointer"
-                        title="Edit Loan Schedule"
+                        type="button"
+                        onClick={() => toggleExpand(loan.id)}
+                        className="flex-1 py-1.5 px-2.5 text-xs font-semibold text-slate-700 bg-[#F4F1EA] hover:bg-[#EBE6DC] border border-[#E6E1D6] rounded-xl flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
                       >
-                        <Edit3 className="w-3.5 h-3.5 text-[#701A35]" />
+                        <Calendar className="w-3.5 h-3.5 text-[#701A35]" />
+                        <span>{isExpanded ? 'Hide Schedule' : `Schedule (${loan.installments.length})`}</span>
                       </button>
 
-                      {/* View Details */}
                       <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedLoanId(loan.id);
-                        }}
-                        className="p-1.5 text-slate-400 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
-                        title="View Loan Details"
+                        type="button"
+                        onClick={() => setSelectedEditLoan(loan)}
+                        className="py-1.5 px-3 text-xs font-semibold text-[#701A35] bg-[#FAF5ED] hover:bg-[#F3ECE0] border border-[#E2D2B0] rounded-xl flex items-center gap-1.5 cursor-pointer transition-colors"
+                        title="Edit Schedule (Spreadsheet)"
                       >
-                        <Eye className="w-3.5 h-3.5" />
+                        <Edit3 className="w-3.5 h-3.5" />
+                        <span>Edit</span>
                       </button>
 
-                      {/* Delete */}
                       <button
-                        onClick={(e) => {
-                          e.stopPropagation();
+                        type="button"
+                        onClick={() => setSelectedLoanId(loan.id)}
+                        className="py-1.5 px-2.5 text-slate-600 hover:text-slate-900 border border-slate-200 rounded-xl flex items-center justify-center cursor-pointer transition-colors"
+                        title="View Details"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
                           if (confirm(`Delete loan ${loan.id} for ${loan.customerName}?`)) {
                             deleteLoan(loan.id);
                           }
                         }}
-                        className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                        className="py-1.5 px-2.5 text-slate-400 hover:text-rose-600 border border-slate-200 hover:border-rose-200 hover:bg-rose-50 rounded-xl flex items-center justify-center cursor-pointer transition-colors"
                         title="Delete Loan"
                       >
-                        <Trash2 className="w-3.5 h-3.5" />
+                        <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
-                  </div>
 
-                  {/* Accordion Expanded Sub-Table: Installments / EMIs with Date Range Highlights */}
-                  {isExpanded && (
-                    <div className="bg-[#FAF8F5] px-6 py-4 border-t border-[#E6E1D6] space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-mono font-bold text-slate-700 uppercase tracking-wider flex items-center gap-2">
-                          <Calendar className="w-3.5 h-3.5 text-[#701A35]" />
-                          Payment Schedule ({loan.installments.length} EMIs)
-                        </span>
-                        <div className="flex items-center gap-2">
-                          {hasDateFilter && (
-                            <span className="text-[11px] font-mono text-amber-800 bg-amber-100 border border-amber-300 px-2.5 py-0.5 rounded-lg font-bold">
-                              Highlighting dates in range ({dateRange.startDate} to {dateRange.endDate})
-                            </span>
-                          )}
-                          <span className="text-xs font-mono text-slate-500 bg-white px-2.5 py-1 rounded-lg border border-[#E6E1D6]">
-                            Loan ID: <strong className="text-slate-800">{loan.id}</strong>
-                          </span>
+                    {/* Expanded Mobile Schedule */}
+                    {isExpanded && (
+                      <div className="bg-[#FAF8F5] p-3 rounded-xl border border-[#E6E1D6] space-y-2 mt-2">
+                        <div className="flex items-center justify-between text-xs font-mono font-bold text-slate-700">
+                          <span>Payment Schedule ({loan.installments.length} EMIs)</span>
+                        </div>
+                        <div className="border border-[#E2DDD3] rounded-xl overflow-x-auto bg-white shadow-2xs">
+                          <table className="w-full text-left border-collapse text-xs min-w-[580px]">
+                            <thead>
+                              <tr className="bg-[#F4F1EA] border-b border-[#E2DDD3] text-[10px] font-mono font-bold text-slate-600">
+                                <th className="p-2 text-center w-10">#</th>
+                                <th className="p-2 w-24">Due Date</th>
+                                <th className="p-2 text-right w-28">Amount (₹)</th>
+                                <th className="p-2 text-center w-20">Status</th>
+                                <th className="p-2">Company Splits</th>
+                                <th className="p-2 text-center w-20">Action</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-[#EDE8DF]">
+                              {loan.installments.map((inst) => {
+                                const isPaid = ['PASS', 'NEFT', 'CASH', 'CLS', 'CS', 'Paid'].includes(inst.status);
+                                return (
+                                  <tr key={inst.id} className="font-mono text-xs">
+                                    <td className="p-2 text-center font-bold text-slate-400">#{inst.seqNo}</td>
+                                    <td className="p-2 font-semibold text-slate-800">{inst.dueDate}</td>
+                                    <td className="p-2 text-right">
+                                      <MoneyDisplay
+                                        amount={inst.amountDue}
+                                        size="xs"
+                                        amountClassName="font-bold text-slate-900 block text-right"
+                                      />
+                                    </td>
+                                    <td className="p-2 text-center">
+                                      <StatusPill status={inst.status} size="sm" />
+                                    </td>
+                                    <td className="p-2">
+                                      <div className="flex items-center gap-1 flex-wrap">
+                                        {Object.entries(inst.companySplits || {}).map(([code, amt]) => (
+                                          <span
+                                            key={code}
+                                            className="px-1 py-0.2 rounded bg-slate-100 text-slate-700 text-[9px] font-semibold"
+                                          >
+                                            {code}: ₹{Number(amt).toLocaleString('en-IN')}
+                                          </span>
+                                        ))}
+                                      </div>
+                                    </td>
+                                    <td className="p-2 text-center">
+                                      {!isPaid ? (
+                                        <button
+                                          onClick={() =>
+                                            updateLoanInstallment(inst.id, {
+                                              status: 'PASS',
+                                              recdDate: new Date().toISOString().slice(0, 10),
+                                            })
+                                          }
+                                          className="px-2 py-0.5 bg-emerald-600 text-white rounded text-[10px] font-bold cursor-pointer"
+                                        >
+                                          Pay
+                                        </button>
+                                      ) : (
+                                        <span className="text-[10px] text-emerald-600 font-bold">Paid</span>
+                                      )}
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
                         </div>
                       </div>
-
-                      <div className="border border-[#E2DDD3] rounded-xl overflow-x-auto bg-white shadow-2xs">
-                        <table className="w-full text-left border-collapse text-xs">
-                          <thead>
-                            <tr className="bg-[#F4F1EA] border-b border-[#E2DDD3] text-[11px] font-mono font-bold text-slate-600">
-                              <th className="p-2.5 text-center w-12">#</th>
-                              <th className="p-2.5 w-28">Due Date</th>
-                              <th className="p-2.5 text-right w-32">Amount Due (₹)</th>
-                              <th className="p-2.5 text-center w-24">Status</th>
-                              <th className="p-2.5 w-28">Payment Date</th>
-                              <th className="p-2.5">Company Splits</th>
-                              <th className="p-2.5 w-28">Cheque / Deposit</th>
-                              <th className="p-2.5 w-32">Notes</th>
-                              <th className="p-2.5 text-center w-20">Action</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-[#EDE8DF]">
-                            {loan.installments.map((inst) => {
-                              const isPaid = ['PASS', 'NEFT', 'CASH', 'CLS', 'CS', 'Paid'].includes(inst.status);
-
-                              // Date Range Match check for highlighting
-                              const dueD = parseToDate(inst.dueDate);
-                              const recdD = parseToDate(inst.recdDate);
-                              const dueMs = dueD ? dueD.getTime() : null;
-                              const recdMs = recdD ? recdD.getTime() : null;
-                              const isDueInRange =
-                                startTimestamp !== null &&
-                                endTimestamp !== null &&
-                                dueMs !== null &&
-                                dueMs >= startTimestamp &&
-                                dueMs <= endTimestamp;
-                              const isRecdInRange =
-                                startTimestamp !== null &&
-                                endTimestamp !== null &&
-                                recdMs !== null &&
-                                recdMs >= startTimestamp &&
-                                recdMs <= endTimestamp;
-                              const isInRange = isDueInRange || isRecdInRange;
-
-                              return (
-                                <tr
-                                  key={inst.id}
-                                  className={`font-mono transition-colors ${
-                                    isInRange
-                                      ? 'bg-amber-50/80 border-l-4 border-amber-400 font-semibold text-amber-950'
-                                      : inst.isMismatch
-                                      ? 'bg-rose-50/50'
-                                      : 'hover:bg-[#FCFBF9]'
-                                  }`}
-                                >
-                                  <td className="p-2.5 text-center font-bold text-slate-500">
-                                    #{inst.seqNo}
-                                  </td>
-                                  <td className="p-2.5 text-slate-800 font-semibold">
-                                    <div className="flex items-center gap-1.5">
-                                      <span>{inst.dueDate}</span>
-                                      {isInRange && (
-                                        <span className="text-[9px] bg-amber-200 text-amber-900 px-1 py-0.2 rounded font-bold">
-                                          IN RANGE
-                                        </span>
-                                      )}
-                                    </div>
-                                  </td>
-                                  <td className="p-2.5 text-right font-mono">
-                                    <MoneyDisplay
-                                      amount={inst.amountDue}
-                                      size="sm"
-                                      amountClassName="font-bold text-slate-900 block text-right"
-                                    />
-                                  </td>
-                                  <td className="p-2.5 text-center">
-                                    <StatusPill status={inst.status} size="sm" />
-                                  </td>
-                                  <td className="p-2.5 text-slate-600">
-                                    {inst.recdDate || '—'}
-                                  </td>
-                                  {/* Company Split Badges */}
-                                  <td className="p-2.5">
-                                    <div className="flex items-center gap-1.5 flex-wrap">
-                                      {Object.entries(inst.companySplits || {}).map(([code, amt]) => (
-                                        <span
-                                          key={code}
-                                          className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-800 text-[10px] font-semibold border border-slate-200"
-                                        >
-                                          <strong>{code}:</strong> ₹{Number(amt).toLocaleString('en-IN')}
-                                        </span>
-                                      ))}
-                                      {inst.isMismatch && (
-                                        <span className="px-1.5 py-0.5 rounded bg-rose-100 text-rose-700 text-[10px] font-bold border border-rose-300">
-                                          Diff ₹{inst.mismatchDiff}
-                                        </span>
-                                      )}
-                                    </div>
-                                  </td>
-                                  <td className="p-2.5 text-slate-500 text-[11px]">
-                                    {inst.chqNo ? `CHQ: ${inst.chqNo}` : ''}
-                                    {inst.depName ? ` (DEP: ${inst.depName})` : ''}
-                                    {!inst.chqNo && !inst.depName ? '—' : ''}
-                                  </td>
-                                  <td className="p-2.5 text-slate-500 text-[11px] truncate max-w-[120px]">
-                                    {inst.remarks || '—'}
-                                  </td>
-                                  <td className="p-2.5 text-center">
-                                    {!isPaid ? (
-                                      <button
-                                        onClick={() =>
-                                          updateLoanInstallment(inst.id, {
-                                            status: 'PASS',
-                                            recdDate: new Date().toISOString().slice(0, 10),
-                                          })
-                                        }
-                                        className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-md text-[10px] font-bold shadow-2xs cursor-pointer"
-                                      >
-                                        Mark Paid
-                                      </button>
-                                    ) : (
-                                      <span className="text-[10px] text-emerald-600 font-bold">Paid</span>
-                                    )}
-                                  </td>
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
       </div>
