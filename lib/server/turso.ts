@@ -14,14 +14,8 @@ export function getTursoClient(): Client {
     return globalThis.__turso_client;
   }
 
-  const url = process.env.TURSO_DATABASE_URL;
+  const url = process.env.TURSO_DATABASE_URL || 'file:local.db';
   const authToken = process.env.TURSO_AUTH_TOKEN;
-
-  if (!url) {
-    throw new Error(
-      'Missing TURSO_DATABASE_URL environment variable. Please check your .env.local or production environment settings.'
-    );
-  }
 
   const client = createClient({
     url,
@@ -32,4 +26,17 @@ export function getTursoClient(): Client {
   return client;
 }
 
-export const turso = getTursoClient();
+/**
+ * Lazy proxy for `turso` export so module importing doesn't immediately crash at build time
+ */
+export const turso = new Proxy({} as Client, {
+  get(_target, prop) {
+    const client = getTursoClient();
+    const val = (client as unknown as Record<string | symbol, unknown>)[prop];
+    if (typeof val === 'function') {
+      return val.bind(client);
+    }
+    return val;
+  },
+});
+
