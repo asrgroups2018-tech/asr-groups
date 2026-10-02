@@ -1,11 +1,23 @@
 import type { Metadata } from "next";
+import { Ubuntu } from "next/font/google";
 import "./globals.css";
 
+const ubuntu = Ubuntu({
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "700"],
+  variable: "--font-ubuntu",
+  display: "swap",
+});
+
 export const metadata: Metadata = {
-  title: "ASR Groups",
-  description:
-    "Enterprise loan management & financial intelligence platform for ASR Family Finance.",
+  title: "ASR Groups — Internal Finance ERP",
+  description: "Enterprise Financial Management, Multi-Role Administration & Loan Underwriting System",
+  icons: {
+    icon: "/Groups Finalized.png",
+  },
 };
+
+import { ClientProviders } from "@/components/providers/ClientProviders";
 
 export default function RootLayout({
   children,
@@ -13,8 +25,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body style={{ margin: 0, padding: 0 }}>{children}</body>
+    <html lang="en" className={`h-full antialiased ${ubuntu.variable}`}>
+      <body className="min-h-full flex flex-col bg-[#F8F6F1] text-slate-900 font-sans">
+        <ClientProviders>
+          {children}
+        </ClientProviders>
+      </body>
     </html>
   );
 }

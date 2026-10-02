@@ -1,0 +1,1242 @@
+{
+  "users": [
+    {
+      "name": "Rubesh",
+      "email": "rubesh@asr.com",
+      "phone": "+91 98000 00000",
+      "initials": "R",
+      "assignedRoleIds": [
+        2
+      ],
+      "primaryRoleId": 2,
+      "status": "Active",
+      "department": "Operations & Finance",
+      "designation": "Operations Officer",
+      "joinedDate": "2026-08-23",
+      "address": "",
+      "twoFactorEnabled": false,
+      "isCustomer": false,
+      "id": "USR-1002",
+      "createdAt": "2026-08-23 20:36",
+      "lastLogin": "Never",
+      "sessions": [],
+      "suspendReason": "Administrative temporary lock"
+    },
+    {
+      "id": "ADM-1001",
+      "name": "System Administrator",
+      "email": "admin@asrgroups.in",
+      "phone": "+91 98401 22345",
+      "initials": "SA",
+      "assignedRoleIds": [
+        0
+      ],
+      "primaryRoleId": 0,
+      "status": "Active",
+      "department": "Administration",
+      "designation": "Super Administrator",
+      "joinedDate": "2026-01-01",
+      "createdAt": "2026-01-01 09:00",
+      "lastLogin": "2026-08-23 10:00",
+      "address": "No. 42, ASR Towers, Mount Road, Chennai - 600032",
+      "emergencyContact": "+91 98401 99887",
+      "twoFactorEnabled": true,
+      "sessions": [
+        {
+          "id": "SESS-1",
+          "device": "Admin Console (Chrome / Web)",
+          "browser": "Chrome 127.0.6533",
+          "ipAddress": "127.0.0.1",
+          "location": "Chennai, TN, IN",
+          "lastActive": "Active now",
+          "isCurrent": true
+        }
+      ],
+      "isCustomer": false
+    }
+  ],
+  "roles": [
+    {
+      "id": 0,
+      "name": "Super Admin",
+      "code": "ROLE_SUPER_ADMIN",
+      "description": "Full unconstrained administrative access across all modules",
+      "colorName": "violet",
+      "bgClass": "bg-purple-50",
+      "textClass": "text-purple-700",
+      "borderClass": "border-purple-200",
+      "hexColor": "#7C3AED",
+      "userCount": 1,
+      "isSystemProtected": true,
+      "hierarchyLevel": 0
+    },
+    {
+      "id": 1,
+      "name": "Admin",
+      "code": "ROLE_ADMIN",
+      "description": "Comprehensive administrative & executive operational access",
+      "colorName": "rose",
+      "bgClass": "bg-rose-50",
+      "textClass": "text-rose-700",
+      "borderClass": "border-rose-200",
+      "hexColor": "#BE123C",
+      "userCount": 0,
+      "isSystemProtected": false,
+      "hierarchyLevel": 1
+    },
+    {
+      "id": 2,
+      "name": "Manager",
+      "code": "ROLE_MANAGER",
+      "description": "Branch & loan approvals, staff oversight, and reporting",
+      "colorName": "emerald",
+      "bgClass": "bg-emerald-50",
+      "textClass": "text-emerald-700",
+      "borderClass": "border-emerald-200",
+      "hexColor": "#059669",
+      "userCount": 1,
+      "isSystemProtected": false,
+      "hierarchyLevel": 2
+    },
+    {
+      "id": 3,
+      "name": "Accountant",
+      "code": "ROLE_ACCOUNTANT",
+      "description": "Ledger management, expenses, salary disbursements, and audits",
+      "colorName": "blue",
+      "bgClass": "bg-blue-50",
+      "textClass": "text-blue-700",
+      "borderClass": "border-blue-200",
+      "hexColor": "#2563EB",
+      "userCount": 0,
+      "isSystemProtected": false,
+      "hierarchyLevel": 3
+    },
+    {
+      "id": 4,
+      "name": "Collection Agent",
+      "code": "ROLE_COLLECTION_AGENT",
+      "description": "Field collections, customer visits, receipts, and route updates",
+      "colorName": "amber",
+      "bgClass": "bg-amber-50",
+      "textClass": "text-amber-700",
+      "borderClass": "border-amber-200",
+      "hexColor": "#D97706",
+      "userCount": 0,
+      "isSystemProtected": false,
+      "hierarchyLevel": 4
+    },
+    {
+      "id": 5,
+      "name": "Employee",
+      "code": "ROLE_EMPLOYEE",
+      "description": "Standard internal employee access and personal requests",
+      "colorName": "slate",
+      "bgClass": "bg-slate-50",
+      "textClass": "text-slate-700",
+      "borderClass": "border-slate-200",
+      "hexColor": "#64748B",
+      "userCount": 0,
+      "isSystemProtected": false,
+      "hierarchyLevel": 5
+    },
+    {
+      "id": 6,
+      "name": "Customer",
+      "code": "ROLE_CUSTOMER",
+      "description": "Self-service borrower portal for loan viewing and payment receipts",
+      "colorName": "ink",
+      "bgClass": "bg-slate-900",
+      "textClass": "text-slate-100",
+      "borderClass": "border-slate-800",
+      "hexColor": "#0F172A",
+      "userCount": 0,
+      "isSystemProtected": false,
+      "hierarchyLevel": 6
+    }
+  ],
+  "permissionMatrix": {
+    "dashboard": {
+      "0": {
+        "view": true,
+        "create": true,
+        "edit": true,
+        "delete": true,
+        "approve": true,
+        "export": true
+      },
+      "1": {
+        "view": true,
+        "create": true,
+        "edit": true,
+        "delete": false,
+        "approve": true,
+        "export": true
+      },
+      "2": {
+        "view": true,
+        "create": false,
+        "edit": false,
+        "delete": false,
+        "approve": false,
+        "export": true
+      },
+      "3": {
+        "view": true,
+        "create": false,
+        "edit": false,
+        "delete": false,
+        "approve": false,
+        "export": true
+      },
+      "4": {
+        "view": true,
+        "create": false,
+        "edit": false,
+        "delete": false,
+        "approve": false,
+        "export": false
+      },
+      "5": {
+        "view": true,
+        "create": false,
+        "edit": false,
+        "delete": false,
+        "approve": false,
+        "export": false
+      },
+      "6": {
+        "view": true,
+        "create": false,
+        "edit": false,
+        "delete": false,
+        "approve": false,
+        "export": false
+      }
+    },
+    "loans": {
+      "0": {
+        "view": true,
+        "create": true,
+        "edit": true,
+        "delete": true,
+        "approve": true,
+        "export": true
+      },
+      "1": {
+        "view": true,
+        "create": true,
+        "edit": true,
+        "delete": true,
+        "approve": true,
+        "export": true
+      },
+      "2": {
+        "view": true,
+        "create": true,
+        "edit": true,
+        "delete": false,
+        "approve": true,
+        "export": true
+      },
+      "3": {
+        "view": true,
+        "create": false,
+        "edit": false,
+        "delete": false,
+        "approve": false,
+        "export": true
+      },
+      "4": {
+        "view": true,
+        "create": false,
+        "edit": false,
+        "delete": false,
+        "approve": false,
+        "export": false
+      },
+      "5": {
+        "view": false,
+        "create": false,
+        "edit": false,
+        "delete": false,
+        "approve": false,
+        "export": false
+      },
+      "6": {
+        "view": true,
+        "create": false,
+        "edit": false,
+        "delete": false,
+        "approve": false,
+        "export": false
+      }
+    },
+    "customers": {
+      "0": {
+        "view": true,
+        "create": true,
+        "edit": true,
+        "delete": true,
+        "approve": true,
+        "export": true
+      },
+      "1": {
+        "view": true,
+        "create": true,
+        "edit": true,
+        "delete": true,
+        "approve": true,
+        "export": true
+      },
+      "2": {
+        "view": true,
+        "create": true,
+        "edit": true,
+        "delete": false,
+        "approve": true,
+        "export": true
+      },
+      "3": {
+        "view": true,
+        "create": false,
+        "edit": false,
+        "delete": false,
+        "approve": false,
+        "export": true
+      },
+      "4": {
+        "view": true,
+        "create": true,
+        "edit": false,
+        "delete": false,
+        "approve": false,
+        "export": false
+      },
+      "5": {
+        "view": false,
+        "create": false,
+        "edit": false,
+        "delete": false,
+        "approve": false,
+        "export": false
+      },
+      "6": {
+        "view": true,
+        "create": false,
+        "edit": false,
+        "delete": false,
+        "approve": false,
+        "export": false
+      }
+    },
+    "collections": {
+      "0": {
+        "view": true,
+        "create": true,
+        "edit": true,
+        "delete": true,
+        "approve": true,
+        "export": true
+      },
+      "1": {
+        "view": true,
+        "create": true,
+        "edit": true,
+        "delete": true,
+        "approve": true,
+        "export": true
+      },
+      "2": {
+        "view": true,
+        "create": true,
+        "edit": true,
+        "delete": false,
+        "approve": true,
+        "export": true
+      },
+      "3": {
+        "view": true,
+        "create": true,
+        "edit": true,
+        "delete": false,
+        "approve": true,
+        "export": true
+      },
+      "4": {
+        "view": true,
+        "create": true,
+        "edit": false,
+        "delete": false,
+        "approve": false,
+        "export": false
+      },
+      "5": {
+        "view": false,
+        "create": false,
+        "edit": false,
+        "delete": false,
+        "approve": false,
+        "export": false
+      },
+      "6": {
+        "view": false,
+        "create": false,
+        "edit": false,
+        "delete": false,
+        "approve": false,
+        "export": false
+      }
+    },
+    "income": {
+      "0": {
+        "view": true,
+        "create": true,
+        "edit": true,
+        "delete": true,
+        "approve": true,
+        "export": true
+      },
+      "1": {
+        "view": true,
+        "create": true,
+        "edit": true,
+        "delete": false,
+        "approve": true,
+        "export": true
+      },
+      "2": {
+        "view": true,
+        "create": false,
+        "edit": false,
+        "delete": false,
+        "approve": false,
+        "export": true
+      },
+      "3": {
+        "view": true,
+        "create": true,
+        "edit": true,
+        "delete": false,
+        "approve": false,
+        "export": true
+      },
+      "4": {
+        "view": false,
+        "create": false,
+        "edit": false,
+        "delete": false,
+        "approve": false,
+        "export": false
+      },
+      "5": {
+        "view": false,
+        "create": false,
+        "edit": false,
+        "delete": false,
+        "approve": false,
+        "export": false
+      },
+      "6": {
+        "view": false,
+        "create": false,
+        "edit": false,
+        "delete": false,
+        "approve": false,
+        "export": false
+      }
+    },
+    "expenses": {
+      "0": {
+        "view": true,
+        "create": true,
+        "edit": true,
+        "delete": true,
+        "approve": true,
+        "export": true
+      },
+      "1": {
+        "view": true,
+        "create": true,
+        "edit": true,
+        "delete": true,
+        "approve": true,
+        "export": true
+      },
+      "2": {
+        "view": true,
+        "create": true,
+        "edit": true,
+        "delete": false,
+        "approve": false,
+        "export": true
+      },
+      "3": {
+        "view": true,
+        "create": true,
+        "edit": true,
+        "delete": false,
+        "approve": false,
+        "export": true
+      },
+      "4": {
+        "view": false,
+        "create": false,
+        "edit": false,
+        "delete": false,
+        "approve": false,
+        "export": false
+      },
+      "5": {
+        "view": false,
+        "create": false,
+        "edit": false,
+        "delete": false,
+        "approve": false,
+        "export": false
+      },
+      "6": {
+        "view": false,
+        "create": false,
+        "edit": false,
+        "delete": false,
+        "approve": false,
+        "export": false
+      }
+    },
+    "salary": {
+      "0": {
+        "view": true,
+        "create": true,
+        "edit": true,
+        "delete": true,
+        "approve": true,
+        "export": true
+      },
+      "1": {
+        "view": true,
+        "create": true,
+        "edit": true,
+        "delete": true,
+        "approve": true,
+        "export": true
+      },
+      "2": {
+        "view": true,
+        "create": false,
+        "edit": false,
+        "delete": false,
+        "approve": false,
+        "export": false
+      },
+      "3": {
+        "view": true,
+        "create": true,
+        "edit": true,
+        "delete": false,
+        "approve": false,
+        "export": true
+      },
+      "4": {
+        "view": false,
+        "create": false,
+        "edit": false,
+        "delete": false,
+        "approve": false,
+        "export": false
+      },
+      "5": {
+        "view": true,
+        "create": false,
+        "edit": false,
+        "delete": false,
+        "approve": false,
+        "export": false
+      },
+      "6": {
+        "view": false,
+        "create": false,
+        "edit": false,
+        "delete": false,
+        "approve": false,
+        "export": false
+      }
+    },
+    "agents": {
+      "0": {
+        "view": true,
+        "create": true,
+        "edit": true,
+        "delete": true,
+        "approve": true,
+        "export": true
+      },
+      "1": {
+        "view": true,
+        "create": true,
+        "edit": true,
+        "delete": false,
+        "approve": true,
+        "export": true
+      },
+      "2": {
+        "view": true,
+        "create": true,
+        "edit": true,
+        "delete": false,
+        "approve": true,
+        "export": true
+      },
+      "3": {
+        "view": true,
+        "create": false,
+        "edit": false,
+        "delete": false,
+        "approve": false,
+        "export": true
+      },
+      "4": {
+        "view": false,
+        "create": false,
+        "edit": false,
+        "delete": false,
+        "approve": false,
+        "export": false
+      },
+      "5": {
+        "view": false,
+        "create": false,
+        "edit": false,
+        "delete": false,
+        "approve": false,
+        "export": false
+      },
+      "6": {
+        "view": false,
+        "create": false,
+        "edit": false,
+        "delete": false,
+        "approve": false,
+        "export": false
+      }
+    },
+    "reports": {
+      "0": {
+        "view": true,
+        "create": true,
+        "edit": true,
+        "delete": true,
+        "approve": true,
+        "export": true
+      },
+      "1": {
+        "view": true,
+        "create": true,
+        "edit": true,
+        "delete": false,
+        "approve": true,
+        "export": true
+      },
+      "2": {
+        "view": true,
+        "create": false,
+        "edit": false,
+        "delete": false,
+        "approve": false,
+        "export": true
+      },
+      "3": {
+        "view": true,
+        "create": false,
+        "edit": false,
+        "delete": false,
+        "approve": false,
+        "export": true
+      },
+      "4": {
+        "view": false,
+        "create": false,
+        "edit": false,
+        "delete": false,
+        "approve": false,
+        "export": false
+      },
+      "5": {
+        "view": false,
+        "create": false,
+        "edit": false,
+        "delete": false,
+        "approve": false,
+        "export": false
+      },
+      "6": {
+        "view": false,
+        "create": false,
+        "edit": false,
+        "delete": false,
+        "approve": false,
+        "export": false
+      }
+    },
+    "schedule": {
+      "0": {
+        "view": true,
+        "create": true,
+        "edit": true,
+        "delete": true,
+        "approve": true,
+        "export": true
+      },
+      "1": {
+        "view": true,
+        "create": true,
+        "edit": true,
+        "delete": false,
+        "approve": true,
+        "export": true
+      },
+      "2": {
+        "view": true,
+        "create": true,
+        "edit": true,
+        "delete": false,
+        "approve": false,
+        "export": true
+      },
+      "3": {
+        "view": true,
+        "create": false,
+        "edit": false,
+        "delete": false,
+        "approve": false,
+        "export": true
+      },
+      "4": {
+        "view": true,
+        "create": false,
+        "edit": false,
+        "delete": false,
+        "approve": false,
+        "export": false
+      },
+      "5": {
+        "view": false,
+        "create": false,
+        "edit": false,
+        "delete": false,
+        "approve": false,
+        "export": false
+      },
+      "6": {
+        "view": true,
+        "create": false,
+        "edit": false,
+        "delete": false,
+        "approve": false,
+        "export": false
+      }
+    },
+    "requests": {
+      "0": {
+        "view": true,
+        "create": true,
+        "edit": true,
+        "delete": true,
+        "approve": true,
+        "export": true
+      },
+      "1": {
+        "view": true,
+        "create": true,
+        "edit": true,
+        "delete": false,
+        "approve": true,
+        "export": true
+      },
+      "2": {
+        "view": true,
+        "create": true,
+        "edit": true,
+        "delete": false,
+        "approve": true,
+        "export": true
+      },
+      "3": {
+        "view": true,
+        "create": true,
+        "edit": true,
+        "delete": false,
+        "approve": false,
+        "export": true
+      },
+      "4": {
+        "view": true,
+        "create": true,
+        "edit": false,
+        "delete": false,
+        "approve": false,
+        "export": false
+      },
+      "5": {
+        "view": true,
+        "create": true,
+        "edit": false,
+        "delete": false,
+        "approve": false,
+        "export": false
+      },
+      "6": {
+        "view": true,
+        "create": true,
+        "edit": false,
+        "delete": false,
+        "approve": false,
+        "export": false
+      }
+    },
+    "settings": {
+      "0": {
+        "view": true,
+        "create": true,
+        "edit": true,
+        "delete": true,
+        "approve": true,
+        "export": true
+      },
+      "1": {
+        "view": true,
+        "create": true,
+        "edit": true,
+        "delete": false,
+        "approve": true,
+        "export": true
+      },
+      "2": {
+        "view": false,
+        "create": false,
+        "edit": false,
+        "delete": false,
+        "approve": false,
+        "export": false
+      },
+      "3": {
+        "view": false,
+        "create": false,
+        "edit": false,
+        "delete": false,
+        "approve": false,
+        "export": false
+      },
+      "4": {
+        "view": false,
+        "create": false,
+        "edit": false,
+        "delete": false,
+        "approve": false,
+        "export": false
+      },
+      "5": {
+        "view": false,
+        "create": false,
+        "edit": false,
+        "delete": false,
+        "approve": false,
+        "export": false
+      },
+      "6": {
+        "view": false,
+        "create": false,
+        "edit": false,
+        "delete": false,
+        "approve": false,
+        "export": false
+      }
+    },
+    "admin": {
+      "0": {
+        "view": true,
+        "create": true,
+        "edit": true,
+        "delete": true,
+        "approve": true,
+        "export": true
+      },
+      "1": {
+        "view": true,
+        "create": true,
+        "edit": true,
+        "delete": false,
+        "approve": true,
+        "export": true
+      },
+      "2": {
+        "view": true,
+        "create": false,
+        "edit": false,
+        "delete": false,
+        "approve": false,
+        "export": false
+      },
+      "3": {
+        "view": false,
+        "create": false,
+        "edit": false,
+        "delete": false,
+        "approve": false,
+        "export": false
+      },
+      "4": {
+        "view": false,
+        "create": false,
+        "edit": false,
+        "delete": false,
+        "approve": false,
+        "export": false
+      },
+      "5": {
+        "view": false,
+        "create": false,
+        "edit": false,
+        "delete": false,
+        "approve": false,
+        "export": false
+      },
+      "6": {
+        "view": false,
+        "create": false,
+        "edit": false,
+        "delete": false,
+        "approve": false,
+        "export": false
+      }
+    }
+  },
+  "approvalRules": [],
+  "auditLogs": [
+    {
+      "id": "AUD-6087",
+      "timestamp": "2026-08-29 21:01",
+      "actorId": "ADM-1001",
+      "actorName": "System Administrator",
+      "actorRoleId": 0,
+      "action": "Created User",
+      "target": "New Loan Syndication (LOAN-2026-001)",
+      "beforeVal": "-",
+      "afterVal": "Amount: ₹2,00,00,000, Borrowers: 1",
+      "ipAddress": "127.0.0.1",
+      "device": "Admin Web Console",
+      "isSensitive": true
+    },
+    {
+      "id": "AUD-4847",
+      "timestamp": "2026-08-29 20:28",
+      "actorId": "ADM-1001",
+      "actorName": "System Administrator",
+      "actorRoleId": 0,
+      "action": "Created User",
+      "target": "Customer / Investor: dfs (CUST-102)",
+      "beforeVal": "-",
+      "afterVal": "Investor Registered (34343)",
+      "ipAddress": "127.0.0.1",
+      "device": "Admin Web Console",
+      "isSensitive": false
+    },
+    {
+      "id": "AUD-3290",
+      "timestamp": "2026-08-29 20:14",
+      "actorId": "ADM-1001",
+      "actorName": "System Administrator",
+      "actorRoleId": 0,
+      "action": "Created User",
+      "target": "Borrower Company: AZURE (COMP-101)",
+      "beforeVal": "-",
+      "afterVal": "Default Rate: 11%",
+      "ipAddress": "127.0.0.1",
+      "device": "Admin Web Console",
+      "isSensitive": false
+    },
+    {
+      "id": "AUD-5967",
+      "timestamp": "2026-08-29 20:12",
+      "actorId": "ADM-1001",
+      "actorName": "System Administrator",
+      "actorRoleId": 0,
+      "action": "Created User",
+      "target": "Customer / Investor: Naresh (CUST-101)",
+      "beforeVal": "-",
+      "afterVal": "Investor Registered (332)",
+      "ipAddress": "127.0.0.1",
+      "device": "Admin Web Console",
+      "isSensitive": false
+    },
+    {
+      "id": "AUD-1821",
+      "timestamp": "2026-08-23 20:37",
+      "actorId": "ADM-1001",
+      "actorName": "System Administrator",
+      "actorRoleId": 0,
+      "action": "Assigned Role",
+      "target": "Rubesh (USR-1002)",
+      "beforeVal": "Roles: [5, 2]",
+      "afterVal": "Roles: [2]",
+      "ipAddress": "127.0.0.1",
+      "device": "Admin Web Console",
+      "isSensitive": false
+    },
+    {
+      "id": "AUD-7690",
+      "timestamp": "2026-08-23 20:36",
+      "actorId": "ADM-1001",
+      "actorName": "System Administrator",
+      "actorRoleId": 0,
+      "action": "Created User",
+      "target": "Rubesh (USR-1002)",
+      "beforeVal": "-",
+      "afterVal": "Roles: [Role 5, Role 2]",
+      "ipAddress": "127.0.0.1",
+      "device": "Admin Web Console",
+      "isSensitive": false
+    },
+    {
+      "id": "AUD-1001",
+      "timestamp": "2026-08-23 09:00",
+      "actorId": "ADM-1001",
+      "actorName": "System Administrator",
+      "actorRoleId": 0,
+      "action": "Created User",
+      "target": "Security & Access Controls Configured",
+      "beforeVal": "-",
+      "afterVal": "Primary Administrator Registered (ADM-1001)",
+      "ipAddress": "127.0.0.1",
+      "device": "Server Bootstrap",
+      "isSensitive": false
+    }
+  ],
+  "customers": [
+    {
+      "id": "CUST-102",
+      "fullName": "dfs",
+      "companyName": "hsdh",
+      "phone": "34343",
+      "email": "dfg@dgf.vom",
+      "address": "dfdgf",
+      "status": "Active",
+      "totalInvested": 0,
+      "totalReturns": 0,
+      "activeLoansCount": 0,
+      "createdAt": "2026-08-29"
+    },
+    {
+      "id": "CUST-101",
+      "fullName": "Naresh",
+      "companyName": "ROCKET Industries",
+      "phone": "332",
+      "email": "3234@ffh.com",
+      "address": "dfs",
+      "status": "Active",
+      "totalInvested": 20000000,
+      "totalReturns": 305556,
+      "activeLoansCount": 1,
+      "createdAt": "2026-08-29"
+    }
+  ],
+  "companies": [
+    {
+      "id": "COMP-101",
+      "companyName": "AZURE",
+      "contactPerson": "rodl",
+      "phone": "fgfgdg",
+      "email": "gddg@kdk.vom",
+      "address": "sdsdfsdfsdfsdfs",
+      "area": "dfgdfg",
+      "defaultInterestRate": 11,
+      "bankDetails": {
+        "bankName": "HDFC Bank",
+        "accountNumber": "502000999580",
+        "ifsc": "HDFC0001234"
+      },
+      "totalBorrowed": 20000000,
+      "outstandingAmount": 20550000,
+      "activeLoansCount": 1,
+      "onTimeRepaymentRate": 100,
+      "status": "Active",
+      "createdAt": "2026-08-29"
+    }
+  ],
+  "loans": [
+    {
+      "totalAmount": 20000000,
+      "disbursedDate": "2026-08-29",
+      "tenureMonths": 3,
+      "frequency": "Monthly",
+      "defaultInterestRate": 24,
+      "asrCommissionRate": 4,
+      "customers": [
+        {
+          "customerId": "CUST-101",
+          "customerName": "Naresh",
+          "sharePercentage": 100,
+          "shareAmount": 20000000
+        }
+      ],
+      "companies": [
+        {
+          "companyId": "COMP-101",
+          "companyName": "AZURE",
+          "percentage": 100,
+          "amount": 20000000,
+          "interestRate": 11,
+          "monthlyInterest": 183333,
+          "totalDuePerMonth": 20183333,
+          "monthlyEmi": 20183333
+        }
+      ],
+      "totalInterestExpected": 550000,
+      "asrIncome": 91667,
+      "customerNetProfit": 458333,
+      "status": "Active",
+      "schedule": [
+        {
+          "sNo": 1,
+          "date": "29-Sep-2026",
+          "dueDate": "2026-09-29",
+          "particulars": "Month #1 Revolving Cycle (Full Principal + Interest)",
+          "principalAmount": 20000000,
+          "interestAmount": 183333,
+          "totalAmount": 20183333,
+          "companyShares": {
+            "COMP-101": 20183333
+          },
+          "companyPrincipalShares": {
+            "COMP-101": 20000000
+          },
+          "companyInterestShares": {
+            "COMP-101": 183333
+          },
+          "status": "Paid",
+          "paidDate": "2026-08-29"
+        },
+        {
+          "sNo": 2,
+          "date": "29-Oct-2026",
+          "dueDate": "2026-10-29",
+          "particulars": "Month #2 Revolving Cycle (Full Principal + Interest)",
+          "principalAmount": 20000000,
+          "interestAmount": 183333,
+          "totalAmount": 20183333,
+          "companyShares": {
+            "COMP-101": 20183333
+          },
+          "companyPrincipalShares": {
+            "COMP-101": 20000000
+          },
+          "companyInterestShares": {
+            "COMP-101": 183333
+          },
+          "status": "Pending"
+        },
+        {
+          "sNo": 3,
+          "date": "29-Nov-2026",
+          "dueDate": "2026-11-29",
+          "particulars": "Month #3 Revolving Cycle (Full Principal + Interest)",
+          "principalAmount": 20000000,
+          "interestAmount": 183333,
+          "totalAmount": 20183333,
+          "companyShares": {
+            "COMP-101": 20183333
+          },
+          "companyPrincipalShares": {
+            "COMP-101": 20000000
+          },
+          "companyInterestShares": {
+            "COMP-101": 183333
+          },
+          "status": "Pending"
+        }
+      ],
+      "id": "LOAN-2026-001",
+      "createdAt": "2026-08-29"
+    }
+  ],
+  "systemSettings": {
+    "companyProfile": {
+      "companyName": "ASR Groups Financial Services Pvt Ltd",
+      "legalEntityName": "ASR Family Microfinance & Investment Private Limited",
+      "logoUrl": "/Groups Finalized.png",
+      "gstin": "33AABCA1234F1Z8",
+      "cin": "U65923TN2018PTC123456",
+      "pan": "AABCA1234F",
+      "registeredAddress": "No. 42, ASR Towers, 4th Floor, Anna Salai, Guindy, Chennai, Tamil Nadu - 600032",
+      "baseCurrency": "INR (₹)",
+      "currencySymbol": "₹",
+      "financialYearStart": "April 1",
+      "supportEmail": "support@asrgroups.in",
+      "supportPhone": "+91 44 2234 5678",
+      "tradeName": "ASR Groups",
+      "website": "https://asrgroups.in"
+    },
+    "shareholders": [
+      {
+        "id": "SH-01",
+        "companyName": "Sunrise Capital & Holdings Pvt Ltd",
+        "percentage": 40,
+        "directorName": "S. Rajesh Kumar",
+        "email": "rajesh@sunrisecap.in",
+        "phone": "+91 98400 11223"
+      },
+      {
+        "id": "SH-02",
+        "companyName": "Vaanavil Financial Ventures LLP",
+        "percentage": 35,
+        "directorName": "V. Meera Suresh",
+        "email": "meera@vaanavil.in",
+        "phone": "+91 98400 33445"
+      },
+      {
+        "id": "SH-03",
+        "companyName": "RK Promoters & Investments",
+        "percentage": 25,
+        "directorName": "R. Anand Kumar",
+        "email": "anand@rkpromoters.in",
+        "phone": "+91 98400 55667"
+      }
+    ],
+    "securityPolicy": {
+      "minPasswordLength": 10,
+      "requireSpecialChar": true,
+      "requireNumber": true,
+      "requireUppercase": true,
+      "sessionTimeoutMinutes": 30,
+      "enforce2FA": true,
+      "ipAllowlist": [
+        "49.207.214.0/24 (Head Office Chennai)",
+        "182.73.24.0/24 (Adyar Branch)",
+        "157.44.132.0/24 (OMR Operations)"
+      ],
+      "maxLoginAttempts": 5,
+      "maxFailedLogins": 5,
+      "enforce2FAForRoles": [
+        0,
+        1
+      ],
+      "ipWhitelist": "127.0.0.1, 49.207.214.18",
+      "passwordMinLength": 10
+    },
+    "featureToggles": {
+      "customerSelfServicePortal": true,
+      "smsNotifications": false,
+      "autoApproveSmallExpenses": true,
+      "twoFactorEnforcement": true,
+      "darkModePreview": false,
+      "multiBranchSupport": true,
+      "strictIpWhitelist": false,
+      "emailNotifications": true,
+      "smsGateway": false,
+      "autoDailyBackups": true,
+      "strictAuditMode": true
+    },
+    "lastBackupTimestamp": "2026-08-23 04:00 AM IST",
+    "backupStatus": "Completed"
+  }
+}

@@ -17,19 +17,6 @@ interface LoginResponse {
   user: { id: string; name: string; role: string };
 }
 
-const authService = {
-  login: async (creds: LoginCredentials): Promise<LoginResponse> => {
-    await new Promise((r) => setTimeout(r, 1000));
-    if (creds.username === "admin" && creds.password === "admin123") {
-      return {
-        token: "asr-jwt-auth-token",
-        user: { id: "1", name: "Super Admin", role: "admin" },
-      };
-    }
-    throw new Error("Invalid username or password. Please verify your credentials.");
-  },
-};
-
 const BG_IMAGES = [
   "/login-bg-1.jpg",
   "/login-bg-2.jpg",
@@ -80,7 +67,7 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.username.trim()) {
-      setError("Please enter your username.");
+      setError("Please enter your username or email.");
       return;
     }
     if (!form.password.trim()) {
@@ -91,17 +78,39 @@ export default function LoginPage() {
     setError("");
 
     try {
-      const res = await authService.login(form);
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          identifier: form.username,
+          password: form.password,
+        }),
+      });
+      const payload = (await response.json()) as {
+        success?: boolean;
+        data?: LoginResponse;
+        error?: string;
+      };
+
+      if (!response.ok || !payload.success || !payload.data) {
+        throw new Error(payload.error || "Invalid username or password. Please verify your credentials.");
+      }
+
+      const res = payload.data;
       const storage = form.rememberMe ? localStorage : sessionStorage;
       storage.setItem("asr_token", res.token);
       storage.setItem("asr_user", JSON.stringify(res.user));
 
       setSuccess(true);
       setTimeout(() => {
-        router.push("/dashboard");
+        const requestedPath = new URLSearchParams(window.location.search).get("next");
+        const target = requestedPath && requestedPath.startsWith("/") && !requestedPath.startsWith("//")
+          ? requestedPath
+          : "/dashboard";
+        router.replace(target);
       }, 600);
-    } catch (err: any) {
-      setError(err.message || "Authentication failed.");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Authentication failed.");
       setLoading(false);
     }
   };
@@ -175,7 +184,7 @@ export default function LoginPage() {
                   } ${error && !form.username ? "asr-field--error" : ""}`}
               >
                 <label htmlFor="asr-username" className="asr-label">
-                  Username
+                  Username or Email
                 </label>
                 <div className="asr-input-wrapper">
                   <User size={17} className="asr-input-icon" />
@@ -183,7 +192,7 @@ export default function LoginPage() {
                     id="asr-username"
                     name="username"
                     type="text"
-                    placeholder="Enter username"
+                    placeholder="Enter username or email"
                     value={form.username}
                     onChange={handleChange}
                     onFocus={() => setFocusedField("username")}
@@ -191,6 +200,7 @@ export default function LoginPage() {
                     className="asr-input-field"
                     disabled={loading || success}
                     autoComplete="username"
+                    suppressHydrationWarning
                   />
                 </div>
               </div>
