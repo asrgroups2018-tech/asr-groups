@@ -3,7 +3,7 @@
 import React, { useEffect } from 'react';
 import { useApp } from '@/lib/store';
 import { AppShell } from '@/components/layout/AppShell';
-import { UnderDevelopmentView } from '@/components/ui/UnderDevelopmentView';
+import { ReportsView } from './_components/ReportsView';
 
 export default function ReportsPage() {
   const { setActiveMainTab } = useApp();
@@ -14,7 +14,9 @@ export default function ReportsPage() {
 
   return (
     <AppShell>
-      <UnderDevelopmentView moduleName="reports" />
+      <main className="mx-auto w-full max-w-[1600px] p-4 sm:p-6 lg:p-8">
+        <ReportsView />
+      </main>
     </AppShell>
   );
 }

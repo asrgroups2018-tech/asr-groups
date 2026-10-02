@@ -41,11 +41,11 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [focusedField, setFocusedField] = useState<"username" | "password" | null>(null);
 
-  // Smooth logo intro timing (1.6s coming and going)
+  // Keep the brand intro brief so the sign-in form is available quickly.
   useEffect(() => {
     const timer = setTimeout(() => {
       setAnimPhase("reveal");
-    }, 1600);
+    }, 800);
     return () => clearTimeout(timer);
   }, []);
 
@@ -77,6 +77,9 @@ export default function LoginPage() {
     setLoading(true);
     setError("");
 
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 15000);
+
     try {
       const response = await fetch("/api/auth/login", {
         method: "POST",
@@ -85,12 +88,19 @@ export default function LoginPage() {
           identifier: form.username,
           password: form.password,
         }),
+        signal: controller.signal,
       });
-      const payload = (await response.json()) as {
+      const responseText = await response.text();
+      let payload: {
         success?: boolean;
         data?: LoginResponse;
         error?: string;
       };
+      try {
+        payload = JSON.parse(responseText);
+      } catch {
+        throw new Error("The sign-in service returned an invalid response. Please try again.");
+      }
 
       if (!response.ok || !payload.success || !payload.data) {
         throw new Error(payload.error || "Invalid username or password. Please verify your credentials.");
@@ -110,8 +120,16 @@ export default function LoginPage() {
         router.replace(target);
       }, 600);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Authentication failed.");
+      if (err instanceof DOMException && err.name === "AbortError") {
+        setError("The sign-in service took too long to respond. Please try again.");
+      } else if (err instanceof TypeError && err.message.toLowerCase().includes("fetch")) {
+        setError("Unable to reach the sign-in service. Check the connection and try again.");
+      } else {
+        setError(err instanceof Error ? err.message : "Authentication failed.");
+      }
       setLoading(false);
+    } finally {
+      window.clearTimeout(timeout);
     }
   };
 
@@ -122,7 +140,7 @@ export default function LoginPage() {
         <div className="asr-intro-screen">
           <div className="asr-intro-badge">
             <Image
-              src="/Groups Finalized.png"
+              src="/groups-finalized.png"
               alt="ASR Groups Logo"
               width={160}
               height={160}
@@ -153,7 +171,7 @@ export default function LoginPage() {
         <header className="asr-header-left">
           <div className="asr-brand-badge">
             <Image
-              src="/Groups Finalized.png"
+              src="/groups-finalized.png"
               alt="ASR Groups Logo"
               width={70}
               height={70}

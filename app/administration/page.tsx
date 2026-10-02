@@ -6,11 +6,12 @@ import { AppShell } from '@/components/layout/AppShell';
 import { AdminSection } from './_components/AdminSection';
 
 export default function AdministrationPage() {
-  const { setActiveMainTab } = useApp();
+  const { setActiveMainTab, setActiveAdminTab } = useApp();
 
   useEffect(() => {
     setActiveMainTab('administration');
-  }, [setActiveMainTab]);
+    setActiveAdminTab('users');
+  }, [setActiveMainTab, setActiveAdminTab]);
 
   return (
     <AppShell>

@@ -94,7 +94,9 @@ export interface ApprovalRule {
 
 export type AuditActionType =
   | 'Created User'
+  | 'Updated User'
   | 'Assigned Role'
+  | 'Updated Access'
   | 'Edited Permission'
   | 'Approved Request'
   | 'Login'
@@ -102,6 +104,7 @@ export type AuditActionType =
   | 'Activated User'
   | 'Deleted User'
   | 'Reset Password'
+  | 'Changed Password'
   | 'Updated Settings'
   | 'Triggered Backup'
   | 'Modified Shareholder Split'

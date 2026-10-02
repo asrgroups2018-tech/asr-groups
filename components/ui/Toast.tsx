@@ -1,11 +1,16 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useApp } from '@/lib/store';
 import { CheckCircle2, AlertTriangle, XCircle, Info, X } from 'lucide-react';
 
 export const ToastContainer: React.FC = () => {
   const { toasts, removeToast } = useApp();
+
+  useEffect(() => {
+    const timers = toasts.map((toast) => window.setTimeout(() => removeToast(toast.id), 5000));
+    return () => timers.forEach((timer) => window.clearTimeout(timer));
+  }, [toasts, removeToast]);
 
   if (toasts.length === 0) return null;
 

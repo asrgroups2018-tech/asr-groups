@@ -12,7 +12,7 @@ export const Footer: React.FC = () => {
         <div className="flex items-center gap-2">
           <div className="w-4 h-4 rounded overflow-hidden relative shrink-0">
             <Image
-              src="/Groups Finalized.png"
+              src="/groups-finalized.png"
               alt="ASR Groups Logo"
               fill
               sizes="16px"

@@ -9,14 +9,16 @@ interface DeleteUserModalProps {
   user: User | null;
   isOpen: boolean;
   onClose: () => void;
+  onDeleted?: () => void;
 }
 
 export const DeleteUserModal: React.FC<DeleteUserModalProps> = ({
   user,
   isOpen,
   onClose,
+  onDeleted,
 }) => {
-  const { deleteUser, users, showToast } = useApp();
+  const { deleteUser, users } = useApp();
   const [confirmationPhrase, setConfirmationPhrase] = useState('');
   const targetPhrase = 'DELETE USER';
 
@@ -37,6 +39,7 @@ export const DeleteUserModal: React.FC<DeleteUserModalProps> = ({
       await deleteUser(user.id);
       setConfirmationPhrase('');
       onClose();
+      onDeleted?.();
     } catch {
       // Store handles error toasts
     }

@@ -190,11 +190,21 @@ export const SCHEMA_STATEMENTS = [
   );`,
 ];
 
+let schemaInitialization: Promise<void> | null = null;
+
 /**
- * Initializes the database schema in Turso libSQL if tables don't exist yet.
+ * Initializes the database schema once per server process. A shared promise
+ * prevents concurrent API requests from repeating the same remote DDL calls.
  */
-export async function initializeSchema(client: Client): Promise<void> {
-  for (const statement of SCHEMA_STATEMENTS) {
-    await client.execute(statement);
+export function initializeSchema(client: Client): Promise<void> {
+  if (!schemaInitialization) {
+    schemaInitialization = client
+      .batch(SCHEMA_STATEMENTS)
+      .then(() => undefined)
+      .catch((error) => {
+        schemaInitialization = null;
+        throw error;
+      });
   }
+  return schemaInitialization;
 }

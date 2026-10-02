@@ -215,7 +215,7 @@ export const SystemSettingsTab: React.FC = () => {
           <div className="flex items-center gap-5 p-4 rounded-xl border border-slate-200 bg-slate-50">
             <div className="w-16 h-16 rounded-2xl border border-[#C5A059]/50 overflow-hidden relative shadow-xs shrink-0">
               <Image
-                src="/Groups Finalized.png"
+                src="/groups-finalized.png"
                 alt="ASR Groups Logo"
                 fill
                 sizes="64px"
@@ -225,7 +225,7 @@ export const SystemSettingsTab: React.FC = () => {
             <div className="space-y-1">
               <h4 className="text-xs font-bold text-slate-900">Official Brand Mark</h4>
               <p className="text-[11px] text-slate-500">
-                Current: <code className="font-mono text-slate-700 font-bold">public/Groups Finalized.png</code>
+                Current: <code className="font-mono text-slate-700 font-bold">public/groups-finalized.png</code>
               </p>
               <p className="text-[11px] text-slate-500">
                 Brand assets are managed with the deployed application configuration.

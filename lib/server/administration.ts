@@ -293,6 +293,9 @@ export async function createUser(user: Omit<User, 'id' | 'createdAt' | 'lastLogi
   const newUser: User = {
     ...user,
     id: newId,
+    phone: user.phone || '',
+    department: user.department || '',
+    designation: user.designation || '',
     username: isAdmin ? undefined : (user.username || user.name.toLowerCase().replace(/[^a-z0-9]/g, '.')),
     loginMethod: isAdmin ? 'email' : 'username',
     tempPassword: user.tempPassword || `ASR@${Math.floor(1000 + Math.random() * 9000)}`,
@@ -310,13 +313,13 @@ export async function createUser(user: Omit<User, 'id' | 'createdAt' | 'lastLogi
       assigned_role_ids, primary_role_id, status, department, designation, joined_date,
       created_at, last_login, address, emergency_contact, two_factor_enabled, suspend_reason,
       sessions, is_customer
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ) VALUES (?, ?, ?, ?, COALESCE(?, ''), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     args: [
       newUser.id,
       newUser.name,
       newUser.username || null,
       newUser.email,
-      newUser.phone || null,
+      newUser.phone || '',
       passwordToStore,
       newUser.loginMethod || 'username',
       newUser.avatar || null,
@@ -349,6 +352,10 @@ export async function updateUser(id: string, updates: Partial<User>): Promise<Us
   if (!existing) return null;
 
   const updated = { ...existing, ...updates };
+  const passwordChanged = typeof updates.tempPassword === 'string'
+    && updates.tempPassword.trim().length > 0
+    && updates.tempPassword !== existing.tempPassword;
+  const statusChanged = updates.status !== undefined && updates.status !== existing.status;
   const passwordToStore = updated.tempPassword
     ? updated.tempPassword.startsWith('scrypt$')
       ? updated.tempPassword
@@ -386,6 +393,16 @@ export async function updateUser(id: string, updates: Partial<User>): Promise<Us
       id,
     ],
   });
+
+  // A suspended account and an account with a changed password must not keep
+  // previously issued sessions alive. Login will create a fresh session after
+  // the account is active again.
+  if ((statusChanged && updated.status === 'Suspended') || passwordChanged) {
+    await client.execute({
+      sql: 'DELETE FROM auth_sessions WHERE user_id = ?',
+      args: [id],
+    });
+  }
 
   return updated;
 }

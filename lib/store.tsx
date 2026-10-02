@@ -665,8 +665,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         await refreshAll();
         return true;
       }
+      showToast('Access update failed', json.error || 'The role assignment could not be saved.', 'error');
       return false;
     } catch {
+      showToast('Access update failed', 'The server could not save the role assignment.', 'error');
       return false;
     }
   };
@@ -682,8 +684,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (json.success) {
         showToast('Profile Updated', 'User saved.', 'success');
         await refreshAll();
+      } else {
+        showToast('Profile update failed', json.error || 'The account could not be saved.', 'error');
       }
-    } catch {}
+    } catch {
+      showToast('Profile update failed', 'The server could not save the account.', 'error');
+    }
   };
 
   const createUser = async (userData: Omit<User, 'id' | 'createdAt' | 'lastLogin' | 'sessions'>) => {
@@ -699,22 +705,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         await refreshAll();
         return json.data;
       }
+      showToast('User creation failed', json.error || 'The account could not be created.', 'error');
       return null;
     } catch {
+      showToast('User creation failed', 'The server could not create the account.', 'error');
       return null;
     }
   };
 
   const toggleUserStatus = async (userId: string, status: UserStatus, reason?: string) => {
     try {
-      await fetch('/api/admin/users', {
+      const res = await fetch('/api/admin/users', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: userId, status, suspendReason: reason }),
       });
+      const json = await res.json();
+      if (!json.success) {
+        showToast('Status update failed', json.error || 'The account status could not be changed.', 'error');
+        return;
+      }
       showToast('Status Updated', `User status changed to ${status}.`, 'info');
       await refreshAll();
-    } catch {}
+    } catch {
+      showToast('Status update failed', 'The server could not change the account status.', 'error');
+    }
   };
 
   const deleteUser = async (userId: string) => {
@@ -727,7 +742,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       } else {
         showToast('Action Blocked', json.error, 'error');
       }
-    } catch {}
+    } catch {
+      showToast('Delete failed', 'The server could not remove this account.', 'error');
+    }
   };
 
   const resetUserPassword = async (userId: string) => {

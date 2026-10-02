@@ -7,7 +7,6 @@ import {
   Menu,
   Bell,
   ChevronDown,
-  UserCheck,
   LogOut,
   Key,
   ShieldAlert,
@@ -30,7 +29,6 @@ export const TopNav: React.FC<TopNavProps> = ({ onOpenMobileMenu }) => {
     companies,
     currentActor,
     simulatedRoleId,
-    setSimulatedRoleId,
     roles,
     showToast,
     isLoading,
@@ -79,7 +77,7 @@ export const TopNav: React.FC<TopNavProps> = ({ onOpenMobileMenu }) => {
 
     if (first === 'administration') {
       const sub = segments[1]?.toLowerCase();
-      if (!sub) return ['Administration', 'Overview'];
+      if (!sub) return ['Administration', 'User Management'];
       if (sub === 'users') {
         const userId = segments[2];
         if (userId) {
@@ -88,9 +86,7 @@ export const TopNav: React.FC<TopNavProps> = ({ onOpenMobileMenu }) => {
         }
         return ['Administration', 'User Management'];
       }
-      if (sub === 'roles') return ['Administration', 'Role Management'];
-      if (sub === 'audit-log' || sub === 'audit') return ['Administration', 'Audit Log'];
-      if (sub === 'settings') return ['Administration', 'System Settings'];
+      if (sub === 'roles' || sub === 'audit-log' || sub === 'audit' || sub === 'settings') return ['Administration', 'User Management'];
       return ['Administration'];
     }
 
@@ -140,10 +136,6 @@ export const TopNav: React.FC<TopNavProps> = ({ onOpenMobileMenu }) => {
   };
 
   const breadcrumbs = getBreadcrumbs();
-  const perspectiveRoles = currentActor.assignedRoleIds.includes(0)
-    ? roles
-    : roles.filter((role) => currentActor.assignedRoleIds.includes(role.id));
-
   return (
     <header className="bg-white border-b border-[#EBE7DF] sticky top-0 z-30 px-4 sm:px-6 py-3 flex items-center justify-between gap-4 relative">
       {/* Top Progress Loading Bar */}
@@ -227,50 +219,6 @@ export const TopNav: React.FC<TopNavProps> = ({ onOpenMobileMenu }) => {
                   <span className="text-[10px] text-slate-400 font-mono">
                     ID: {currentActor.id}
                   </span>
-                </div>
-              </div>
-
-              {/* Perspective Switcher in Dropdown */}
-              <div className="p-2 bg-slate-50 rounded-xl border border-slate-200 mb-2">
-                <p className="text-[10px] font-bold uppercase text-slate-600 mb-1.5 flex items-center gap-1">
-                  <UserCheck className="w-3 h-3 text-amber-600" />
-                  Active Role Perspective
-                </p>
-                <p className="text-[10px] text-slate-500 mb-2">
-                  Switch active persona to preview role-based permissions:
-                </p>
-                <div className="space-y-1 max-h-40 overflow-y-auto pr-1">
-                  {perspectiveRoles.map((r) => {
-                    const isSelected = simulatedRoleId === r.id;
-                    return (
-                      <button
-                        key={r.id}
-                        onClick={() => {
-                          setSimulatedRoleId(r.id);
-                          showToast(
-                            'Perspective Changed',
-                            `Now operating as ${r.name} (Role ${r.id}).`,
-                            'info'
-                          );
-                          setIsProfileOpen(false);
-                        }}
-                        className={`w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-xs transition-colors cursor-pointer ${
-                          isSelected
-                            ? 'bg-amber-100/80 font-bold text-amber-900 border border-amber-300'
-                            : 'hover:bg-slate-200/60 text-slate-700'
-                        }`}
-                      >
-                        <div className="flex items-center gap-1.5">
-                          <span
-                            className="w-2 h-2 rounded-full"
-                            style={{ backgroundColor: r.hexColor }}
-                          />
-                          <span>Role {r.id} · {r.name}</span>
-                        </div>
-                        {isSelected && <span className="text-[10px] text-amber-800">Active</span>}
-                      </button>
-                    );
-                  })}
                 </div>
               </div>
 

@@ -13,7 +13,6 @@ import {
   FileBarChart,
   CalendarDays,
   CheckSquare,
-  Settings,
   ChevronRight,
   X,
 } from 'lucide-react';
@@ -58,7 +57,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpenMobile, onCloseMobile })
       label: 'Requests & Approvals',
       icon: <CheckSquare className="w-4 h-4" />,
     },
-    { id: 'settings', href: '/settings', label: 'Settings', icon: <Settings className="w-4 h-4" /> },
     {
       id: 'administration',
       href: '/administration',
@@ -77,7 +75,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpenMobile, onCloseMobile })
     if (item.id === 'administration') return simulatedRoleId <= 1;
     // Customer sees only customer portal pages
     if (simulatedRoleId === 6) {
-      return ['dashboard', 'loans', 'requests', 'settings'].includes(item.id);
+      return ['dashboard', 'loans', 'requests'].includes(item.id);
     }
     return true;
   });
@@ -114,7 +112,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpenMobile, onCloseMobile })
             {/* Logo container that cleanly fills the box edge-to-edge */}
             <div className="w-12 h-12 rounded-xl border border-[#C5A059]/50 overflow-hidden relative shadow-md shrink-0">
               <Image
-                src="/Groups Finalized.png"
+                src="/groups-finalized.png"
                 alt="ASR Groups Logo"
                 fill
                 sizes="48px"
@@ -126,9 +124,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpenMobile, onCloseMobile })
               <h1 className="font-serif text-sm font-bold text-[#EED8A1] tracking-wide leading-tight">
                 ASR Groups
               </h1>
-              <p className="text-[10px] tracking-widest text-[#C5A059]/80 uppercase font-mono font-medium">
-                FINANCE ERP
-              </p>
             </div>
           </div>
 
@@ -147,8 +142,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpenMobile, onCloseMobile })
               {navItems.map((item) => {
                 const isActive =
                   (item.id === 'dashboard' && (pathname === '/' || pathname === '/dashboard' || pathname.startsWith('/dashboard'))) ||
-                  (item.id === 'settings' && (pathname === '/settings' || pathname.startsWith('/settings'))) ||
-                  (item.id !== 'dashboard' && item.id !== 'settings' && pathname.startsWith(`/${item.id}`));
+                  (item.id !== 'dashboard' && pathname.startsWith(`/${item.id}`));
 
                 return (
                   <button

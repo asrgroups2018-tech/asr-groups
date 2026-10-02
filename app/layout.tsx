@@ -10,10 +10,10 @@ const ubuntu = Ubuntu({
 });
 
 export const metadata: Metadata = {
-  title: "ASR Groups — Internal Finance ERP",
-  description: "Enterprise Financial Management, Multi-Role Administration & Loan Underwriting System",
+  title: "ASR Groups",
+  description: "ASR Groups financial management system",
   icons: {
-    icon: "/Groups Finalized.png",
+    icon: "/groups-finalized.png",
   },
 };
 

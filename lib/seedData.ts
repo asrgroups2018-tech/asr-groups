@@ -930,7 +930,7 @@ export const INITIAL_SYSTEM_SETTINGS: SystemSettingsState = {
   companyProfile: {
     companyName: 'ASR Groups Finance ERP',
     legalEntityName: 'ASR Family Microfinance & Investment Private Limited',
-    logoUrl: '/Groups Finalized.png',
+    logoUrl: '/groups-finalized.png',
     gstin: '33AABCA1234F1Z8',
     cin: 'U65929TN2018PTC123456',
     pan: 'AABCA1234F',

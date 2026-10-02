@@ -6,7 +6,7 @@ import { AppShell } from '@/components/layout/AppShell';
 import { UserDetailsView } from '@/app/administration/_components/UserDetailsView';
 
 function UserDetailAdminContent({ userId }: { userId: string }) {
-  const { setActiveMainTab, setActiveAdminTab, setSelectedUserId } = useApp();
+  const { setActiveMainTab, setActiveAdminTab, setSelectedUserId, selectedUserId } = useApp();
 
   useEffect(() => {
     setActiveMainTab('administration');
@@ -18,7 +18,7 @@ function UserDetailAdminContent({ userId }: { userId: string }) {
 
   return (
     <main className="p-4 sm:p-8 max-w-7xl w-full mx-auto space-y-6">
-      <UserDetailsView />
+      <UserDetailsView key={`${userId}-${selectedUserId || ''}`} />
     </main>
   );
 }
