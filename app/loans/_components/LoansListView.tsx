@@ -771,71 +771,72 @@ export const LoansListView: React.FC = () => {
         </div>
       )}
 
-      {/* Flat Per-Loan Table Grid with Clickable Sort Headers */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        {filteredAndSortedLoans.length === 0 ? (
-          <div className="p-10 md:p-14 text-center space-y-4 max-w-lg mx-auto">
-            <div className="w-14 h-14 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center mx-auto text-[#701A35] shadow-xs">
-              <CalendarDays className="w-7 h-7" />
-            </div>
-            <div>
-              <h3 className="text-base font-bold text-slate-900 font-serif">
-                No Loans Found
-              </h3>
-              <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
-                {dateRange.startDate ? (
-                  <>
-                    No loans match the selected date range (
-                    <span className="font-mono font-bold text-slate-800">
-                      {dateRange.startDate} to {dateRange.endDate}
-                    </span>
-                    ) or active filters.
-                  </>
-                ) : (
-                  'No loans match the current search or filters.'
-                )}
-              </p>
-            </div>
-
-            {/* Quick Action Buttons */}
-            <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setSelectedClients(new Set());
-                  setDateRange({
-                    startDate: null,
-                    endDate: null,
-                    presetLabel: undefined,
-                  });
-                  setSearchQuery('');
-                  setStatusFilter('ALL');
-                }}
-                className="px-4 py-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-800 text-xs font-bold rounded-xl shadow-2xs transition-all cursor-pointer"
-              >
-                Reset All Filters
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  const current = getCurrentMonthRange();
-                  setDateRange({
-                    startDate: current.startIso,
-                    endDate: current.endIso,
-                    presetLabel: 'curr_month',
-                  });
-                }}
-                className="px-4 py-2 bg-[#701A35] hover:bg-[#5C142B] text-white text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer flex items-center gap-1.5"
-              >
-                <span>Show Current Month</span>
-              </button>
-            </div>
+      {/* ─── Empty State (Visible on all devices when no loans match) ─── */}
+      {filteredAndSortedLoans.length === 0 ? (
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-10 md:p-14 text-center space-y-4 max-w-lg mx-auto">
+          <div className="w-14 h-14 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center mx-auto text-[#701A35] shadow-xs">
+            <CalendarDays className="w-7 h-7" />
           </div>
-        ) : (
           <div>
-            {/* Desktop Table Header (Visible on lg+) */}
-            <div className="hidden lg:grid grid-cols-[2.5fr_1.1fr_1.1fr_1.4fr_0.6fr_2fr_1fr_0.9fr_1fr] gap-3 px-5 py-3.5 bg-slate-100 border-b-2 border-slate-200 text-[11px] font-mono font-bold text-slate-700 uppercase tracking-wider select-none items-center">
+            <h3 className="text-base font-bold text-slate-900 font-serif">
+              No Loans Found
+            </h3>
+            <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
+              {dateRange.startDate ? (
+                <>
+                  No loans match the selected date range (
+                  <span className="font-mono font-bold text-slate-800">
+                    {dateRange.startDate} to {dateRange.endDate}
+                  </span>
+                  ) or active filters.
+                </>
+              ) : (
+                'No loans match the current search or filters.'
+              )}
+            </p>
+          </div>
+
+          {/* Quick Action Buttons */}
+          <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedClients(new Set());
+                setDateRange({
+                  startDate: null,
+                  endDate: null,
+                  presetLabel: undefined,
+                });
+                setSearchQuery('');
+                setStatusFilter('ALL');
+              }}
+              className="px-4 py-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-800 text-xs font-bold rounded-xl shadow-2xs transition-all cursor-pointer"
+            >
+              Reset All Filters
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                const current = getCurrentMonthRange();
+                setDateRange({
+                  startDate: current.startIso,
+                  endDate: current.endIso,
+                  presetLabel: 'curr_month',
+                });
+              }}
+              className="px-4 py-2 bg-[#701A35] hover:bg-[#5C142B] text-white text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer flex items-center gap-1.5"
+            >
+              <span>Show Current Month</span>
+            </button>
+          </div>
+        </div>
+      ) : (
+        <>
+          {/* ─── Desktop Table View (lg+ Screens ≥ 1024px) ─── */}
+          <div className="hidden lg:block bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            {/* Desktop Table Header */}
+            <div className="grid grid-cols-[2.5fr_1.1fr_1.1fr_1.4fr_0.6fr_2fr_1fr_0.9fr_1fr] gap-3 px-5 py-3.5 bg-slate-100 border-b-2 border-slate-200 text-[11px] font-mono font-bold text-slate-700 uppercase tracking-wider select-none items-center">
               {/* Client & Loan ID */}
               <div
                 onClick={() => handleSort('customerName')}
@@ -1266,262 +1267,318 @@ export const LoansListView: React.FC = () => {
                 );
               })}
             </div>
+          </div>
 
-            {/* Mobile & Tablet Card View (Hidden on lg+) */}
-            <div className="block lg:hidden divide-y divide-[#EDE8DF]">
-              {filteredAndSortedLoans.map((loan) => {
-                const isExpanded = expandedLoanIds.has(loan.id);
-                const collected = loan.totalCollected || 0;
-                const total = loan.totalAmount || 0;
-                const progress = total > 0 ? Math.min(100, Math.round((collected / total) * 100)) : 0;
-                const { startTimestamp, endTimestamp } = dateTimestamps;
-                const hasDateFilter = startTimestamp !== null && endTimestamp !== null;
+          {/* ─── Mobile & Tablet Card View (Visible on screens < 1024px) ─── */}
+          <div className="block lg:hidden space-y-3.5">
+            {filteredAndSortedLoans.map((loan) => {
+              const isExpanded = expandedLoanIds.has(loan.id);
+              const collected = loan.totalCollected || 0;
+              const total = loan.totalAmount || 0;
+              const progress = total > 0 ? Math.min(100, Math.round((collected / total) * 100)) : 0;
+              const { startTimestamp, endTimestamp } = dateTimestamps;
+              const hasDateFilter = startTimestamp !== null && endTimestamp !== null;
 
-                return (
-                  <div key={loan.id} className="p-4 space-y-3 bg-white hover:bg-[#FAF8F5]/60 transition-colors">
-                    {/* Top Row: Borrower Name, Status & Expand Chevron */}
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0 flex-1">
-                        <h4
-                          onClick={() => {
-                            setSelectedLoanId(loan.id);
-                            router.push(`/loans/${loan.id}`);
-                          }}
-                          className="text-sm font-bold text-slate-900 truncate hover:text-[#701A35] cursor-pointer"
-                        >
-                          {loan.customerName}
-                        </h4>
-                        <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                          <span className="font-mono text-[10px] bg-[#FAF5ED] text-[#701A35] border border-[#E2D2B0] px-2 py-0.5 rounded font-bold">
-                            {loan.id}
+              return (
+                <div
+                  key={`mob-card-${loan.id}`}
+                  className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-sm space-y-3.5 transition-all hover:border-slate-300"
+                >
+                  {/* Top Row: Borrower Name, Code, Status & Expand */}
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <h3
+                        onClick={() => {
+                          setSelectedLoanId(loan.id);
+                          router.push(`/loans/${loan.id}`);
+                        }}
+                        className="font-serif font-bold text-slate-950 text-sm hover:text-[#701A35] cursor-pointer leading-tight truncate"
+                      >
+                        {loan.customerName}
+                      </h3>
+                      <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                        <span className="font-mono text-[10px] bg-[#701A35]/10 text-[#701A35] border border-[#701A35]/25 px-1.5 py-0.5 rounded font-bold">
+                          {loan.id}
+                        </span>
+                        {loan.codeNo && (
+                          <span className="font-mono text-[10px] bg-slate-100 text-slate-800 border border-slate-300 px-1.5 py-0.5 rounded font-bold">
+                            {loan.codeNo}
                           </span>
-                          {loan.codeNo && (
-                            <span className="font-mono text-[10px] bg-slate-100 text-slate-700 px-2 py-0.5 rounded font-semibold">
-                              {loan.codeNo}
-                            </span>
-                          )}
-                          <span className="text-[11px] text-slate-500 font-medium">
-                            📍 {loan.place || 'CHENNAI'}
-                          </span>
-                        </div>
+                        )}
+                        <span className="text-[10px] text-slate-500 font-medium">
+                          📍 {loan.place || 'CHENNAI'}
+                        </span>
                       </div>
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        <StatusPill status={loan.status} size="sm" />
-                        <button
-                          type="button"
-                          onClick={() => toggleExpand(loan.id)}
-                          className="p-1.5 rounded-lg border border-slate-200 text-slate-500 hover:text-slate-900 hover:bg-slate-100 cursor-pointer"
-                          title={isExpanded ? 'Collapse Schedule' : 'Expand Schedule'}
-                        >
-                          {isExpanded ? (
-                            <ChevronDown className="w-4 h-4 text-[#701A35]" />
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <StatusPill status={loan.status} size="sm" />
+                    </div>
+                  </div>
+
+                  {/* 2x2 Financial Metric Matrix */}
+                  <div className="p-3 bg-gradient-to-br from-[#FAF8F5] to-slate-50 border border-[#E6E1D6] rounded-xl space-y-2.5">
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      {/* Paid Amount */}
+                      <div className="bg-white p-2.5 rounded-lg border border-slate-200/80 shadow-2xs">
+                        <span className="text-[10px] uppercase font-bold text-slate-500 font-mono block">
+                          Paid Amount
+                        </span>
+                        <div className="mt-0.5">
+                          {(loan.totalCollected || 0) > 0 ? (
+                            <MoneyDisplay
+                              amount={loan.totalCollected || 0}
+                              size="sm"
+                              amountClassName={`font-bold text-xs block ${
+                                (loan.totalCollected || 0) >= loan.totalAmount
+                                  ? 'text-emerald-700 font-extrabold'
+                                  : 'text-slate-900'
+                              }`}
+                            />
                           ) : (
-                            <ChevronRight className="w-4 h-4" />
+                            <span className="text-slate-400 font-mono text-xs font-bold block">—</span>
                           )}
-                        </button>
+                        </div>
+                        {loan.disbursedAmount != null && loan.disbursedAmount > 0 && (
+                          <span className="text-[9px] text-slate-500 font-medium block mt-0.5">
+                            Disb: ₹{loan.disbursedAmount.toLocaleString('en-IN')}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Interest Amount */}
+                      <div className="bg-white p-2.5 rounded-lg border border-slate-200/80 shadow-2xs">
+                        <span className="text-[10px] uppercase font-bold text-slate-500 font-mono block">
+                          Interest (Margin)
+                        </span>
+                        <div className="mt-0.5">
+                          {loan.interestAmount != null && loan.interestAmount > 0 ? (
+                            <span className="inline-block px-1.5 py-0.5 rounded bg-amber-100 text-amber-950 border border-amber-300 font-mono text-xs font-bold">
+                              ₹{loan.interestAmount.toLocaleString('en-IN')}
+                            </span>
+                          ) : (
+                            <span className="text-slate-400 font-mono text-xs font-bold block">—</span>
+                          )}
+                        </div>
+                        <span className="text-[9px] text-slate-400 font-medium block mt-0.5">
+                          ASR upfront profit
+                        </span>
+                      </div>
+
+                      {/* Loan Amount */}
+                      <div className="bg-white p-2.5 rounded-lg border border-slate-200/80 shadow-2xs">
+                        <span className="text-[10px] uppercase font-bold text-slate-500 font-mono block">
+                          Loan Amount
+                        </span>
+                        <div className="mt-0.5">
+                          <MoneyDisplay
+                            amount={loan.totalAmount}
+                            size="sm"
+                            amountClassName="font-bold text-slate-950 text-xs block"
+                          />
+                        </div>
+                        <span className="text-[9px] text-slate-500 font-medium block mt-0.5">
+                          Gross facility
+                        </span>
+                      </div>
+
+                      {/* Balance Due */}
+                      <div className="bg-white p-2.5 rounded-lg border border-slate-200/80 shadow-2xs">
+                        <span className="text-[10px] uppercase font-bold text-slate-500 font-mono block">
+                          Balance Due
+                        </span>
+                        <div className="mt-0.5">
+                          {(loan.totalCollected || 0) >= loan.totalAmount ? (
+                            <span className="text-[11px] text-emerald-700 font-bold block">
+                              Fully Settled
+                            </span>
+                          ) : (
+                            <MoneyDisplay
+                              amount={Math.max(0, loan.totalAmount - (loan.totalCollected || 0))}
+                              size="sm"
+                              amountClassName="font-bold text-[#701A35] text-xs block"
+                            />
+                          )}
+                        </div>
+                        <span className="text-[9px] text-slate-500 font-medium block mt-0.5">
+                          {(loan.totalCollected || 0) >= loan.totalAmount ? '0 pending' : 'Pending collection'}
+                        </span>
                       </div>
                     </div>
 
-                    {/* Financial Summary Card */}
-                    <div className="p-3 bg-[#FAF8F5] border border-[#E6E1D6] rounded-xl space-y-2">
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="text-slate-500 font-medium">Loan Amount:</span>
-                        <MoneyDisplay
-                          amount={loan.totalAmount}
-                          size="md"
-                          amountClassName="font-bold text-slate-900"
-                        />
+                    {/* Collection Recovery Progress Bar */}
+                    <div className="space-y-1 pt-1 border-t border-slate-200/60">
+                      <div className="flex items-center justify-between text-[10px] font-mono text-slate-600">
+                        <span>Recovery Progress</span>
+                        <span className="font-bold text-emerald-700">{progress}%</span>
                       </div>
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="text-slate-500 font-medium">Paid / Disbursed:</span>
-                        {loan.disbursedAmount != null && loan.disbursedAmount > 0 ? (
-                          <span className="font-mono font-bold text-slate-800 text-xs">
-                            ₹{loan.disbursedAmount.toLocaleString('en-IN')}
-                          </span>
-                        ) : (
-                          <span className="font-mono text-slate-400 text-xs">—</span>
-                        )}
-                      </div>
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="text-slate-500 font-medium">Interest (ASR Margin):</span>
-                        {loan.interestAmount != null && loan.interestAmount > 0 ? (
-                          <span className="font-mono font-bold text-amber-900 bg-amber-100 border border-amber-300 px-2 py-0.5 rounded text-xs">
-                            ₹{loan.interestAmount.toLocaleString('en-IN')}
-                          </span>
-                        ) : (
-                          <span className="font-mono text-slate-400 text-xs">—</span>
-                        )}
-                      </div>
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="text-slate-500 font-medium">Collected:</span>
-                        <div className="flex items-center gap-1.5">
-                          <MoneyDisplay
-                            amount={collected}
-                            size="sm"
-                            amountClassName="font-bold text-emerald-700"
-                          />
-                          <span className="text-[10px] text-emerald-800 bg-emerald-100 border border-emerald-200 px-1.5 py-0.2 rounded font-mono font-bold">
-                            {progress}%
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Progress bar */}
                       <div className="h-1.5 w-full bg-slate-200 rounded-full overflow-hidden">
                         <div
                           style={{ width: `${progress}%` }}
-                          className="h-full bg-emerald-600 rounded-full transition-all"
+                          className={`h-full rounded-full transition-all ${
+                            progress >= 100 ? 'bg-emerald-600' : progress >= 50 ? 'bg-emerald-500' : 'bg-amber-500'
+                          }`}
                         />
                       </div>
+                    </div>
 
-                      <div className="flex items-center justify-between text-[11px] text-slate-500 pt-0.5">
-                        <span>
-                          EMIs: <strong className="text-slate-800 font-mono">{loan.installmentCount || loan.installments?.length || 0}</strong>
+                    {/* EMIs & Next Due */}
+                    <div className="flex items-center justify-between text-[11px] text-slate-600 pt-0.5 flex-wrap gap-2">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-medium text-slate-500">EMIs:</span>
+                        <span className="font-mono font-bold text-slate-900 bg-white px-1.5 py-0.2 rounded border border-slate-200">
+                          {loan.installmentCount || loan.installments?.length || 0}
                         </span>
-                        <span>
-                          Next Due: <strong className="text-slate-800 font-mono">{loan.nextDueDate || '—'}</strong>
+                      </div>
+
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-medium text-slate-500">Next Due:</span>
+                        <span className="font-mono font-semibold text-slate-900">
+                          {loan.nextDueDate || '—'}
                         </span>
                       </div>
                     </div>
 
-                    {/* Company Splits */}
+                    {/* Funding Companies Split Badges */}
                     {loan.splits && loan.splits.length > 0 && (
-                      <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
-                        <span className="text-[10px] text-slate-400 font-mono uppercase">Funded:</span>
+                      <div className="flex items-center gap-1.5 flex-wrap pt-1 border-t border-slate-200/60">
+                        <span className="text-[10px] text-slate-500 font-mono font-medium">Funded By:</span>
                         {loan.splits.map((sp) => (
                           <CompanySplitBadge key={sp.id} split={sp} size="sm" />
                         ))}
                       </div>
                     )}
+                  </div>
 
-                    {/* Actions Bar */}
-                    <div className="flex items-center justify-between pt-1 gap-2">
-                      <button
-                        type="button"
-                        onClick={() => toggleExpand(loan.id)}
-                        className="flex-1 py-1.5 px-2.5 text-xs font-semibold text-slate-700 bg-[#F4F1EA] hover:bg-[#EBE6DC] border border-[#E6E1D6] rounded-xl flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
-                      >
-                        <Calendar className="w-3.5 h-3.5 text-[#701A35]" />
-                        <span>{isExpanded ? 'Hide Schedule' : `Schedule (${loan.installments.length})`}</span>
-                      </button>
+                  {/* Actions Bar on Mobile */}
+                  <div className="flex items-center gap-2 pt-0.5">
+                    <button
+                      type="button"
+                      onClick={() => toggleExpand(loan.id)}
+                      className="flex-1 py-2 px-3 text-xs font-bold text-slate-800 bg-[#FAF8F5] hover:bg-[#F3EFE6] border border-[#D5CEBF] rounded-xl flex items-center justify-center gap-1.5 cursor-pointer transition-colors shadow-2xs btn-press"
+                    >
+                      <Calendar className="w-3.5 h-3.5 text-[#701A35]" />
+                      <span>{isExpanded ? 'Hide Schedule' : `Schedule (${loan.installments.length})`}</span>
+                      <ChevronDown className={`w-3.5 h-3.5 text-slate-500 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                    </button>
 
-                      <button
-                        type="button"
-                        onClick={() => setSelectedEditLoan(loan)}
-                        className="py-1.5 px-3 text-xs font-semibold text-[#701A35] bg-[#FAF5ED] hover:bg-[#F3ECE0] border border-[#E2D2B0] rounded-xl flex items-center gap-1.5 cursor-pointer transition-colors"
-                        title="Edit Schedule (Spreadsheet)"
-                      >
-                        <Edit3 className="w-3.5 h-3.5" />
-                        <span>Edit</span>
-                      </button>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedEditLoan(loan)}
+                      className="py-2 px-3 text-xs font-bold text-[#701A35] bg-[#FAF5ED] hover:bg-[#F3ECE0] border border-[#E2D2B0] rounded-xl flex items-center gap-1.5 cursor-pointer transition-colors shadow-2xs btn-press"
+                      title="Edit Loan in Spreadsheet"
+                    >
+                      <Edit3 className="w-3.5 h-3.5" />
+                      <span>Edit</span>
+                    </button>
 
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setSelectedLoanId(loan.id);
-                          router.push(`/loans/${loan.id}`);
-                        }}
-                        className="py-1.5 px-2.5 text-slate-600 hover:text-slate-900 border border-slate-200 rounded-xl flex items-center justify-center cursor-pointer transition-colors"
-                        title="View Details"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedLoanId(loan.id);
+                        router.push(`/loans/${loan.id}`);
+                      }}
+                      className="p-2 text-slate-600 hover:text-slate-950 bg-white hover:bg-slate-50 border border-slate-300 rounded-xl cursor-pointer transition-colors shadow-2xs btn-press"
+                      title="View Details"
+                    >
+                      <Eye className="w-4 h-4" />
+                    </button>
 
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (confirm(`Delete loan ${loan.id} for ${loan.customerName}?`)) {
-                            deleteLoan(loan.id);
-                          }
-                        }}
-                        className="py-1.5 px-2.5 text-slate-400 hover:text-rose-600 border border-slate-200 hover:border-rose-200 hover:bg-rose-50 rounded-xl flex items-center justify-center cursor-pointer transition-colors"
-                        title="Delete Loan"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (confirm(`Delete loan ${loan.id} for ${loan.customerName}?`)) {
+                          deleteLoan(loan.id);
+                        }
+                      }}
+                      className="p-2 text-slate-400 hover:text-rose-600 bg-white hover:bg-rose-50 border border-slate-300 hover:border-rose-300 rounded-xl cursor-pointer transition-colors shadow-2xs btn-press"
+                      title="Delete Loan"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
 
-                    {/* Expanded Mobile Schedule */}
-                    <div className={`grid-accordion ${isExpanded ? 'open' : ''}`}>
-                      <div>
-                        <div className="bg-[#FAF8F5] p-3 rounded-xl border border-[#E6E1D6] space-y-2 mt-2">
-                          <div className="flex items-center justify-between text-xs font-mono font-bold text-slate-700">
-                            <span>Payment Schedule ({loan.installments.length} EMIs)</span>
-                          </div>
-                          <div className="border border-[#E2DDD3] rounded-xl overflow-x-auto bg-white shadow-2xs">
-                            <table className="w-full text-left border-collapse text-xs min-w-[580px]">
-                              <thead>
-                                <tr className="bg-[#F4F1EA] border-b border-[#E2DDD3] text-[10px] font-mono font-bold text-slate-600">
-                                  <th className="p-2 text-center w-10">#</th>
-                                  <th className="p-2 w-24">Due Date</th>
-                                  <th className="p-2 text-right w-28">Amount (₹)</th>
-                                  <th className="p-2 text-center w-20">Status</th>
-                                  <th className="p-2">Company Splits</th>
-                                  <th className="p-2 text-center w-20">Action</th>
-                                </tr>
-                              </thead>
-                              <tbody className="divide-y divide-[#EDE8DF]">
-                                {loan.installments.map((inst) => {
-                                  const isPaid = ['PASS', 'NEFT', 'CASH', 'PAID', 'CLOSED', 'SETTLED', 'Paid'].includes(inst.status?.trim().toUpperCase());
-                                  return (
-                                    <tr key={inst.id} className="font-mono text-xs">
-                                      <td className="p-2 text-center font-bold text-slate-400">#{inst.seqNo}</td>
-                                      <td className="p-2 font-semibold text-slate-800">{inst.dueDate}</td>
-                                      <td className={`p-2 text-right ${isPaid ? 'bg-emerald-50/70' : ''}`}>
-                                        <MoneyDisplay
-                                          amount={inst.amountDue}
-                                          size="xs"
-                                          amountClassName={`font-bold block text-right ${isPaid ? 'text-emerald-800' : 'text-slate-900'}`}
-                                        />
-                                      </td>
-                                      <td className="p-2 text-center">
-                                        <StatusPill status={inst.status} size="sm" />
-                                      </td>
-                                      <td className="p-2">
-                                        <div className="flex items-center gap-1 flex-wrap">
-                                          {Object.entries(inst.companySplits || {}).map(([code, amt]) => (
-                                            <span
-                                              key={code}
-                                              className="px-1 py-0.2 rounded bg-slate-100 text-slate-700 text-[9px] font-semibold"
-                                            >
-                                              {code}: ₹{Number(amt).toLocaleString('en-IN')}
-                                            </span>
-                                          ))}
-                                        </div>
-                                      </td>
-                                      <td className="p-2 text-center">
-                                        {!isPaid ? (
-                                          <button
-                                            onClick={() =>
-                                              updateLoanInstallment(inst.id, {
-                                                status: 'PASS',
-                                                recdDate: new Date().toISOString().slice(0, 10),
-                                              })
-                                            }
-                                            className="px-2 py-0.5 bg-emerald-600 text-white rounded text-[10px] font-bold cursor-pointer btn-press"
+                  {/* Accordion Expanded Sub-Table: Installments on Mobile */}
+                  <div className={`grid-accordion ${isExpanded ? 'open' : ''}`}>
+                    <div>
+                      <div className="bg-[#FAF8F5] p-3 sm:p-4 rounded-xl border border-[#E6E1D6] space-y-2 mt-2">
+                        <div className="flex items-center justify-between text-xs font-mono font-bold text-slate-800">
+                          <span>Payment Schedule ({loan.installments.length} EMIs)</span>
+                          <span className="text-[10px] text-slate-400 font-normal">← Swipe horizontally →</span>
+                        </div>
+                        <div className="border border-[#E2DDD3] rounded-xl overflow-x-auto bg-white shadow-2xs">
+                          <table className="w-full text-left border-collapse text-xs min-w-[560px]">
+                            <thead>
+                              <tr className="bg-[#F4F1EA] border-b border-[#E2DDD3] text-[10px] font-mono font-bold text-slate-700">
+                                <th className="p-2 text-center w-10">#</th>
+                                <th className="p-2 w-24">Due Date</th>
+                                <th className="p-2 text-right w-28">Amount (₹)</th>
+                                <th className="p-2 text-center w-20">Status</th>
+                                <th className="p-2">Company Splits</th>
+                                <th className="p-2 text-center w-20">Action</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-[#EDE8DF]">
+                              {loan.installments.map((inst) => {
+                                const isPaid = ['PASS', 'NEFT', 'CASH', 'PAID', 'CLS', 'CS', 'SETTLED', 'CLOSED', 'RET NEFT', 'RET PASS', 'Paid'].includes(inst.status?.trim().toUpperCase());
+                                return (
+                                  <tr key={inst.id} className="font-mono text-xs hover:bg-slate-50 transition-colors">
+                                    <td className="p-2 text-center font-bold text-slate-400">#{inst.seqNo}</td>
+                                    <td className="p-2 font-semibold text-slate-800 whitespace-nowrap">{inst.dueDate}</td>
+                                    <td className={`p-2 text-right whitespace-nowrap ${isPaid ? 'bg-emerald-50/70' : ''}`}>
+                                      <MoneyDisplay
+                                        amount={inst.amountDue}
+                                        size="xs"
+                                        amountClassName={`font-bold block text-right ${isPaid ? 'text-emerald-700 font-bold' : 'text-slate-900'}`}
+                                      />
+                                    </td>
+                                    <td className="p-2 text-center whitespace-nowrap">
+                                      <StatusPill status={inst.status} size="xs" />
+                                    </td>
+                                    <td className="p-2">
+                                      <div className="flex items-center gap-1 flex-wrap">
+                                        {Object.entries(inst.companySplits || {}).map(([code, amt]) => (
+                                          <span
+                                            key={code}
+                                            className="px-1.5 py-0.2 rounded bg-slate-100 border border-slate-200 text-slate-700 text-[9px] font-semibold whitespace-nowrap"
                                           >
-                                            Pay
-                                          </button>
-                                        ) : (
-                                          <span className="text-[10px] text-emerald-600 font-bold">Paid</span>
-                                        )}
-                                      </td>
-                                    </tr>
-                                  );
-                                })}
-                              </tbody>
-                            </table>
-                          </div>
+                                            <strong>{code}:</strong> ₹{Number(amt).toLocaleString('en-IN')}
+                                          </span>
+                                        ))}
+                                      </div>
+                                    </td>
+                                    <td className="p-2 text-center whitespace-nowrap">
+                                      {!isPaid ? (
+                                        <button
+                                          type="button"
+                                          onClick={() =>
+                                            updateLoanInstallment(inst.id, {
+                                              status: 'PASS',
+                                              recdDate: new Date().toISOString().slice(0, 10),
+                                            })
+                                          }
+                                          className="px-2.5 py-1 bg-emerald-700 hover:bg-emerald-800 text-white rounded text-[10px] font-bold cursor-pointer btn-press"
+                                        >
+                                          Collect
+                                        </button>
+                                      ) : (
+                                        <span className="text-[10px] text-emerald-700 font-bold">Paid</span>
+                                      )}
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
                         </div>
                       </div>
                     </div>
                   </div>
-                );
-              })}
-            </div>
+                </div>
+              );
+            })}
           </div>
-        )}
-      </div>
+        </>
+      )}
 
       {/* Guided 5-Step Loan Creation Modal */}
       <NewLoanModal
