@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { X, Scissors, AlertCircle, ArrowRight, CheckCircle2, CheckSquare, Square } from 'lucide-react';
 import { Loan, Installment } from '@/lib/types';
 import { useApp } from '@/lib/store';
+import { evaluateApprovalAction } from '@/lib/utils/approvalRouting';
 
 interface SplitLoanModalProps {
   isOpen: boolean;
@@ -12,7 +13,7 @@ interface SplitLoanModalProps {
 }
 
 export const SplitLoanModal: React.FC<SplitLoanModalProps> = ({ isOpen, onClose, loan }) => {
-  const { showToast, refreshAll } = useApp();
+  const { showToast, refreshAll, currentActor, approvalRules, createApprovalRequest } = useApp();
 
   const [selectedInstIds, setSelectedInstIds] = useState<Set<string>>(new Set());
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -54,6 +55,34 @@ export const SplitLoanModal: React.FC<SplitLoanModalProps> = ({ isOpen, onClose,
 
     setIsSubmitting(true);
     try {
+      const evaluation = evaluateApprovalAction('Loan Split', extractedTotal, currentActor.primaryRoleId, approvalRules);
+
+      if (evaluation.action === 'REQUIRE_APPROVAL') {
+        await createApprovalRequest({
+          ruleId: evaluation.rule?.id,
+          changeType: 'Loan Split',
+          title: `Split ${extractedList.length} EMIs (₹${extractedTotal.toLocaleString('en-IN')}) from ${loan.id}`,
+          description: `Splitting ${loan.customerName} facility: moving ${extractedList.length} EMIs to a new loan while retaining ${retainedList.length} EMIs in ${loan.id}.`,
+          entityType: 'loan',
+          entityId: loan.id,
+          requesterId: currentActor.id,
+          requesterName: currentActor.name,
+          requesterRoleId: currentActor.primaryRoleId,
+          approverRoleId: evaluation.approverRoleId,
+          amount: extractedTotal,
+          status: 'Pending',
+          beforePayload: { loanId: loan.id, customer: loan.customerName, totalAmount: loan.totalAmount, emiCount: installments.length },
+          proposedPayload: {
+            parentLoanId: loan.id,
+            installmentIdsToExtract: Array.from(selectedInstIds),
+            extractedAmount: extractedTotal,
+            retainedAmount: retainedTotal,
+          },
+        });
+        onClose();
+        return;
+      }
+
       const res = await fetch('/api/loans/split', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -66,6 +95,25 @@ export const SplitLoanModal: React.FC<SplitLoanModalProps> = ({ isOpen, onClose,
       const resJson = await res.json();
       if (!resJson.success) {
         throw new Error(resJson.error || 'Failed to split loan.');
+      }
+
+      if (evaluation.action === 'AUTO_APPROVE_QUEUE') {
+        await createApprovalRequest({
+          ruleId: evaluation.rule?.id,
+          changeType: 'Loan Split',
+          title: `Split ${extractedList.length} EMIs (₹${extractedTotal.toLocaleString('en-IN')}) from ${loan.id}`,
+          description: `Auto-approved per active policy: facility amount within threshold.`,
+          entityType: 'loan',
+          entityId: loan.id,
+          requesterId: currentActor.id,
+          requesterName: currentActor.name,
+          requesterRoleId: currentActor.primaryRoleId,
+          approverRoleId: evaluation.approverRoleId,
+          amount: extractedTotal,
+          status: 'Auto-Approved',
+          beforePayload: { loanId: loan.id, totalAmount: loan.totalAmount },
+          proposedPayload: { parentLoanId: loan.id, newLoanId: resJson.data.newLoan.id, extractedAmount: extractedTotal },
+        });
       }
 
       await refreshAll();
@@ -84,7 +132,7 @@ export const SplitLoanModal: React.FC<SplitLoanModalProps> = ({ isOpen, onClose,
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 overflow-y-auto animate-in fade-in duration-150">
-      <div className="bg-white rounded-3xl border border-[#E6E1D6] shadow-2xl w-full max-w-3xl max-h-[92vh] flex flex-col overflow-hidden">
+      <div className="bg-white rounded-3xl border border-[#E6E1D6] shadow-2xl w-full max-w-3xl max-h-[92vh] flex flex-col overflow-hidden motion-modal">
         {/* Header */}
         <div className="px-6 py-5 border-b border-[#E6E1D6] flex items-center justify-between bg-[#FAF8F5]">
           <div className="flex items-center gap-3">

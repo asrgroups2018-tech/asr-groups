@@ -73,11 +73,14 @@ export type PermissionMatrixState = {
 
 export type ChangeType =
   | 'Loan Update'
+  | 'Loan Split'
+  | 'Loan Merge'
   | 'Collection Correction'
   | 'Expense Edit'
   | 'Salary Change'
   | 'Customer Update'
-  | 'Role Change';
+  | 'Role Change'
+  | 'Historical Correction';
 
 export interface ApprovalRule {
   id: string; // e.g. "RULE-101"
@@ -90,6 +93,33 @@ export interface ApprovalRule {
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+export type ApprovalRequestStatus = 'Pending' | 'Approved' | 'Rejected' | 'Auto-Approved';
+
+export type EntityType = 'loan' | 'customer' | 'company' | 'historical_receipt' | 'user';
+
+export interface ApprovalRequest {
+  id: string; // e.g. "REQ-2026-1001"
+  ruleId?: string; // e.g. "RULE-101"
+  changeType: ChangeType;
+  title: string;
+  description?: string;
+  entityType: EntityType;
+  entityId: string;
+  requesterId: string;
+  requesterName: string;
+  requesterRoleId: RoleId;
+  approverRoleId: RoleId;
+  amount: number;
+  status: ApprovalRequestStatus;
+  beforePayload?: string; // JSON string of old state
+  proposedPayload: string; // JSON string of proposed state
+  reviewerId?: string;
+  reviewerName?: string;
+  reviewerNotes?: string;
+  createdAt: string;
+  resolvedAt?: string;
 }
 
 export type AuditActionType =
@@ -305,7 +335,9 @@ export interface Loan {
   customerName: string;
   place?: string;
   codeNo?: string; // Reference/display code (e.g. "TN0019") - NOT a unique key
-  totalAmount: number; // Sum of all installment amounts
+  totalAmount: number; // Sum of all installment amounts (Total repayable account)
+  disbursedAmount?: number | null; // Net principal amount paid / given to customer (e.g. ₹90,000)
+  interestAmount?: number | null; // Upfront interest amount earned by ASR (e.g. ₹10,000)
   startDate: string;
   installmentCount: number; // e.g. 2, 4, 12
   frequency: 'Weekly' | 'Monthly';

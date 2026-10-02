@@ -40,8 +40,8 @@ export const ExportLoansModal: React.FC<ExportLoansModalProps> = ({
 
   if (!isOpen) return null;
 
-  const handleExportExcel = () => {
-    exportLoansToExcel(loans, dateRangeLabel);
+  const handleExportExcel = async () => {
+    await exportLoansToExcel(loans, dateRangeLabel);
     onSuccess('excel');
     onClose();
   };
@@ -55,7 +55,7 @@ export const ExportLoansModal: React.FC<ExportLoansModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
       <div
-        className="relative w-full max-w-xl bg-white rounded-3xl shadow-2xl border border-[#E6E1D6] overflow-hidden animate-in zoom-in-95 duration-150"
+        className="relative w-full max-w-xl bg-white rounded-3xl shadow-2xl border border-[#E6E1D6] overflow-hidden motion-modal"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}
@@ -104,7 +104,7 @@ export const ExportLoansModal: React.FC<ExportLoansModalProps> = ({
             {/* Option 1: Export as Excel */}
             <button
               onClick={handleExportExcel}
-              className="group text-left p-5 rounded-2xl border-2 border-emerald-200 hover:border-emerald-500 bg-emerald-50/40 hover:bg-emerald-50 transition-all cursor-pointer flex flex-col justify-between space-y-4 shadow-2xs hover:shadow-md"
+              className="group text-left p-5 rounded-2xl border-2 border-emerald-200 hover:border-emerald-500 bg-emerald-50/40 hover:bg-emerald-50 transition-all cursor-pointer flex flex-col justify-between space-y-4 shadow-2xs hover:shadow-md btn-press"
             >
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
@@ -134,7 +134,7 @@ export const ExportLoansModal: React.FC<ExportLoansModalProps> = ({
             {/* Option 2: Export as PDF */}
             <button
               onClick={handleExportPdf}
-              className="group text-left p-5 rounded-2xl border-2 border-[#E2D2B0] hover:border-[#701A35] bg-[#FAF8F5] hover:bg-[#F5EFE6] transition-all cursor-pointer flex flex-col justify-between space-y-4 shadow-2xs hover:shadow-md"
+              className="group text-left p-5 rounded-2xl border-2 border-[#E2D2B0] hover:border-[#701A35] bg-[#FAF8F5] hover:bg-[#F5EFE6] transition-all cursor-pointer flex flex-col justify-between space-y-4 shadow-2xs hover:shadow-md btn-press"
             >
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
@@ -170,7 +170,7 @@ export const ExportLoansModal: React.FC<ExportLoansModalProps> = ({
           </span>
           <button
             onClick={onClose}
-            className="px-4 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-200 rounded-xl transition-colors cursor-pointer"
+            className="px-4 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-200 rounded-xl transition-colors cursor-pointer btn-press"
           >
             Cancel
           </button>

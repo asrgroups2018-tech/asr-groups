@@ -7,6 +7,10 @@ import { MoneyDisplay } from '@/components/ui/MoneyDisplay';
 interface TermsStepProps {
   totalAmount: number;
   setTotalAmount: (amount: number) => void;
+  disbursedAmount: number;
+  setDisbursedAmount: (amount: number) => void;
+  interestAmount: number;
+  setInterestAmount: (amount: number) => void;
   frequency: 'Weekly' | 'Monthly';
   setFrequency: (freq: 'Weekly' | 'Monthly') => void;
   installmentCount: number;
@@ -18,6 +22,10 @@ interface TermsStepProps {
 export const TermsStep: React.FC<TermsStepProps> = ({
   totalAmount,
   setTotalAmount,
+  disbursedAmount,
+  setDisbursedAmount,
+  interestAmount,
+  setInterestAmount,
   frequency,
   setFrequency,
   installmentCount,
@@ -30,7 +38,7 @@ export const TermsStep: React.FC<TermsStepProps> = ({
       {/* Total Loan Capital Amount */}
       <div className="bg-[#240F1D] p-5 rounded-xl border border-[#3D1A2C] space-y-3">
         <label className="text-sm font-semibold text-[#EED8A1] flex items-center gap-2">
-          <IndianRupee className="w-4 h-4 text-[#C5A059]" /> Total Loan Capital Amount (₹)
+          <IndianRupee className="w-4 h-4 text-[#C5A059]" /> Total Loan Account Amount (₹)
         </label>
         <div className="relative">
           <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#C5A059] font-bold text-lg">₹</span>
@@ -39,9 +47,15 @@ export const TermsStep: React.FC<TermsStepProps> = ({
             min="1000"
             step="1000"
             value={totalAmount || ''}
-            onChange={(e) => setTotalAmount(e.target.value === '' ? 0 : Number(e.target.value))}
+            onChange={(e) => {
+              const val = e.target.value === '' ? 0 : Number(e.target.value);
+              setTotalAmount(val);
+              if (interestAmount > 0 && val > interestAmount) {
+                setDisbursedAmount(val - interestAmount);
+              }
+            }}
             className="w-full bg-[#160810] border border-[#3D1A2C] rounded-lg pl-8 pr-4 py-3 text-lg font-mono font-bold text-[#EED8A1] focus:outline-hidden focus:border-[#C5A059] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-            placeholder="Enter loan amount (e.g. 1000000)"
+            placeholder="Enter total gross loan amount to repay (e.g. 1000000)"
           />
         </div>
         <div className="flex items-center gap-2 text-xs text-slate-400 flex-wrap">
@@ -50,12 +64,75 @@ export const TermsStep: React.FC<TermsStepProps> = ({
             <button
               key={val}
               type="button"
-              onClick={() => setTotalAmount(val)}
+              onClick={() => {
+                setTotalAmount(val);
+                if (interestAmount > 0 && val > interestAmount) {
+                  setDisbursedAmount(val - interestAmount);
+                }
+              }}
               className="px-2.5 py-1 bg-[#160810] hover:bg-[#C5A059]/20 hover:text-[#EED8A1] border border-[#3D1A2C] rounded-md font-mono text-[11px] cursor-pointer transition-colors"
             >
               ₹{(val / 100000).toFixed(0)} Lakh
             </button>
           ))}
+        </div>
+      </div>
+
+      {/* Disbursed Amount & Upfront Interest (ASR Earnings) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="bg-[#240F1D] p-4.5 rounded-xl border border-[#3D1A2C] space-y-2">
+          <label className="text-xs font-mono uppercase text-slate-300 font-bold block">
+            Net Disbursed / Paid (₹)
+          </label>
+          <div className="relative">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-mono text-sm">₹</span>
+            <input
+              type="number"
+              placeholder="e.g. 850000"
+              value={disbursedAmount || ''}
+              onChange={(e) => {
+                const val = e.target.value === '' ? 0 : Number(e.target.value);
+                setDisbursedAmount(val);
+                if (totalAmount > 0 && val <= totalAmount) {
+                  setInterestAmount(totalAmount - val);
+                }
+              }}
+              className="w-full bg-[#160810] border border-[#3D1A2C] rounded-lg pl-7 pr-3 py-2 text-sm font-mono font-bold text-slate-100 focus:outline-hidden focus:border-[#C5A059] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+            />
+          </div>
+          <span className="text-[11px] text-slate-400 block">
+            Principal given to the borrower
+          </span>
+        </div>
+
+        <div className="bg-[#240F1D] p-4.5 rounded-xl border border-amber-500/30 bg-gradient-to-br from-[#240F1D] to-[#2D1223] space-y-2">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-mono uppercase text-[#EED8A1] font-bold block">
+              Upfront Interest (₹)
+            </label>
+            <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-amber-400/20 text-amber-300 border border-amber-400/40 font-mono">
+              ASR Profit
+            </span>
+          </div>
+          <div className="relative">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#C5A059] font-mono text-sm">₹</span>
+            <input
+              type="number"
+              placeholder="e.g. 150000"
+              value={interestAmount || ''}
+              onChange={(e) => {
+                const val = e.target.value === '' ? 0 : Number(e.target.value);
+                setInterestAmount(val);
+                if (totalAmount > 0 && val <= totalAmount) {
+                  setDisbursedAmount(totalAmount - val);
+                }
+              }}
+              className="w-full bg-[#160810] border border-[#3D1A2C] rounded-lg pl-7 pr-3 py-2 text-sm font-mono font-bold text-[#EED8A1] focus:outline-hidden focus:border-[#C5A059] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+            />
+          </div>
+          <span className="text-[11px] text-amber-300/80 block">
+            Deducted upfront upon loan creation
+          </span>
         </div>
       </div>
 

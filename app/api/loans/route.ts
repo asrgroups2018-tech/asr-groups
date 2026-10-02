@@ -27,6 +27,8 @@ export async function POST(req: NextRequest) {
       customerId: body.customerId,
       codeNo: body.codeNo,
       totalAmount: Number(body.totalAmount),
+      disbursedAmount: body.disbursedAmount !== undefined ? Number(body.disbursedAmount) : null,
+      interestAmount: body.interestAmount !== undefined ? Number(body.interestAmount) : null,
       startDate: body.startDate || new Date().toISOString().slice(0, 10),
       frequency: body.frequency || 'Monthly',
       splits: body.splits || [],

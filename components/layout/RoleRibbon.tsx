@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useApp } from '@/lib/store';
-import { ShieldCheck, ShieldAlert, Sparkles, UserCheck } from 'lucide-react';
+import { ShieldCheck, ShieldAlert, UserCheck } from 'lucide-react';
 import { RoleBadge } from '@/components/ui/RoleBadge';
 
 export const RoleRibbon: React.FC = () => {

@@ -155,7 +155,7 @@ export const SystemSettingsTab: React.FC = () => {
   return (
     <div className="space-y-6 pb-20">
       {/* Sub-tab Navigation */}
-      <div className="bg-white rounded-2xl p-2.5 border border-[#EBE7DF] shadow-[0_2px_8px_rgba(0,0,0,0.03)] flex items-center gap-2 overflow-x-auto">
+      <div className="bg-white rounded-2xl p-2.5 border border-slate-200 shadow-sm flex items-center gap-2 overflow-x-auto">
         {[
           { id: 'profile', label: 'Company Profile', icon: <Building2 className="w-4 h-4" /> },
           {
@@ -176,7 +176,7 @@ export const SystemSettingsTab: React.FC = () => {
             <button
               key={tab.id}
               onClick={() => setActiveSubTab(tab.id as SettingsSubTab)}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 ${
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 cursor-pointer btn-press ${
                 isActive
                   ? 'bg-[#701A35] text-white border border-[#C5A059]/40 shadow-xs'
                   : 'text-slate-600 hover:bg-[#F3EFE6] hover:text-slate-900'
@@ -200,7 +200,7 @@ export const SystemSettingsTab: React.FC = () => {
       {activeSubTab === 'profile' && (
         <form
           onSubmit={handleSaveProfile}
-          className="bg-white rounded-2xl p-6 border border-[#EBE7DF] shadow-[0_2px_8px_rgba(0,0,0,0.03)] space-y-6 max-w-4xl animate-in fade-in"
+          className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-6 max-w-4xl animate-in fade-in"
         >
           <div>
             <h3 className="text-base font-bold text-slate-900 font-serif">
@@ -351,7 +351,7 @@ export const SystemSettingsTab: React.FC = () => {
 
       {/* 2. SHAREHOLDER COMPANIES */}
       {activeSubTab === 'shareholders' && (
-        <div className="bg-white rounded-2xl p-6 border border-[#EBE7DF] shadow-[0_2px_8px_rgba(0,0,0,0.03)] space-y-6 max-w-4xl animate-in fade-in">
+        <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-6 max-w-4xl animate-in fade-in">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
               <h3 className="text-base font-bold text-slate-900 font-serif">
@@ -532,7 +532,7 @@ export const SystemSettingsTab: React.FC = () => {
       {activeSubTab === 'security' && (
         <form
           onSubmit={handleSaveSecurity}
-          className="bg-white rounded-2xl p-6 border border-[#EBE7DF] shadow-[0_2px_8px_rgba(0,0,0,0.03)] space-y-6 max-w-4xl animate-in fade-in"
+          className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-6 max-w-4xl animate-in fade-in"
         >
           <div>
             <h3 className="text-base font-bold text-slate-900 font-serif">
@@ -635,7 +635,7 @@ export const SystemSettingsTab: React.FC = () => {
           <div className="flex justify-end pt-3 border-t border-slate-100">
             <button
               type="submit"
-              className="px-5 py-2 text-xs font-bold text-white bg-[#701A35] hover:bg-[#5C142B] active:scale-98 rounded-xl transition-all shadow-xs flex items-center gap-1.5"
+              className="px-5 py-2 text-xs font-bold text-white bg-[#701A35] hover:bg-[#5C142B] rounded-xl transition-all shadow-xs flex items-center gap-1.5 btn-press cursor-pointer"
             >
               <Save className="w-4 h-4 text-amber-200" />
               <span>Update Security Policy</span>
@@ -646,7 +646,7 @@ export const SystemSettingsTab: React.FC = () => {
 
       {/* 4. DATA & BACKUP */}
       {activeSubTab === 'backup' && (
-        <div className="bg-white rounded-2xl p-6 border border-[#EBE7DF] shadow-[0_2px_8px_rgba(0,0,0,0.03)] space-y-6 max-w-4xl animate-in fade-in">
+        <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-6 max-w-4xl animate-in fade-in">
           <div>
             <h3 className="text-base font-bold text-slate-900 font-serif">
               Disaster Recovery & Encrypted Snapshots
@@ -716,7 +716,7 @@ export const SystemSettingsTab: React.FC = () => {
 
       {/* 5. FEATURE TOGGLES */}
       {activeSubTab === 'toggles' && (
-        <div className="bg-white rounded-2xl p-6 border border-[#EBE7DF] shadow-[0_2px_8px_rgba(0,0,0,0.03)] space-y-6 max-w-4xl animate-in fade-in">
+        <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-6 max-w-4xl animate-in fade-in">
           <div>
             <h3 className="text-base font-bold text-slate-900 font-serif">
               System Feature Flags & Modules
@@ -834,7 +834,7 @@ export const SystemSettingsTab: React.FC = () => {
           <div className="flex justify-end pt-3 border-t border-slate-100">
             <button
               onClick={handleSaveToggles}
-              className="px-5 py-2 text-xs font-bold text-white bg-[#701A35] hover:bg-[#5C142B] active:scale-98 rounded-xl transition-all shadow-xs flex items-center gap-1.5"
+              className="px-5 py-2 text-xs font-bold text-white bg-[#701A35] hover:bg-[#5C142B] rounded-xl transition-all shadow-xs flex items-center gap-1.5 btn-press cursor-pointer"
             >
               <Save className="w-4 h-4 text-amber-200" />
               <span>Save Feature Flags</span>

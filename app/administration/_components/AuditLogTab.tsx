@@ -11,7 +11,6 @@ import {
   FileSpreadsheet,
   ShieldAlert,
   ArrowRight,
-  Sparkles,
   UserRound,
 } from 'lucide-react';
 import { RoleBadge } from '@/components/ui/RoleBadge';
@@ -49,121 +48,124 @@ export const AuditLogTab: React.FC = () => {
     return Array.from(new Set(auditLogs.map((l) => l.action))).sort();
   }, [auditLogs]);
 
-  const columns: ColumnDef<AuditLogEntry>[] = [
-    {
-      key: 'timestamp',
-      header: 'Time',
-      sortable: true,
-      accessor: (l) => l.timestamp,
-      render: (l) => (
-        <div className="font-mono text-[11px] text-slate-700">
-          <p className="font-bold">{l.timestamp.slice(0, 10)}</p>
-          <p className="text-slate-500">{l.timestamp.slice(11)}</p>
-        </div>
-      ),
-      exportValue: (l) => l.timestamp,
-    },
-    {
-      key: 'actor',
-      header: 'Actor',
-      sortable: true,
-      accessor: (l) => l.actorName,
-      render: (l) => (
-        <div className="space-y-0.5">
-          <div className="flex items-center gap-1.5">
-            <span className="font-bold text-slate-900 text-xs">{l.actorName}</span>
-            <RoleBadge roleId={l.actorRoleId} size="xs" />
+  const columns: ColumnDef<AuditLogEntry>[] = useMemo(
+    () => [
+      {
+        key: 'timestamp',
+        header: 'Time',
+        sortable: true,
+        accessor: (l) => l.timestamp,
+        render: (l) => (
+          <div className="font-mono text-[11px] text-slate-700">
+            <p className="font-bold">{l.timestamp.slice(0, 10)}</p>
+            <p className="text-slate-500">{l.timestamp.slice(11)}</p>
           </div>
-          <p className="text-[10px] font-mono text-slate-400">{l.actorId}</p>
-        </div>
-      ),
-      exportValue: (l) => `${l.actorName} (Role ${l.actorRoleId})`,
-    },
-    {
-      key: 'action',
-      header: 'Action',
-      sortable: true,
-      accessor: (l) => l.action,
-      render: (l) => (
-        <div className="space-y-1">
-          <div className="flex items-center gap-1.5">
-            <span
-              className={`font-bold text-xs ${
-                l.isSensitive ? 'text-amber-800' : 'text-slate-800'
-              }`}
-            >
-              {l.action}
-            </span>
-            {l.isSensitive && (
-              <span className="text-[9px] bg-amber-100 text-amber-900 font-bold px-1.5 py-0.2 rounded border border-amber-300">
-                SENSITIVE
+        ),
+        exportValue: (l) => l.timestamp,
+      },
+      {
+        key: 'actor',
+        header: 'Actor',
+        sortable: true,
+        accessor: (l) => l.actorName,
+        render: (l) => (
+          <div className="space-y-0.5">
+            <div className="flex items-center gap-1.5">
+              <span className="font-bold text-slate-900 text-xs">{l.actorName}</span>
+              <RoleBadge roleId={l.actorRoleId} size="xs" />
+            </div>
+            <p className="text-[10px] font-mono text-slate-400">{l.actorId}</p>
+          </div>
+        ),
+        exportValue: (l) => `${l.actorName} (Role ${l.actorRoleId})`,
+      },
+      {
+        key: 'action',
+        header: 'Action',
+        sortable: true,
+        accessor: (l) => l.action,
+        render: (l) => (
+          <div className="space-y-1">
+            <div className="flex items-center gap-1.5">
+              <span
+                className={`font-bold text-xs ${
+                  l.isSensitive ? 'text-amber-800' : 'text-slate-800'
+                }`}
+              >
+                {l.action}
               </span>
+              {l.isSensitive && (
+                <span className="text-[9px] bg-amber-100 text-amber-900 font-bold px-1.5 py-0.2 rounded border border-amber-300">
+                  SENSITIVE
+                </span>
+              )}
+            </div>
+          </div>
+        ),
+        exportValue: (l) => (l.isSensitive ? `[SENSITIVE] ${l.action}` : l.action),
+      },
+      {
+        key: 'target',
+        header: 'Target',
+        sortable: true,
+        accessor: (l) => l.target,
+        render: (l) => (
+          <span className="font-medium text-slate-800 text-xs truncate max-w-xs block">
+            {l.target}
+          </span>
+        ),
+      },
+      {
+        key: 'diff',
+        header: 'Details',
+        sortable: false,
+        render: (l) => (
+          <div className="text-[11px] space-y-1 max-w-sm">
+            {l.beforeVal && (
+              <div className="flex items-center gap-1.5 text-slate-500 font-mono bg-slate-50 px-2 py-0.5 rounded border border-slate-200">
+                <span className="text-slate-400 font-bold text-[10px]">BEFORE:</span>
+                <span className="truncate">{l.beforeVal}</span>
+              </div>
+            )}
+            {l.afterVal && (
+              <div className="flex items-center gap-1.5 text-emerald-800 font-mono bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                <span className="text-emerald-600 font-bold text-[10px]">AFTER:</span>
+                <span className="truncate">{l.afterVal}</span>
+              </div>
             )}
           </div>
-        </div>
-      ),
-      exportValue: (l) => (l.isSensitive ? `[SENSITIVE] ${l.action}` : l.action),
-    },
-    {
-      key: 'target',
-      header: 'Target',
-      sortable: true,
-      accessor: (l) => l.target,
-      render: (l) => (
-        <span className="font-medium text-slate-800 text-xs truncate max-w-xs block">
-          {l.target}
-        </span>
-      ),
-    },
-    {
-      key: 'diff',
-      header: 'Details',
-      sortable: false,
-      render: (l) => (
-        <div className="text-[11px] space-y-1 max-w-sm">
-          {l.beforeVal && (
-            <div className="flex items-center gap-1.5 text-slate-500 font-mono bg-slate-50 px-2 py-0.5 rounded border border-slate-200">
-              <span className="text-slate-400 font-bold text-[10px]">BEFORE:</span>
-              <span className="truncate">{l.beforeVal}</span>
-            </div>
-          )}
-          {l.afterVal && (
-            <div className="flex items-center gap-1.5 text-emerald-800 font-mono bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-              <span className="text-emerald-600 font-bold text-[10px]">AFTER:</span>
-              <span className="truncate">{l.afterVal}</span>
-            </div>
-          )}
-        </div>
-      ),
-      exportValue: (l) =>
-        `Before: ${l.beforeVal || '-'} -> After: ${l.afterVal || '-'}`,
-    },
-    {
-      key: 'client',
-      header: 'IP / Device Info',
-      sortable: false,
-      render: (l) => (
-        <div className="font-mono text-[11px] text-slate-600 space-y-0.5">
-          <p className="font-semibold text-slate-800">{l.ipAddress}</p>
-          <p className="text-[10px] text-slate-400 truncate max-w-[140px]">{l.device}</p>
-        </div>
-      ),
-      exportValue: (l) => `${l.ipAddress} (${l.device})`,
-    },
-  ];
+        ),
+        exportValue: (l) =>
+          `Before: ${l.beforeVal || '-'} -> After: ${l.afterVal || '-'}`,
+      },
+      {
+        key: 'client',
+        header: 'IP / Device Info',
+        sortable: false,
+        render: (l) => (
+          <div className="font-mono text-[11px] text-slate-600 space-y-0.5">
+            <p className="font-semibold text-slate-800">{l.ipAddress}</p>
+            <p className="text-[10px] text-slate-400 truncate max-w-[140px]">{l.device}</p>
+          </div>
+        ),
+        exportValue: (l) => `${l.ipAddress} (${l.device})`,
+      },
+    ],
+    []
+  );
 
   return (
     <div className="space-y-6">
       {/* Header Banner */}
-      <div className="bg-white rounded-2xl p-5 border border-[#EBE7DF] shadow-[0_2px_8px_rgba(0,0,0,0.03)] space-y-4">
+      <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#FAF8F5] border border-[#E6E1D6] flex items-center justify-center text-[#701A35]">
-              <History className="w-5 h-5" />
+            <div className="w-10 h-10 rounded-xl bg-[#701A35] text-[#EED8A1] shadow-sm flex items-center justify-center shrink-0">
+              <History className="w-5 h-5 text-amber-200" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="text-base font-bold text-slate-900 font-serif">
+                <h3 className="text-lg font-bold text-slate-900 font-serif">
                   System Audit Ledger
                 </h3>
                 <span className="inline-flex items-center gap-1 text-[10px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200">

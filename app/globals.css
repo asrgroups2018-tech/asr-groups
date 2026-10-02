@@ -70,3 +70,157 @@ input[type="number"] {
   appearance: textfield;
 }
 
+/* ═════════════════════════════════════════════════════════════════════════
+   UNIVERSAL SMOOTH INTERACTIVE TRANSITIONS (SNAPPY 90ms - 160ms)
+   ═════════════════════════════════════════════════════════════════════════ */
+
+button,
+a,
+input,
+select,
+textarea,
+[role="button"] {
+  transition: background-color 140ms ease-out, border-color 140ms ease-out, color 140ms ease-out, box-shadow 140ms ease-out, opacity 140ms ease-out, transform 90ms ease-out;
+}
+
+input[type="checkbox"],
+input[type="radio"] {
+  transition: background-color 120ms ease-out, border-color 120ms ease-out, transform 90ms ease-out, box-shadow 120ms ease-out;
+  cursor: pointer;
+}
+
+input[type="checkbox"]:active,
+input[type="radio"]:active {
+  transform: scale(0.92);
+}
+
+button svg,
+a svg,
+[role="button"] svg {
+  transition: transform 120ms ease-out, color 120ms ease-out, opacity 120ms ease-out;
+}
+
+tr,
+tbody tr {
+  transition: background-color 120ms ease-out, border-color 120ms ease-out, opacity 120ms ease-out;
+}
+
+@keyframes pageEnter {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes modalEnter {
+  from {
+    opacity: 0;
+    transform: scale(0.97) translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes popoverEnter {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes shakeError {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-3px); }
+  40%, 80% { transform: translateX(3px); }
+}
+
+@keyframes saveCommitFlash {
+  0% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4);
+    border-color: #10b981;
+  }
+  50% {
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.35);
+    border-color: #10b981;
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+  }
+}
+
+.page-enter {
+  animation: pageEnter 140ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.smooth-transition {
+  transition: all 140ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.smooth-fade {
+  transition: opacity 140ms ease-out, transform 140ms ease-out;
+}
+
+.motion-modal {
+  animation: modalEnter 130ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.motion-popover {
+  animation: popoverEnter 90ms ease-out forwards;
+  transform-origin: top right;
+}
+
+.motion-shake {
+  animation: shakeError 160ms ease-in-out;
+}
+
+.motion-save-pulse {
+  animation: saveCommitFlash 400ms ease-out;
+}
+
+/* CSS Grid Smooth Accordion Drawer */
+.grid-accordion {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 160ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.grid-accordion.open {
+  grid-template-rows: 1fr;
+}
+
+.grid-accordion > div {
+  overflow: hidden;
+}
+
+/* Active micro-press feedback */
+.btn-press {
+  transition: transform 90ms ease-out, background-color 100ms ease-out, border-color 100ms ease-out;
+}
+.btn-press:active {
+  transform: scale(0.98);
+}
+
+/* ═════════════════════════════════════════════════════════════════════════
+   PREFERS-REDUCED-MOTION ZERO-DURATION FALLBACK (MANDATORY ACCESSIBILITY)
+   ═════════════════════════════════════════════════════════════════════════ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+

@@ -21,6 +21,7 @@ import {
   Loan,
   Installment,
   HistoricalReceiptRow,
+  ApprovalRequest,
 } from './types';
 import {
   ROLES_DATA,
@@ -115,16 +116,23 @@ interface AppContextType {
   companies: Company[];
   loans: Loan[];
   receipts: HistoricalReceiptRow[];
+  approvalRequests: ApprovalRequest[];
   dashboardData: DashboardData | null;
   toasts: ToastMessage[];
   isLoading: boolean;
   isSavingReceipt: boolean;
 
   // Backend API Operations
-  refreshAll: () => Promise<void>;
+  refreshAll: (showLoadingState?: boolean) => Promise<void>;
   fetchReceipts: (category?: 'ALL' | 'ASR_ONLY' | 'OUTSIDE_ONLY', query?: string) => Promise<void>;
+  fetchApprovalRequests: (status?: string, changeType?: string, query?: string) => Promise<void>;
   showToast: (title: string, description?: string, type?: ToastMessage['type']) => void;
   removeToast: (id: string) => void;
+
+  // Requests & Approvals
+  createApprovalRequest: (data: any) => Promise<ApprovalRequest | null>;
+  approveRequest: (id: string, notes?: string) => Promise<boolean>;
+  rejectRequest: (id: string, notes: string) => Promise<boolean>;
 
   // Admin & User Operations
   updateUserRoles: (userId: string, roleIds: RoleId[], primaryRoleId: RoleId) => Promise<boolean>;
@@ -160,6 +168,8 @@ interface AppContextType {
     customerId: string;
     codeNo?: string;
     totalAmount: number;
+    disbursedAmount?: number | null;
+    interestAmount?: number | null;
     startDate: string;
     frequency: 'Weekly' | 'Monthly';
     splits: { companyId: string; splitPercent: number; splitAmount: number }[];
@@ -193,6 +203,8 @@ interface AppContextType {
       status?: string;
       frequency?: string;
       startDate?: string;
+      disbursedAmount?: number | null;
+      interestAmount?: number | null;
       installments: {
         id?: string;
         seqNo: number;
@@ -265,10 +277,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loans, setLoans] = useState<Loan[]>([]);
   const [receipts, setReceipts] = useState<HistoricalReceiptRow[]>([]);
+  const [approvalRequests, setApprovalRequests] = useState<ApprovalRequest[]>([]);
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isSavingReceipt, setIsSavingReceipt] = useState<boolean>(false);
+  const hasLoadedDataRef = React.useRef(false);
+  const isFetchingAuthRef = React.useRef(false);
 
   useEffect(() => {
     if (pathname === '/login') {
@@ -277,8 +292,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return;
     }
 
+    if (authenticatedUser || isFetchingAuthRef.current) {
+      setAuthReady(true);
+      return;
+    }
+
+    isFetchingAuthRef.current = true;
     let cancelled = false;
-    setAuthReady(false);
     fetch('/api/auth/me')
       .then((response) => (response.ok ? response.json() : { success: false }))
       .then((json) => {
@@ -291,12 +311,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           setAuthenticatedUser(null);
           setAuthReady(true);
         }
+      })
+      .finally(() => {
+        isFetchingAuthRef.current = false;
       });
 
     return () => {
       cancelled = true;
     };
-  }, [pathname]);
+  }, [pathname, authenticatedUser]);
 
   // Toast Helpers
   const showToast = useCallback(
@@ -332,8 +355,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, []);
 
   // Fetch all primary datasets
-  const refreshAll = useCallback(async () => {
-    setIsLoading(true);
+  const refreshAll = useCallback(async (showLoadingState = false) => {
+    if (showLoadingState || !hasLoadedDataRef.current) {
+      setIsLoading(true);
+    }
     try {
       const [
         usersRes,
@@ -346,6 +371,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         compRes,
         loansRes,
         dashRes,
+        reqsRes,
       ] = await Promise.all([
         fetch('/api/admin/users').then((r) => r.json()).catch(() => ({ success: false })),
         fetch('/api/admin/roles').then((r) => r.json()).catch(() => ({ success: false })),
@@ -357,6 +383,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         fetch('/api/companies').then((r) => r.json()).catch(() => ({ success: false })),
         fetch('/api/loans').then((r) => r.json()).catch(() => ({ success: false })),
         fetch('/api/dashboard').then((r) => r.json()).catch(() => ({ success: false })),
+        fetch('/api/requests').then((r) => r.json()).catch(() => ({ success: false })),
       ]);
 
       if (usersRes.success && usersRes.data) setUsers(usersRes.data);
@@ -369,23 +396,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (compRes.success && compRes.data) setCompanies(compRes.data);
       if (loansRes.success && loansRes.data) setLoans(loansRes.data);
       if (dashRes.success && dashRes.data) setDashboardData(dashRes.data);
+      if (reqsRes && reqsRes.success && reqsRes.data) setApprovalRequests(reqsRes.data);
 
+      hasLoadedDataRef.current = true;
       // Also trigger initial receipt fetch
       fetchReceipts();
     } catch (err) {
       console.error('Data load error:', err);
-      showToast('Connection Notice', 'Financial records synchronized successfully.', 'info');
     } finally {
       setIsLoading(false);
     }
-  }, [showToast, fetchReceipts]);
+  }, [fetchReceipts]);
 
   useEffect(() => {
     if (!authReady || pathname === '/login') {
       setIsLoading(false);
       return;
     }
-    refreshAll();
+    // Only load initial data once on mount / initial auth
+    if (!hasLoadedDataRef.current) {
+      refreshAll(true);
+    }
   }, [authReady, pathname, refreshAll]);
 
   // Current Actor
@@ -393,6 +424,102 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     ? authenticatedUser.primaryRoleId
     : simulatedRoleId;
   const currentActor = authenticatedUser || users[0] || ROOT_ADMIN_FALLBACK;
+
+  const fetchApprovalRequests = useCallback(async (status?: string, changeType?: string, query?: string) => {
+    try {
+      const params = new URLSearchParams();
+      if (status && status !== 'ALL') params.set('status', status);
+      if (changeType && changeType !== 'ALL') params.set('changeType', changeType);
+      if (query) params.set('q', query);
+      const res = await fetch(`/api/requests?${params.toString()}`);
+      const json = await res.json();
+      if (json.success) setApprovalRequests(json.data || []);
+    } catch (err) {
+      console.error('Failed to fetch approval requests:', err);
+    }
+  }, []);
+
+  const createApprovalRequest = async (data: any): Promise<ApprovalRequest | null> => {
+    try {
+      const res = await fetch('/api/requests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      const json = await res.json();
+      if (json.success) {
+        showToast(
+          data.status === 'Auto-Approved' ? 'Request Auto-Approved' : 'Request Submitted',
+          data.status === 'Auto-Approved'
+            ? `${data.title} was automatically approved per active threshold policy.`
+            : `${data.title} submitted to Approvals Queue for authorization.`,
+          data.status === 'Auto-Approved' ? 'success' : 'info'
+        );
+        refreshAll(false);
+        return json.data;
+      } else {
+        showToast('Submission Failed', json.error || 'Failed to create request', 'error');
+        return null;
+      }
+    } catch (err: any) {
+      showToast('Error', err.message || 'Network error', 'error');
+      return null;
+    }
+  };
+
+  const approveRequest = async (id: string, notes?: string): Promise<boolean> => {
+    try {
+      const res = await fetch(`/api/requests/${encodeURIComponent(id)}/approve`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reviewerId: currentActor.id,
+          reviewerName: currentActor.name,
+          reviewerRoleId: currentActor.primaryRoleId,
+          notes: notes || 'Approved by reviewer',
+        }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        showToast('Request Approved', `Request ${id} approved and changes committed to ledger.`, 'success');
+        refreshAll(false);
+        return true;
+      } else {
+        showToast('Approval Error', json.error || 'Failed to approve request', 'error');
+        return false;
+      }
+    } catch (err: any) {
+      showToast('Error', err.message || 'Failed to approve request', 'error');
+      return false;
+    }
+  };
+
+  const rejectRequest = async (id: string, notes: string): Promise<boolean> => {
+    try {
+      const res = await fetch(`/api/requests/${encodeURIComponent(id)}/reject`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reviewerId: currentActor.id,
+          reviewerName: currentActor.name,
+          reviewerRoleId: currentActor.primaryRoleId,
+          notes,
+        }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        showToast('Request Rejected', `Request ${id} was rejected. Reason: ${notes}`, 'warning');
+        refreshAll(false);
+        return true;
+      } else {
+        showToast('Rejection Error', json.error || 'Failed to reject request', 'error');
+        return false;
+      }
+    } catch (err: any) {
+      showToast('Error', err.message || 'Failed to reject request', 'error');
+      return false;
+    }
+  };
 
   // ==========================================
   // Loan Creation Engine v2 & Propagation
@@ -430,7 +557,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       );
 
       // Re-trigger global propagation across dashboard, customers, companies, loans, receipts
-      await refreshAll();
+      refreshAll(false);
       return json.data;
     } catch (err: any) {
       showToast('Error', err.message || 'Failed to create loan', 'error');
@@ -465,7 +592,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
 
       showToast('Installment Updated', 'Repayment schedule and metrics updated.', 'success');
-      await refreshAll();
+      refreshAll(false);
       return json.data;
     } catch (err: any) {
       showToast('Error', err.message || 'Failed to update installment', 'error');
@@ -510,8 +637,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return null;
       }
       showToast('Loan Updated', `Loan ${loanId} and all ${data.installments.length} EMIs successfully updated.`, 'success');
-      await refreshAll();
-      return json;
+      refreshAll(false);
+      return json.data;
     } catch (err: any) {
       showToast('Error', err.message || 'Failed to update loan', 'error');
       return null;
@@ -520,15 +647,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const deleteLoan = async (id: string): Promise<boolean> => {
     try {
+      setLoans((prev) => prev.filter((l) => l.id !== id));
       const res = await fetch(`/api/loans?id=${id}`, { method: 'DELETE' });
       const json = await res.json();
       if (json.success) {
         showToast('Loan Removed', `Loan ${id} was deleted.`, 'info');
-        await refreshAll();
+        refreshAll(false);
         return true;
       }
+      refreshAll(false);
       return false;
     } catch {
+      refreshAll(false);
       return false;
     }
   };
@@ -584,7 +714,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const json = await res.json();
       if (json.success) {
         showToast('Customer Created', `Borrower ${data.name} added.`, 'success');
-        await refreshAll();
+        if (json.data) {
+          setCustomers((prev) => [json.data, ...prev]);
+        }
+        refreshAll(false);
         return json.data;
       }
       return null;
@@ -594,6 +727,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateCustomer = async (id: string, updates: Partial<Customer>) => {
+    setCustomers((prev) => prev.map((c) => (c.id === id ? { ...c, ...updates } : c)));
     try {
       const res = await fetch('/api/customers', {
         method: 'PUT',
@@ -603,26 +737,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const json = await res.json();
       if (json.success) {
         showToast('Customer Updated', `Borrower ${updates.name || id} modified.`, 'success');
-        await refreshAll();
+        refreshAll(false);
         return json.data;
       }
+      refreshAll(false);
       return null;
     } catch {
+      refreshAll(false);
       return null;
     }
   };
 
   const deleteCustomer = async (id: string) => {
+    setCustomers((prev) => prev.filter((c) => c.id !== id));
     try {
       const res = await fetch(`/api/customers?id=${id}`, { method: 'DELETE' });
       const json = await res.json();
       if (json.success) {
         showToast('Customer Removed', 'Borrower deleted.', 'info');
-        await refreshAll();
+        refreshAll(false);
         return true;
       }
+      refreshAll(false);
       return false;
     } catch {
+      refreshAll(false);
       return false;
     }
   };
@@ -640,7 +779,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const json = await res.json();
       if (json.success) {
         showToast('Company Added', `Funding entity ${data.shortCode} added.`, 'success');
-        await refreshAll();
+        if (json.data) {
+          setCompanies((prev) => [...prev, json.data]);
+        }
+        refreshAll(false);
         return json.data;
       }
       return null;
@@ -653,6 +795,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Administration Operations
   // ==========================================
   const updateUserRoles = async (userId: string, roleIds: RoleId[], primaryRoleId: RoleId): Promise<boolean> => {
+    setUsers((prev) =>
+      prev.map((u) => (u.id === userId ? { ...u, assignedRoleIds: roleIds, primaryRoleId } : u))
+    );
     try {
       const res = await fetch('/api/admin/users', {
         method: 'PUT',
@@ -662,7 +807,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const json = await res.json();
       if (json.success) {
         showToast('Roles Updated', `User roles updated successfully.`, 'success');
-        await refreshAll();
+        refreshAll(false);
         return true;
       }
       showToast('Access update failed', json.error || 'The role assignment could not be saved.', 'error');
@@ -674,6 +819,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateUserProfile = async (userId: string, data: Partial<User>) => {
+    setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, ...data } : u)));
     try {
       const res = await fetch('/api/admin/users', {
         method: 'PUT',
@@ -702,7 +848,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const json = await res.json();
       if (json.success) {
         showToast('User Created', `User ${userData.name} created.`, 'success');
-        await refreshAll();
+        if (json.data) {
+          setUsers((prev) => [...prev, json.data]);
+        }
+        refreshAll(false);
         return json.data;
       }
       showToast('User creation failed', json.error || 'The account could not be created.', 'error');
@@ -714,6 +863,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const toggleUserStatus = async (userId: string, status: UserStatus, reason?: string) => {
+    setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, status } : u)));
     try {
       const res = await fetch('/api/admin/users', {
         method: 'PUT',
@@ -733,14 +883,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteUser = async (userId: string) => {
+    setUsers((prev) => prev.filter((u) => u.id !== userId));
     try {
       const res = await fetch(`/api/admin/users?id=${userId}`, { method: 'DELETE' });
       const json = await res.json();
       if (json.success) {
         showToast('User Deleted', 'Account removed.', 'info');
-        await refreshAll();
+        refreshAll(false);
       } else {
         showToast('Action Blocked', json.error, 'error');
+        refreshAll(false);
       }
     } catch {
       showToast('Delete failed', 'The server could not remove this account.', 'error');
@@ -764,11 +916,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const toggleTwoFactor = async (userId: string) => {
     const u = users.find((x) => x.id === userId);
     if (!u) return;
-    await updateUserProfile(userId, { twoFactorEnabled: !u.twoFactorEnabled });
-    showToast('2FA Setting', `Two-Factor ${!u.twoFactorEnabled ? 'Enabled' : 'Disabled'}.`, 'success');
+    const nextVal = !u.twoFactorEnabled;
+    setUsers((prev) => prev.map((x) => (x.id === userId ? { ...x, twoFactorEnabled: nextVal } : x)));
+    showToast('2FA Setting', `Two-Factor ${nextVal ? 'Enabled' : 'Disabled'}.`, 'success');
+    try {
+      await fetch('/api/admin/users', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: userId, twoFactorEnabled: nextVal }),
+      });
+      refreshAll(false);
+    } catch {
+      refreshAll(false);
+    }
   };
 
   const updatePermissionMatrix = async (newMatrix: PermissionMatrixState) => {
+    setPermissionMatrix(newMatrix);
     try {
       const res = await fetch('/api/admin/permissions', {
         method: 'PUT',
@@ -778,12 +942,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const json = await res.json();
       if (json.success) {
         showToast('Permissions Saved', 'Access matrix updated.', 'success');
-        setPermissionMatrix(newMatrix);
+        refreshAll(false);
       }
-    } catch {}
+    } catch {
+      refreshAll(false);
+    }
   };
 
   const updateRole = async (roleId: number, data: Partial<Role>): Promise<boolean> => {
+    setRoles((prev) => prev.map((r) => (r.id === roleId ? { ...r, ...data } : r)));
     try {
       const res = await fetch('/api/admin/roles', {
         method: 'PUT',
@@ -793,11 +960,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const json = await res.json();
       if (json.success) {
         showToast('Role Configured', 'Role settings updated.', 'success');
-        await refreshAll();
+        refreshAll(false);
         return true;
       }
+      refreshAll(false);
       return false;
     } catch {
+      refreshAll(false);
       return false;
     }
   };
@@ -812,7 +981,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const json = await res.json();
       if (json.success) {
         showToast('Custom Role Created', `Role ${roleData.name} active.`, 'success');
-        await refreshAll();
+        if (json.data) {
+          setRoles((prev) => [...prev, json.data]);
+        }
+        refreshAll(false);
         return json.data;
       }
       return null;
@@ -831,7 +1003,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const json = await res.json();
       if (json.success) {
         showToast('Rule Created', 'Approval governance rule active.', 'success');
-        await refreshAll();
+        refreshAll(false);
       }
     } catch {}
   };
@@ -846,7 +1018,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const json = await res.json();
       if (json.success) {
         showToast('Rule Updated', 'Approval rule saved.', 'success');
-        await refreshAll();
+        refreshAll(false);
       }
     } catch {}
   };
@@ -857,12 +1029,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const json = await res.json();
       if (json.success) {
         showToast('Rule Removed', 'Approval rule deleted.', 'info');
-        await refreshAll();
+        refreshAll(false);
       }
     } catch {}
   };
 
   const updateCompanyProfile = async (profile: CompanyProfile) => {
+    setSystemSettings((prev) => ({ ...prev, companyProfile: profile }));
     try {
       const res = await fetch('/api/admin/settings', {
         method: 'PUT',
@@ -872,12 +1045,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const json = await res.json();
       if (json.success) {
         showToast('Company Profile Saved', 'Organization details updated successfully.', 'success');
-        await refreshAll();
+        refreshAll(false);
       }
     } catch {}
   };
 
   const updateShareholders = async (shareholders: ShareholderCompany[]): Promise<boolean> => {
+    setSystemSettings((prev) => ({ ...prev, shareholders }));
     try {
       const res = await fetch('/api/admin/settings', {
         method: 'PUT',
@@ -887,17 +1061,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const json = await res.json();
       if (json.success) {
         showToast('Shareholders Updated', 'Equity distribution saved.', 'success');
-        await refreshAll();
+        refreshAll(false);
         return true;
       }
       showToast('Validation Error', json.error, 'error');
+      refreshAll(false);
       return false;
     } catch {
+      refreshAll(false);
       return false;
     }
   };
 
   const updateSecurityPolicy = async (policy: SecurityPolicy) => {
+    setSystemSettings((prev) => ({ ...prev, securityPolicy: policy }));
     try {
       const res = await fetch('/api/admin/settings', {
         method: 'PUT',
@@ -907,12 +1084,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const json = await res.json();
       if (json.success) {
         showToast('Security Policy Updated', 'Governance parameters saved.', 'success');
-        await refreshAll();
+        refreshAll(false);
       }
     } catch {}
   };
 
   const updateFeatureToggles = async (toggles: SystemSettingsState['featureToggles']) => {
+    setSystemSettings((prev) => ({ ...prev, featureToggles: toggles }));
     try {
       const res = await fetch('/api/admin/settings', {
         method: 'PUT',
@@ -922,7 +1100,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const json = await res.json();
       if (json.success) {
         showToast('Feature Flags Updated', 'Module toggles saved.', 'success');
-        await refreshAll();
+        refreshAll(false);
       }
     } catch {}
   };
@@ -933,85 +1111,124 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const json = await res.json();
       if (json.success) {
         showToast('Cloud Snapshot Created', `System backup snapshot completed at ${json.timestamp}`, 'success');
-        await refreshAll();
+        refreshAll(false);
       }
     } catch {}
   };
 
+  const contextValue: AppContextType = React.useMemo(
+    () => ({
+      activeMainTab,
+      setActiveMainTab,
+      activeAdminTab,
+      setActiveAdminTab,
+      selectedUserId,
+      setSelectedUserId,
+      selectedCustomerId,
+      setSelectedCustomerId,
+      selectedCompanyId,
+      setSelectedCompanyId,
+      selectedLoanId,
+      setSelectedLoanId,
+      userDetailsTab,
+      setUserDetailsTab,
+      simulatedRoleId: effectiveRoleId,
+      setSimulatedRoleId,
+      currentActor,
+
+      users,
+      roles,
+      permissionMatrix,
+      approvalRules,
+      auditLogs,
+      systemSettings,
+      customers,
+      companies,
+      loans,
+      receipts,
+      approvalRequests,
+      dashboardData,
+      toasts,
+      isLoading,
+      isSavingReceipt,
+
+      refreshAll,
+      fetchReceipts,
+      fetchApprovalRequests,
+      showToast,
+      removeToast,
+
+      createApprovalRequest,
+      approveRequest,
+      rejectRequest,
+
+      updateUserRoles,
+      updateUserProfile,
+      createUser,
+      toggleUserStatus,
+      deleteUser,
+      resetUserPassword,
+      forceLogoutSession,
+      toggleTwoFactor,
+      updatePermissionMatrix,
+      updateRole,
+      createRole,
+      addApprovalRule,
+      updateApprovalRule,
+      deleteApprovalRule,
+      updateCompanyProfile,
+      updateShareholders,
+      updateSecurityPolicy,
+      updateFeatureToggles,
+      triggerBackupNow,
+
+      createCustomer,
+      updateCustomer,
+      deleteCustomer,
+
+      createCompany,
+
+      createLoan,
+      updateLoanInstallment,
+      updateFullLoan,
+      deleteLoan,
+      updateHistoricalReceipt,
+    }),
+    [
+      activeMainTab,
+      activeAdminTab,
+      selectedUserId,
+      selectedCustomerId,
+      selectedCompanyId,
+      selectedLoanId,
+      userDetailsTab,
+      effectiveRoleId,
+      currentActor,
+      users,
+      roles,
+      permissionMatrix,
+      approvalRules,
+      auditLogs,
+      systemSettings,
+      customers,
+      companies,
+      loans,
+      receipts,
+      approvalRequests,
+      dashboardData,
+      toasts,
+      isLoading,
+      isSavingReceipt,
+      refreshAll,
+      fetchReceipts,
+      fetchApprovalRequests,
+      showToast,
+      removeToast,
+    ]
+  );
+
   return (
-    <AppContext.Provider
-      value={{
-        activeMainTab,
-        setActiveMainTab,
-        activeAdminTab,
-        setActiveAdminTab,
-        selectedUserId,
-        setSelectedUserId,
-        selectedCustomerId,
-        setSelectedCustomerId,
-        selectedCompanyId,
-        setSelectedCompanyId,
-        selectedLoanId,
-        setSelectedLoanId,
-        userDetailsTab,
-        setUserDetailsTab,
-        simulatedRoleId: effectiveRoleId,
-        setSimulatedRoleId,
-        currentActor,
-
-        users,
-        roles,
-        permissionMatrix,
-        approvalRules,
-        auditLogs,
-        systemSettings,
-        customers,
-        companies,
-        loans,
-        receipts,
-        dashboardData,
-        toasts,
-        isLoading,
-        isSavingReceipt,
-
-        refreshAll,
-        fetchReceipts,
-        showToast,
-        removeToast,
-
-        updateUserRoles,
-        updateUserProfile,
-        createUser,
-        toggleUserStatus,
-        deleteUser,
-        resetUserPassword,
-        forceLogoutSession,
-        toggleTwoFactor,
-        updatePermissionMatrix,
-        updateRole,
-        createRole,
-        addApprovalRule,
-        updateApprovalRule,
-        deleteApprovalRule,
-        updateCompanyProfile,
-        updateShareholders,
-        updateSecurityPolicy,
-        updateFeatureToggles,
-        triggerBackupNow,
-
-        createCustomer,
-        updateCustomer,
-        deleteCustomer,
-
-        createCompany,
-
-        createLoan,
-        updateLoanInstallment,
-        updateFullLoan,
-        deleteLoan,
-        updateHistoricalReceipt,
-      }}
-    >
+    <AppContext.Provider value={contextValue}>
       {children}
     </AppContext.Provider>
   );

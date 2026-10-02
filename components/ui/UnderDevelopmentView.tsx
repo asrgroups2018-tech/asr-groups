@@ -7,7 +7,6 @@ import {
   ShieldAlert,
   Clock,
   ArrowRight,
-  Sparkles,
   LayoutDashboard,
   CreditCard,
   Users,
@@ -64,7 +63,7 @@ export const UnderDevelopmentView: React.FC<UnderDevelopmentViewProps> = ({ modu
 
   return (
     <div className="p-4 sm:p-8 max-w-4xl mx-auto space-y-6 animate-in fade-in">
-      <div className="bg-white rounded-3xl p-8 sm:p-12 border border-[#EBE7DF] shadow-[0_4px_20px_rgba(0,0,0,0.03)] text-center space-y-6 relative overflow-hidden">
+      <div className="bg-white rounded-2xl p-8 sm:p-12 border border-slate-200 shadow-sm text-center space-y-6 relative overflow-hidden">
         {/* Subtle decorative background pattern */}
         <div className="absolute -top-24 -right-24 w-60 h-60 bg-amber-100/50 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute -bottom-24 -left-24 w-60 h-60 bg-purple-100/40 rounded-full blur-3xl pointer-events-none" />
@@ -96,9 +95,9 @@ export const UnderDevelopmentView: React.FC<UnderDevelopmentViewProps> = ({ modu
         <div className="pt-2 relative z-10 flex flex-wrap items-center justify-center gap-3">
           <button
             onClick={() => setActiveMainTab('dashboard')}
-            className="px-6 py-3 text-xs font-bold text-[#EED8A1] bg-[#1A0A13] hover:bg-[#2C1420] active:scale-95 rounded-2xl transition-all shadow-md flex items-center gap-2 border border-[#C5A059]/40 cursor-pointer"
+            className="px-6 py-3 text-xs font-bold text-[#EED8A1] bg-[#1A0A13] hover:bg-[#2C1420] rounded-2xl transition-all shadow-md flex items-center gap-2 border border-[#C5A059]/40 cursor-pointer btn-press"
           >
-            <Sparkles className="w-4 h-4 text-amber-400" />
+            <LayoutDashboard className="w-4 h-4 text-amber-400" />
             <span>Return to Financial Dashboard</span>
             <ArrowRight className="w-4 h-4 text-amber-400" />
           </button>

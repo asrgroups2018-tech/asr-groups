@@ -26,7 +26,7 @@ export const ElevatedAccessModal: React.FC<ElevatedAccessModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="bg-white rounded-2xl border border-amber-200 shadow-2xl max-w-lg w-full overflow-hidden">
+      <div className="bg-white rounded-2xl border border-amber-200 shadow-2xl max-w-lg w-full overflow-hidden motion-modal">
         {/* Amber alert ribbon */}
         <div className="bg-amber-500 text-slate-950 px-6 py-3.5 flex items-center justify-between font-bold text-sm">
           <div className="flex items-center gap-2">

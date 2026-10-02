@@ -209,70 +209,85 @@ export const CustomersListView: React.FC = () => {
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
       {/* ─── Top Control Bar ─── */}
-      <div className="bg-white p-5 rounded-2xl border border-[#E6E1D6] shadow-[0_1px_3px_rgba(0,0,0,0.02)] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl font-bold text-slate-900 font-serif">
-              Customers
-            </h1>
+          <div className="flex items-center gap-2.5">
+            <div className="w-10 h-10 rounded-xl bg-[#701A35] text-[#EED8A1] shadow-sm flex items-center justify-center shrink-0">
+              <Users className="w-5 h-5" />
+            </div>
+            <div>
+              <h1 className="text-xl font-bold text-slate-950 font-serif">
+                Customers Directory
+              </h1>
+              <p className="text-xs text-slate-600 font-medium mt-0.5">
+                Borrower directory, active facilities, and loan history tracking
+              </p>
+            </div>
           </div>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Borrower Directory & Portfolio Overview
-          </p>
         </div>
 
         {/* Action Buttons */}
         <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={() => setIsAddModalOpen(true)}
-            className="px-4 py-2 text-xs font-bold text-white bg-[#701A35] hover:bg-[#5C142B] active:scale-98 rounded-xl transition-all shadow-xs flex items-center gap-1.5 cursor-pointer shrink-0"
+            className="px-4 py-2 text-xs font-bold text-slate-950 bg-gradient-to-r from-amber-400 via-amber-300 to-[#C5A059] hover:from-amber-300 hover:to-amber-400 active:scale-98 rounded-xl transition-all shadow-sm flex items-center gap-1.5 cursor-pointer shrink-0"
           >
-            <Plus className="w-4 h-4 text-amber-200" />
+            <Plus className="w-4 h-4 font-bold" />
             <span>New Customer</span>
           </button>
         </div>
       </div>
 
-      {/* ─── 3 High-Contrast Financial Totals ─── */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div className="bg-white p-4 rounded-xl border border-[#E6E1D6] shadow-2xs">
-          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider font-mono">
+      {/* ─── 3 High-Impact KPI Badges ─── */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+        <div className="bg-white p-4.5 rounded-2xl border-2 border-slate-200/90 shadow-sm hover:border-slate-300 transition-all">
+          <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider font-mono">
             Total Borrowed Portfolio
           </span>
-          <div className="mt-1">
+          <div className="mt-1.5">
             <MoneyDisplay
               amount={totalBorrowedSum}
               size="xl"
-              amountClassName="text-slate-900 font-bold block"
+              amountClassName="text-slate-950 font-black text-2xl block tracking-tight"
             />
           </div>
-          <span className="text-[10px] text-slate-400 mt-0.5 block">Sum across all customer loans</span>
+          <span className="text-[11px] text-slate-500 font-medium mt-1 block">
+            Sum across all borrower loan facilities
+          </span>
         </div>
 
-        <div className="bg-white p-4 rounded-xl border border-[#E6E1D6] shadow-2xs">
-          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider font-mono">
+        <div className="bg-gradient-to-br from-emerald-100/90 via-emerald-50 to-white p-4.5 rounded-2xl border-2 border-emerald-300 shadow-sm hover:border-emerald-400 transition-all">
+          <span className="text-[11px] font-bold text-emerald-900 uppercase tracking-wider font-mono">
             Active Contracts
           </span>
-          <span className="text-xl font-bold text-emerald-700 font-mono block mt-1">
-            {loans.length} Loans
+          <div className="mt-1.5">
+            <span className="text-2xl font-black font-mono text-emerald-700 block tracking-tight">
+              {loans.length} Loans
+            </span>
+          </div>
+          <span className="text-[11px] text-emerald-800 font-bold mt-1 block">
+            Disbursed active loan contracts
           </span>
-          <span className="text-[10px] text-slate-400 mt-0.5 block">Disbursed active contracts</span>
         </div>
 
-        <div className="bg-white p-4 rounded-xl border border-[#E6E1D6] shadow-2xs">
-          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider font-mono">
+        <div className="bg-gradient-to-br from-amber-100/90 via-amber-50 to-white p-4.5 rounded-2xl border-2 border-amber-300 shadow-sm hover:border-amber-400 transition-all">
+          <span className="text-[11px] font-bold text-amber-900 uppercase tracking-wider font-mono">
             Total Customers
           </span>
-          <span className="text-xl font-bold text-slate-900 font-mono block mt-1">
-            {customers.length} Clients
+          <div className="mt-1.5">
+            <span className="text-2xl font-black font-mono text-amber-800 block tracking-tight">
+              {customers.length} Clients
+            </span>
+          </div>
+          <span className="text-[11px] text-amber-800 font-bold mt-1 block">
+            Registered borrower profiles
           </span>
-          <span className="text-[10px] text-slate-400 mt-0.5 block">Registered borrower parties</span>
         </div>
       </div>
 
       {/* ─── Customers DataTable ─── */}
       {customers.length === 0 ? (
-        <div className="bg-white rounded-2xl p-12 border border-[#E6E1D6] text-center space-y-3">
+        <div className="bg-white rounded-2xl p-12 border border-slate-200 shadow-sm text-center space-y-3">
           <div className="w-12 h-12 rounded-2xl bg-[#701A35]/10 text-[#701A35] flex items-center justify-center mx-auto">
             <Users className="w-6 h-6" />
           </div>

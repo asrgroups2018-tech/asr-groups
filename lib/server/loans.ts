@@ -31,7 +31,7 @@ export async function getLoans(query?: string): Promise<Loan[]> {
 
   let sql = `
     SELECT 
-      l.id as loan_id, l.customer_id, l.code_no, l.total_amount, l.start_date,
+      l.id as loan_id, l.customer_id, l.code_no, l.total_amount, l.disbursed_amount, l.interest_amount, l.start_date,
       l.installment_count, l.frequency, l.status as loan_status, l.created_at as loan_created_at,
       c.name as customer_name, c.place as customer_place
     FROM loans l
@@ -133,15 +133,16 @@ export async function getLoans(query?: string): Promise<Loan[]> {
     let nextDueDate: string | undefined;
 
     installments.forEach((ins) => {
-      const st = String(ins.status || '').toUpperCase();
-      if (['PASS', 'NEFT', 'CASH', 'PAID'].includes(st)) {
+      const st = String(ins.status || '').trim().toUpperCase();
+      if (['PASS', 'NEFT', 'CASH', 'PAID', 'CLS', 'CS', 'SETTLED', 'CLOSED', 'RET NEFT', 'RET PASS'].includes(st)) {
         totalCollected += ins.amountDue;
       } else if (!nextDueDate && ins.dueDate) {
         nextDueDate = ins.dueDate;
       }
     });
 
-    const totalAmount = Number(row.total_amount || 0);
+    const instSum = installments.reduce((sum, ins) => sum + (ins.amountDue || 0), 0);
+    const totalAmount = installments.length > 0 ? instSum : Number(row.total_amount || 0);
     const totalOutstanding = Math.max(0, totalAmount - totalCollected);
 
     return {
@@ -151,6 +152,8 @@ export async function getLoans(query?: string): Promise<Loan[]> {
       place: String(row.customer_place || 'CHENNAI'),
       codeNo: row.code_no ? String(row.code_no) : undefined,
       totalAmount,
+      disbursedAmount: row.disbursed_amount != null ? Number(row.disbursed_amount) : null,
+      interestAmount: row.interest_amount != null ? Number(row.interest_amount) : null,
       startDate: String(row.start_date || new Date().toISOString().slice(0, 10)),
       installmentCount: Number(row.installment_count || installments.length),
       frequency: (row.frequency as any) || 'Monthly',
@@ -213,6 +216,8 @@ export async function createLoan(data: {
   customerId: string;
   codeNo?: string;
   totalAmount: number;
+  disbursedAmount?: number | null;
+  interestAmount?: number | null;
   startDate: string;
   frequency: 'Weekly' | 'Monthly';
   splits: { companyId: string; splitPercent: number; splitAmount: number }[];
@@ -236,14 +241,16 @@ export async function createLoan(data: {
   const statements: any[] = [
     {
       sql: `INSERT INTO loans (
-        id, customer_id, code_no, total_amount, start_date,
+        id, customer_id, code_no, total_amount, disbursed_amount, interest_amount, start_date,
         installment_count, frequency, status, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       args: [
         loanId,
         data.customerId,
         data.codeNo || `CL-${loanId.slice(-4)}`,
         data.totalAmount,
+        data.disbursedAmount ?? null,
+        data.interestAmount ?? null,
         data.startDate,
         data.installments.length,
         data.frequency,
@@ -384,6 +391,45 @@ export async function updateLoanInstallment(
         }
       }
     }
+  } else if (updates.amountDue !== undefined && Number(updates.amountDue) !== Number(current.amount_due)) {
+    const existingSplitsRes = await client.execute({
+      sql: `SELECT ics.amount, c.short_code, c.id as comp_id
+            FROM installment_company_splits ics
+            JOIN companies c ON c.id = ics.company_id
+            WHERE ics.installment_id = ?`,
+      args: [installmentId],
+    });
+    if (existingSplitsRes.rows.length > 0) {
+      const splits = existingSplitsRes.rows.map((r) => ({
+        comp_id: String(r.comp_id),
+        short_code: String(r.short_code),
+        amount: Number(r.amount) || 0,
+      }));
+      const totalSplit = splits.reduce((s, r) => s + r.amount, 0);
+      const newAmt = Number(updates.amountDue);
+
+      if (totalSplit > 0 && newAmt > 0) {
+        statements.push({
+          sql: 'DELETE FROM installment_company_splits WHERE installment_id = ?',
+          args: [installmentId],
+        });
+        let allocated = 0;
+        splits.forEach((sp, idx) => {
+          const share =
+            idx === splits.length - 1
+              ? Math.max(0, newAmt - allocated)
+              : Math.round((newAmt * sp.amount) / totalSplit);
+          allocated += share;
+          if (share > 0) {
+            statements.push({
+              sql: `INSERT INTO installment_company_splits (id, installment_id, company_id, amount)
+                    VALUES (?, ?, ?, ?)`,
+              args: [`ICS-${installmentId}-${sp.short_code}`, installmentId, sp.comp_id, share],
+            });
+          }
+        });
+      }
+    }
   }
 
   await client.batch(statements, 'write');
@@ -429,6 +475,8 @@ export async function updateFullLoan(
     status?: string;
     frequency?: string;
     startDate?: string;
+    disbursedAmount?: number | null;
+    interestAmount?: number | null;
     installments: {
       id?: string;
       seqNo: number;
@@ -484,6 +532,8 @@ export async function updateFullLoan(
     sql: `UPDATE loans SET
             code_no = ?,
             total_amount = ?,
+            disbursed_amount = ?,
+            interest_amount = ?,
             start_date = ?,
             installment_count = ?,
             frequency = ?,
@@ -492,6 +542,8 @@ export async function updateFullLoan(
     args: [
       data.codeNo !== undefined ? data.codeNo : currentLoan.codeNo || null,
       newTotalAmount,
+      data.disbursedAmount !== undefined ? data.disbursedAmount : currentLoan.disbursedAmount ?? null,
+      data.interestAmount !== undefined ? data.interestAmount : currentLoan.interestAmount ?? null,
       data.startDate || currentLoan.startDate,
       data.installments.length,
       data.frequency || currentLoan.frequency,

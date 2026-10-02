@@ -11,11 +11,14 @@ export function exportToCSV(filename: string, headers: string[], rows: (string |
     ),
   ].join('\r\n');
 
+  const now = new Date();
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const timestamp = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}_${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`;
   const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.setAttribute('href', url);
-  link.setAttribute('download', `${filename}_${new Date().toISOString().slice(0, 10)}.csv`);
+  link.setAttribute('download', `${filename}_${timestamp}.csv`);
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
