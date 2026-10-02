@@ -125,14 +125,25 @@ export const SCHEMA_STATEMENTS = [
   `CREATE INDEX IF NOT EXISTS idx_users_status ON users(status);`,
   `CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);`,
 
-  // 9. Permission Matrix
+  // 9. Auth Sessions
+  `CREATE TABLE IF NOT EXISTS auth_sessions (
+    token_hash TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    created_at TEXT NOT NULL,
+    expires_at TEXT NOT NULL,
+    revoked_at TEXT
+  );`,
+  `CREATE INDEX IF NOT EXISTS idx_auth_sessions_user ON auth_sessions(user_id);`,
+  `CREATE INDEX IF NOT EXISTS idx_auth_sessions_expires ON auth_sessions(expires_at);`,
+
+  // 10. Permission Matrix
   `CREATE TABLE IF NOT EXISTS permission_matrix (
     id TEXT PRIMARY KEY,
     data TEXT NOT NULL,
     updated_at TEXT NOT NULL
   );`,
 
-  // 10. Approval Rules
+  // 11. Approval Rules
   `CREATE TABLE IF NOT EXISTS approval_rules (
     id TEXT PRIMARY KEY,
     change_type TEXT NOT NULL,
@@ -147,7 +158,7 @@ export const SCHEMA_STATEMENTS = [
   );`,
   `CREATE INDEX IF NOT EXISTS idx_approval_rules_active ON approval_rules(is_active);`,
 
-  // 11. Audit Logs
+  // 12. Audit Logs
   `CREATE TABLE IF NOT EXISTS audit_logs (
     id TEXT PRIMARY KEY,
     timestamp TEXT NOT NULL,
@@ -166,7 +177,7 @@ export const SCHEMA_STATEMENTS = [
   `CREATE INDEX IF NOT EXISTS idx_audit_logs_timestamp ON audit_logs(timestamp);`,
   `CREATE INDEX IF NOT EXISTS idx_audit_logs_action ON audit_logs(action);`,
 
-  // 12. System Settings
+  // 13. System Settings
   `CREATE TABLE IF NOT EXISTS system_settings (
     id TEXT PRIMARY KEY,
     company_profile TEXT NOT NULL,

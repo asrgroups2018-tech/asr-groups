@@ -4,10 +4,8 @@ import React from 'react';
 import { useApp } from '@/lib/store';
 import {
   ArrowRight,
-  Sliders,
   UserPlus,
   Shield,
-  FileCheck2,
   History,
   Settings,
   Users,
@@ -17,26 +15,15 @@ import {
 } from 'lucide-react';
 import { RoleBadge } from '@/components/ui/RoleBadge';
 
-const ROLE_BAR_COLORS: Record<number, string> = {
-  0: '#701A35',
-  1: '#8B2548',
-  2: '#475569',
-  3: '#64748B',
-  4: '#94A3B8',
-  5: '#CBD5E1',
-  6: '#0F172A',
-};
-
 export const OverviewTab: React.FC = () => {
-  const { users, roles, auditLogs, approvalRules, setActiveAdminTab } = useApp();
+  const { users, roles, auditLogs, systemSettings, setActiveAdminTab } = useApp();
 
   const totalUsers = users.length;
-  const activeUsers = users.filter((u) => u.status === 'Active').length;
   const pendingApprovals = users.filter((u) => u.status === 'Pending').length;
   const staffCount = users.filter((u) => !u.isCustomer).length;
   const customerCount = users.filter((u) => u.isCustomer).length;
   const totalRoles = roles.length;
-  const activeRulesCount = approvalRules.filter((r) => r.isActive).length;
+  const companyName = systemSettings?.companyProfile?.companyName || 'Organisation';
 
   const roleCounts = roles.map((role) => ({
     role,
@@ -217,7 +204,7 @@ export const OverviewTab: React.FC = () => {
                         className="h-full rounded-full transition-all duration-500"
                         style={{
                           width: `${Math.max(barWidth, count > 0 ? 6 : 0)}%`,
-                          backgroundColor: ROLE_BAR_COLORS[role.id] || '#64748B',
+                          backgroundColor: role.hexColor || '#64748B',
                         }}
                       />
                     </div>
@@ -344,4 +331,3 @@ export const OverviewTab: React.FC = () => {
     </div>
   );
 };
-

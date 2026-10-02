@@ -55,7 +55,10 @@ export const UserDetailsView: React.FC = () => {
     currentActor,
     approvalRules,
     createApprovalRequest,
+    systemSettings,
   } = useApp();
+
+  const companyName = systemSettings?.companyProfile?.companyName || 'Organisation';
 
   const cleanSelectedId = String(selectedUserId || '').trim().toLowerCase();
   const user =
@@ -474,7 +477,7 @@ export const UserDetailsView: React.FC = () => {
                       </div>
                       <div>
                         <span className="text-slate-400 block text-[11px]">Master Account</span>
-                        <span className="text-slate-900 font-medium block mt-0.5">ASR Groups Enterprise</span>
+                        <span className="text-slate-900 font-medium block mt-0.5">{companyName}</span>
                       </div>
                       <div>
                         <span className="text-slate-400 block text-[11px]">Status</span>

@@ -2,18 +2,14 @@
 
 import React, { useState, useEffect } from 'react';
 import { useApp } from '@/lib/store';
-import { Role, RoleId, ModuleAction, PermissionMatrixState } from '@/lib/types';
+import { Role, ModuleAction, PermissionMatrixState } from '@/lib/types';
 import { MODULES_DATA } from '@/lib/seedData';
 import {
   X,
-  Sliders,
   Shield,
   Save,
-  Check,
-  CheckCircle2,
-  Lock,
   Layers,
-  LayoutGrid,
+  Info,
 } from 'lucide-react';
 import { RoleBadge } from '@/components/ui/RoleBadge';
 
@@ -22,17 +18,6 @@ interface EditRoleModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
-
-const CATEGORIES = [
-  'General',
-  'Loans & Underwriting',
-  'Collections & Field',
-  'Accounting & Cashbook',
-  'Salary & Payroll',
-  'Agents & Business',
-  'Reports & Analytics',
-  'Administration',
-];
 
 export const EditRoleModal: React.FC<EditRoleModalProps> = ({
   role,
@@ -45,8 +30,6 @@ export const EditRoleModal: React.FC<EditRoleModalProps> = ({
   const [roleName, setRoleName] = useState('');
   const [roleCode, setRoleCode] = useState('');
   const [description, setDescription] = useState('');
-  const [category, setCategory] = useState('General');
-  const [accountType, setAccountType] = useState('STAFF');
   const [draftMatrix, setDraftMatrix] = useState<PermissionMatrixState>(permissionMatrix);
 
   useEffect(() => {
@@ -64,7 +47,7 @@ export const EditRoleModal: React.FC<EditRoleModalProps> = ({
 
   const handleToggleModuleView = (moduleId: string) => {
     if (isSuperAdmin) {
-      showToast('Protected', 'Role 0 (Super Admin) has full immutable view permissions.', 'warning');
+      showToast('Protected', 'The Super Admin role has full immutable view permissions.', 'warning');
       return;
     }
 
@@ -83,7 +66,7 @@ export const EditRoleModal: React.FC<EditRoleModalProps> = ({
 
   const handleToggleAction = (moduleId: string, action: ModuleAction) => {
     if (isSuperAdmin) {
-      showToast('Protected', 'Role 0 (Super Admin) has full immutable action permissions.', 'warning');
+      showToast('Protected', 'The Super Admin role has full immutable action permissions.', 'warning');
       return;
     }
 
@@ -179,7 +162,7 @@ export const EditRoleModal: React.FC<EditRoleModalProps> = ({
             {activeTab === 'pages' && (
               <div className="space-y-4">
                 <div className="p-3.5 rounded-xl bg-amber-50/70 border border-amber-200 text-xs text-amber-900 flex items-start gap-2">
-                  <span className="text-sm">💡</span>
+                  <Info className="mt-0.5 h-4 w-4 shrink-0 text-amber-700" />
                   <div>
                     <strong className="block">Role-Based Page Visibility:</strong>
                     <span>
@@ -304,31 +287,16 @@ export const EditRoleModal: React.FC<EditRoleModalProps> = ({
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block font-bold text-slate-700 mb-1">
-                      Functional Category
-                    </label>
-                    <select
-                      value={category}
-                      onChange={(e) => setCategory(e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#701A35]"
-                    >
-                      {CATEGORIES.map((c) => (
-                        <option key={c} value={c}>
-                          {c}
-                        </option>
-                      ))}
-                    </select>
+                    <label className="block font-bold text-slate-700 mb-1">Role type</label>
+                    <div className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-slate-600">
+                      {role.isSystemProtected ? 'System role' : 'Custom role'}
+                    </div>
                   </div>
                   <div>
-                    <label className="block font-bold text-slate-700 mb-1">
-                      Account Type Tag
-                    </label>
-                    <input
-                      type="text"
-                      value={accountType}
-                      onChange={(e) => setAccountType(e.target.value)}
-                      className="w-full px-3.5 py-2 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#701A35]"
-                    />
+                    <label className="block font-bold text-slate-700 mb-1">Hierarchy level</label>
+                    <div className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-slate-600">
+                      {role.hierarchyLevel}
+                    </div>
                   </div>
                 </div>
 

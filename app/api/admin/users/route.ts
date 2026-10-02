@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/server/db';
+import { toPublicUser } from '@/lib/server/administration';
 
 // GET /api/admin/users
 export async function GET(request: NextRequest) {
@@ -15,7 +16,7 @@ export async function GET(request: NextRequest) {
       query: queryParam || undefined,
     });
 
-    return NextResponse.json({ success: true, data: users, total: users.length });
+    return NextResponse.json({ success: true, data: users.map(toPublicUser), total: users.length });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
@@ -33,7 +34,7 @@ export async function POST(request: NextRequest) {
     }
 
     const newUser = await db.createUser(body);
-    return NextResponse.json({ success: true, data: newUser }, { status: 201 });
+    return NextResponse.json({ success: true, data: toPublicUser(newUser) }, { status: 201 });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
@@ -52,7 +53,7 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'User not found.' }, { status: 404 });
     }
 
-    return NextResponse.json({ success: true, data: updated });
+    return NextResponse.json({ success: true, data: toPublicUser(updated) });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }

@@ -6,15 +6,11 @@ import { useApp } from '@/lib/store';
 import { User, RoleId } from '@/lib/types';
 import {
   UserPlus,
-  Shield,
   Ban,
   CheckCircle2,
-  MoreHorizontal,
   Eye,
   KeyRound,
   Filter,
-  UserCheck,
-  Search,
   Trash2,
 } from 'lucide-react';
 import { DataTable, ColumnDef } from '@/components/ui/DataTable';
@@ -37,6 +33,7 @@ export const UserManagementTab: React.FC = () => {
     resetUserPassword,
     deleteUser,
     showToast,
+    systemSettings,
   } = useApp();
 
   const [activeChip, setActiveChip] = useState<FilterChip>('all');
@@ -75,6 +72,8 @@ export const UserManagementTab: React.FC = () => {
     suspended: users.filter((u) => u.status === 'Suspended').length,
   };
 
+  const companyName = systemSettings?.companyProfile?.companyName || 'Organisation';
+
   const handleRowClick = (user: User) => {
     setSelectedUserId(user.id);
     setUserDetailsTab('roles');
@@ -112,123 +111,76 @@ export const UserManagementTab: React.FC = () => {
   const columns: ColumnDef<User>[] = [
     {
       key: 'name',
-      header: 'User Name',
+      header: 'Account',
       sortable: true,
       accessor: (u) => u.name,
-      render: (u) => {
-        const isAdmin = u.assignedRoleIds.includes(0) || u.assignedRoleIds.includes(1);
-
-        return (
-          <div className="min-w-0">
-            <button
-              onClick={() => handleRowClick(u)}
-              className="font-bold text-[#701A35] hover:underline text-xs block text-left cursor-pointer transition-colors"
-            >
-              {u.name}
-            </button>
-            <span className="text-[10px] text-slate-400 font-mono block mt-0.5">
-              {isAdmin ? `(${u.id} · Admin)` : `@${u.username || u.id.toLowerCase()}`}
-            </span>
+      render: (u) => (
+        <div className="min-w-[180px]">
+          <button
+            onClick={() => handleRowClick(u)}
+            className="font-semibold text-[#701A35] hover:text-[#4E1026] text-sm block text-left cursor-pointer transition-colors"
+          >
+            {u.name}
+          </button>
+          <span className="text-[11px] text-slate-400 font-mono block mt-1">{u.id}</span>
+        </div>
+      ),
+      exportValue: (u) => `${u.name} (${u.id})`,
+    },
+    {
+      key: 'login',
+      header: 'Login identity',
+      sortable: true,
+      accessor: (u) => u.loginMethod === 'email' ? u.email : (u.username || u.email),
+      render: (u) => (
+        <div className="min-w-[190px] text-xs">
+          <span className="block font-medium text-slate-900 font-mono truncate">{u.loginMethod === 'email' ? u.email : `@${u.username || u.email}`}</span>
+          <span className="mt-1 inline-flex rounded-md border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[10px] font-semibold text-slate-500">
+            {u.loginMethod === 'email' ? 'Email sign-in' : 'Username sign-in'}
+          </span>
+        </div>
+      ),
+      exportValue: (u) => u.loginMethod === 'email' ? u.email : (u.username || u.email),
+    },
+    {
+      key: 'access',
+      header: 'Access',
+      sortable: false,
+      accessor: (u) => u.assignedRoleIds.map((roleId) => roles.find((r) => r.id === roleId)?.name || `Role ${roleId}`).join(', '),
+      render: (u) => (
+        <div className="min-w-[150px] space-y-1">
+          <div className="flex flex-wrap gap-1">
+            {u.assignedRoleIds.slice(0, 2).map((roleId) => (
+              <RoleBadge key={roleId} roleId={roleId} size="xs" isPrimary={roleId === u.primaryRoleId} />
+            ))}
           </div>
-        );
-      },
-      exportValue: (u) => `${u.name} (${u.username ? `@${u.username}` : u.id})`,
+          {u.assignedRoleIds.length > 2 && <span className="text-[10px] text-slate-400">+{u.assignedRoleIds.length - 2} more roles</span>}
+          <p className="text-[11px] text-slate-500">{u.isCustomer ? 'Customer account' : `${u.designation || 'Staff'}${u.department ? ` · ${u.department}` : ''}`}</p>
+        </div>
+      ),
+      exportValue: (u) => u.assignedRoleIds.map((roleId) => roles.find((r) => r.id === roleId)?.name || `Role ${roleId}`).join(', '),
     },
     {
       key: 'status',
       header: 'Status',
-      align: 'center',
+      align: 'left',
       sortable: true,
       accessor: (u) => u.status,
       render: (u) => <StatusPill status={u.status} size="sm" />,
     },
     {
-      key: 'masterAccount',
-      header: 'Master Account',
-      sortable: true,
-      accessor: () => 'ASR Groups Enterprise',
-      render: () => (
-        <span className="text-xs text-slate-700 font-medium">
-          ASR Groups Enterprise
-        </span>
-      ),
-      exportValue: () => 'ASR Groups Enterprise',
-    },
-    {
-      key: 'email',
-      header: 'Login ID / Email',
-      sortable: true,
-      accessor: (u) => (u.assignedRoleIds.includes(0) || u.assignedRoleIds.includes(1) ? u.email : u.username || u.email),
-      render: (u) => {
-        const isAdmin = u.assignedRoleIds.includes(0) || u.assignedRoleIds.includes(1);
-
-        return (
-          <div className="text-xs">
-            {isAdmin ? (
-              <div>
-                <span className="text-slate-900 font-medium font-mono">{u.email}</span>
-                <span className="text-[10px] text-purple-700 bg-purple-50 px-1.5 py-0.2 rounded border border-purple-200 block w-fit mt-0.5 font-bold">
-                  Email Login
-                </span>
-              </div>
-            ) : (
-              <div>
-                <span className="text-slate-900 font-bold font-mono">@{u.username || u.name.toLowerCase().replace(/[^a-z0-9]/g, '.')}</span>
-                <span className="text-[10px] text-slate-400 block truncate mt-0.5">
-                  {u.email}
-                </span>
-              </div>
-            )}
-          </div>
-        );
-      },
-      exportValue: (u) => u.email,
-    },
-    {
-      key: 'accountType',
-      header: 'Account Type',
-      sortable: true,
-      accessor: (u) => (u.isCustomer ? 'Customer' : 'Internal Staff'),
-      render: (u) => (
-        <span className="text-xs text-slate-700">
-          {u.isCustomer ? 'Customer' : 'Internal Staff'}
-        </span>
-      ),
-      exportValue: (u) => (u.isCustomer ? 'Customer' : 'Internal Staff'),
-    },
-    {
-      key: 'jobTitle',
-      header: 'Job Title/Dept',
-      sortable: true,
-      accessor: (u) => `${u.designation} (${u.department})`,
-      render: (u) => (
-        <span className="text-xs text-slate-700">
-          {u.designation || u.department}
-        </span>
-      ),
-      exportValue: (u) => `${u.designation || ''} - ${u.department || ''}`,
-    },
-    {
-      key: 'createdAt',
-      header: 'Create Date (IST)',
-      sortable: true,
-      accessor: (u) => u.createdAt,
-      render: (u) => (
-        <span className="text-[11px] font-mono text-slate-600">
-          {u.createdAt} IST
-        </span>
-      ),
-    },
-    {
-      key: 'lastLogin',
-      header: 'Last Login (IST)',
+      key: 'activity',
+      header: 'Activity',
       sortable: true,
       accessor: (u) => u.lastLogin,
       render: (u) => (
-        <span className="text-[11px] font-mono text-slate-600">
-          {u.lastLogin} IST
-        </span>
+        <div className="min-w-[145px] text-[11px]">
+          <span className="block font-medium text-slate-700">Last sign-in</span>
+          <span className="mt-0.5 block font-mono text-slate-500">{u.lastLogin || 'Never'}</span>
+          <span className="mt-1 block text-slate-400">Joined {u.createdAt?.slice(0, 10) || '—'}</span>
+        </div>
       ),
+      exportValue: (u) => `Last sign-in: ${u.lastLogin}; Joined: ${u.createdAt}`,
     },
     {
       key: 'actions',
@@ -292,8 +244,16 @@ export const UserManagementTab: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Top Filter Chips & Actions Header */}
-      <div className="flex flex-wrap items-center justify-between gap-4 bg-white p-4.5 rounded-2xl border border-slate-200 shadow-sm">
+      <div className="flex flex-col gap-4 rounded-2xl border border-[#E6E1D6] bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.03)]">
+        <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-base font-semibold tracking-tight text-slate-900">User directory</h2>
+            <p className="mt-1 text-xs text-slate-500">Review access, account status, and sign-in activity for {companyName}.</p>
+          </div>
+          <span className="text-xs font-medium text-slate-400">{counts.all} total accounts</span>
+        </div>
+
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-4">
         {/* Segmented Filter Pills */}
         <div className="flex items-center gap-1.5 flex-wrap overflow-x-auto pb-1 sm:pb-0">
           {chips.map((chip) => {
@@ -323,14 +283,14 @@ export const UserManagementTab: React.FC = () => {
 
         {/* Right Controls: Role filter + Bulk Actions + + Create User in Maroon */}
         <div className="flex items-center gap-2.5 flex-wrap">
-          <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs">
+          <div className="flex items-center gap-1.5 bg-[#FAF8F5] border border-[#E6E1D6] rounded-xl px-3 py-1.5 text-xs">
             <Filter className="w-3.5 h-3.5 text-slate-400" />
             <select
               value={selectedRoleFilter}
               onChange={(e) => setSelectedRoleFilter(e.target.value)}
               className="bg-transparent text-xs font-semibold text-slate-700 focus:outline-none cursor-pointer"
             >
-              <option value="all">All Roles (0–6)</option>
+              <option value="all">All roles</option>
               {roles.map((r) => (
                 <option key={r.id} value={r.id}>
                   Role {r.id} · {r.name}
@@ -374,6 +334,7 @@ export const UserManagementTab: React.FC = () => {
             <span>Create User</span>
           </button>
         </div>
+        </div>
       </div>
 
       {/* Main Table */}
@@ -399,7 +360,7 @@ export const UserManagementTab: React.FC = () => {
             <td colSpan={3} className="px-4 py-2.5 text-xs text-slate-600">
               Total: <strong className="text-slate-900">{filteredUsers.length}</strong>
             </td>
-            <td colSpan={4} className="px-4 py-2.5 text-xs text-right text-slate-500 font-mono">
+            <td colSpan={3} className="px-4 py-2.5 text-xs text-right text-slate-500 font-mono">
               Active: {filteredUsers.filter((u) => u.status === 'Active').length} · Suspended: {filteredUsers.filter((u) => u.status === 'Suspended').length} · Pending: {filteredUsers.filter((u) => u.status === 'Pending').length}
             </td>
           </>

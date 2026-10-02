@@ -11,6 +11,7 @@ import {
   FileSpreadsheet,
   ShieldAlert,
   ArrowRight,
+  UserRound,
 } from 'lucide-react';
 import { RoleBadge } from '@/components/ui/RoleBadge';
 import { DataTable, ColumnDef } from '@/components/ui/DataTable';
@@ -203,7 +204,7 @@ export const AuditLogTab: React.FC = () => {
 
             {/* Actor Filter */}
             <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs">
-              <span className="text-slate-400 font-bold">@</span>
+              <UserRound className="w-3.5 h-3.5 text-slate-400" />
               <select
                 value={selectedActor}
                 onChange={(e) => setSelectedActor(e.target.value)}

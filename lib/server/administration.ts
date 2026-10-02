@@ -1,3 +1,4 @@
+import { createHash, randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
 import { getTursoClient } from './turso';
 import { initializeSchema } from './schema';
 import {
@@ -64,6 +65,12 @@ export function mapUserRow(row: any): User {
     sessions: parseJson<UserSession[]>(row.sessions, []),
     isCustomer: Boolean(row.is_customer),
   };
+}
+
+export function toPublicUser(user: User): Omit<User, 'tempPassword'> {
+  const publicUser = { ...user };
+  delete publicUser.tempPassword;
+  return publicUser;
 }
 
 export function mapRoleRow(row: any): Role {
@@ -155,6 +162,124 @@ export async function getUserById(id: string): Promise<User | null> {
   return mapUserRow(result.rows[0]);
 }
 
+/** Authenticate against the database-backed user credentials. */
+export async function authenticateUser(identifier: string, password: string): Promise<User | null> {
+  await ensureDbInitialized();
+  const client = getTursoClient();
+  const normalizedIdentifier = identifier.trim().toLowerCase();
+
+  if (!normalizedIdentifier || !password) return null;
+
+  const result = await client.execute({
+    sql: `SELECT * FROM users
+      WHERE LOWER(email) = ? OR LOWER(COALESCE(username, '')) = ?
+      LIMIT 1`,
+    args: [normalizedIdentifier, normalizedIdentifier],
+  });
+
+  if (result.rows.length === 0) return null;
+
+  const row = result.rows[0];
+  const user = mapUserRow(row);
+  if (user.status !== 'Active') return null;
+
+  // ASR_ADMIN_PASSWORD is only a first-login bootstrap value for an older
+  // administrator row. Once used, it is persisted to the database and the
+  // database value remains the source of truth for all future logins.
+  const storedPassword = row.temp_password
+    ? String(row.temp_password)
+    : user.assignedRoleIds.some((roleId) => roleId === 0 || roleId === 1)
+      ? process.env.ASR_ADMIN_PASSWORD
+      : undefined;
+
+  if (!storedPassword || !verifyPassword(storedPassword, password)) return null;
+
+  if (!storedPassword.startsWith('scrypt$')) {
+    await client.execute({
+      sql: 'UPDATE users SET temp_password = ? WHERE id = ?',
+      args: [hashPasswordValue(password), user.id],
+    });
+  }
+
+  const now = new Date().toISOString().slice(0, 16).replace('T', ' ');
+  await client.execute({
+    sql: 'UPDATE users SET last_login = ? WHERE id = ?',
+    args: [now, user.id],
+  });
+
+  return { ...user, lastLogin: now };
+}
+
+function hashSessionToken(token: string): string {
+  return createHash('sha256').update(token).digest('hex');
+}
+
+function hashPasswordValue(password: string): string {
+  const salt = randomBytes(16).toString('hex');
+  const derivedKey = scryptSync(password, salt, 64).toString('hex');
+  return `scrypt$${salt}$${derivedKey}`;
+}
+
+function verifyPassword(storedPassword: string, password: string): boolean {
+  if (!storedPassword.startsWith('scrypt$')) return storedPassword === password;
+
+  const [, salt, storedKey] = storedPassword.split('$');
+  if (!salt || !storedKey) return false;
+
+  const derivedKey = scryptSync(password, salt, 64);
+  const expectedKey = Buffer.from(storedKey, 'hex');
+  return expectedKey.length === derivedKey.length && timingSafeEqual(expectedKey, derivedKey);
+}
+
+export async function createAuthSession(
+  userId: string,
+  token: string,
+  expiresAt: string,
+): Promise<void> {
+  await ensureDbInitialized();
+  const client = getTursoClient();
+  const now = new Date().toISOString();
+
+  await client.execute({
+    sql: 'DELETE FROM auth_sessions WHERE expires_at <= ? OR revoked_at IS NOT NULL',
+    args: [now],
+  });
+  await client.execute({
+    sql: `INSERT INTO auth_sessions (token_hash, user_id, created_at, expires_at)
+      VALUES (?, ?, ?, ?)`,
+    args: [hashSessionToken(token), userId, now, expiresAt],
+  });
+}
+
+export async function getUserBySessionToken(token: string | undefined): Promise<User | null> {
+  if (!token) return null;
+  await ensureDbInitialized();
+  const client = getTursoClient();
+  const now = new Date().toISOString();
+  const result = await client.execute({
+    sql: `SELECT u.* FROM auth_sessions s
+      INNER JOIN users u ON u.id = s.user_id
+      WHERE s.token_hash = ?
+        AND s.revoked_at IS NULL
+        AND s.expires_at > ?
+        AND u.status = 'Active'
+      LIMIT 1`,
+    args: [hashSessionToken(token), now],
+  });
+
+  return result.rows.length > 0 ? mapUserRow(result.rows[0]) : null;
+}
+
+export async function revokeAuthSession(token: string | undefined): Promise<void> {
+  if (!token) return;
+  await ensureDbInitialized();
+  const client = getTursoClient();
+  await client.execute({
+    sql: 'UPDATE auth_sessions SET revoked_at = ? WHERE token_hash = ? AND revoked_at IS NULL',
+    args: [new Date().toISOString(), hashSessionToken(token)],
+  });
+}
+
 export async function createUser(user: Omit<User, 'id' | 'createdAt' | 'lastLogin' | 'sessions'>): Promise<User> {
   await ensureDbInitialized();
   const client = getTursoClient();
@@ -170,12 +295,14 @@ export async function createUser(user: Omit<User, 'id' | 'createdAt' | 'lastLogi
     id: newId,
     username: isAdmin ? undefined : (user.username || user.name.toLowerCase().replace(/[^a-z0-9]/g, '.')),
     loginMethod: isAdmin ? 'email' : 'username',
-    tempPassword: isAdmin ? undefined : (user.tempPassword || `ASR@${Math.floor(1000 + Math.random() * 9000)}`),
+    tempPassword: user.tempPassword || `ASR@${Math.floor(1000 + Math.random() * 9000)}`,
     createdAt: now,
     lastLogin: 'Never',
     sessions: [],
     isCustomer: user.assignedRoleIds.length === 1 && user.assignedRoleIds[0] === 6,
   };
+
+  const passwordToStore = newUser.tempPassword ? hashPasswordValue(newUser.tempPassword) : null;
 
   await client.execute({
     sql: `INSERT INTO users (
@@ -190,7 +317,7 @@ export async function createUser(user: Omit<User, 'id' | 'createdAt' | 'lastLogi
       newUser.username || null,
       newUser.email,
       newUser.phone || null,
-      newUser.tempPassword || null,
+      passwordToStore,
       newUser.loginMethod || 'username',
       newUser.avatar || null,
       newUser.initials || 'U',
@@ -222,6 +349,11 @@ export async function updateUser(id: string, updates: Partial<User>): Promise<Us
   if (!existing) return null;
 
   const updated = { ...existing, ...updates };
+  const passwordToStore = updated.tempPassword
+    ? updated.tempPassword.startsWith('scrypt$')
+      ? updated.tempPassword
+      : hashPasswordValue(updated.tempPassword)
+    : null;
 
   await client.execute({
     sql: `UPDATE users SET
@@ -235,7 +367,7 @@ export async function updateUser(id: string, updates: Partial<User>): Promise<Us
       updated.username || null,
       updated.email,
       updated.phone || null,
-      updated.tempPassword || null,
+      passwordToStore,
       updated.loginMethod || 'username',
       updated.avatar || null,
       updated.initials || 'U',

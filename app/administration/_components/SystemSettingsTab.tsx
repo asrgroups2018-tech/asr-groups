@@ -20,7 +20,6 @@ import {
   RotateCw,
   Info,
   Lock,
-  Upload,
 } from 'lucide-react';
 
 type SettingsSubTab = 'profile' | 'shareholders' | 'security' | 'backup' | 'toggles';
@@ -95,17 +94,17 @@ export const SystemSettingsTab: React.FC = () => {
   };
 
   const handleAddShareholder = () => {
-    const newId = `SH-${shareholders.length + 1}`;
+    const newId = `SH-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
     setShareholders([
       ...shareholders,
       {
         id: newId,
-        name: 'New Shareholder Entity',
-        registrationNumber: 'CIN-PENDING',
+        name: '',
+        registrationNumber: '',
         percentage: 0,
-        contactPerson: 'Director Name',
-        email: 'director@entity.in',
-        phone: '+91 98000 00000',
+        contactPerson: '',
+        email: '',
+        phone: '',
         isPrimary: false,
       },
     ]);
@@ -228,16 +227,9 @@ export const SystemSettingsTab: React.FC = () => {
               <p className="text-[11px] text-slate-500">
                 Current: <code className="font-mono text-slate-700 font-bold">public/Groups Finalized.png</code>
               </p>
-              <button
-                type="button"
-                onClick={() =>
-                  showToast('Logo Management', 'Official vector branding is locked to enterprise asset repository.', 'info')
-                }
-                className="text-xs font-bold text-amber-700 hover:text-amber-800 flex items-center gap-1"
-              >
-                <Upload className="w-3.5 h-3.5" />
-                <span>Upload Replacement SVG/PNG</span>
-              </button>
+              <p className="text-[11px] text-slate-500">
+                Brand assets are managed with the deployed application configuration.
+              </p>
             </div>
           </div>
 

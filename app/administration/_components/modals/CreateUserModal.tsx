@@ -120,7 +120,7 @@ export const CreateUserModal: React.FC<CreateUserModalProps> = ({ isOpen, onClos
       name: name.trim(),
       username: isAdminRole ? undefined : username.trim(),
       email: effectiveEmail,
-      tempPassword: isAdminRole ? undefined : finalPassword,
+      tempPassword: finalPassword,
       loginMethod: isAdminRole ? 'email' : 'username',
       initials,
       assignedRoleIds: selectedRoleIds,
@@ -148,7 +148,7 @@ export const CreateUserModal: React.FC<CreateUserModalProps> = ({ isOpen, onClos
   const copyCredentials = () => {
     if (!createdUserCredentials) return;
     const text = createdUserCredentials.isAdmin
-      ? `ASR Groups Admin Login Credentials:\nName: ${createdUserCredentials.name}\nLogin Email: ${createdUserCredentials.email}\nPortal URL: ${window.location.origin}`
+      ? `ASR Groups Admin Login Credentials:\nName: ${createdUserCredentials.name}\nLogin Email: ${createdUserCredentials.email}\nPassword: ${createdUserCredentials.password}\nPortal URL: ${window.location.origin}`
       : `ASR Groups User Login Credentials:\nName: ${createdUserCredentials.name}\nUsername: ${createdUserCredentials.username}\nPassword: ${createdUserCredentials.password}\nPortal URL: ${window.location.origin}`;
 
     navigator.clipboard.writeText(text);
@@ -213,10 +213,18 @@ export const CreateUserModal: React.FC<CreateUserModalProps> = ({ isOpen, onClos
                   </div>
 
                   {createdUserCredentials.isAdmin ? (
-                    <div className="flex items-center justify-between bg-white p-2 rounded-xl border border-slate-200">
-                      <span className="text-slate-500 font-sans">Admin Login Email:</span>
-                      <strong className="text-[#701A35]">{createdUserCredentials.email}</strong>
-                    </div>
+                    <>
+                      <div className="flex items-center justify-between bg-white p-2 rounded-xl border border-slate-200">
+                        <span className="text-slate-500 font-sans">Admin Login Email:</span>
+                        <strong className="text-[#701A35]">{createdUserCredentials.email}</strong>
+                      </div>
+                      <div className="flex items-center justify-between bg-white p-2 rounded-xl border border-slate-200">
+                        <span className="text-slate-500 font-sans">Provided Password:</span>
+                        <strong className="text-slate-900 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 font-mono tracking-wider">
+                          {createdUserCredentials.password}
+                        </strong>
+                      </div>
+                    </>
                   ) : (
                     <>
                       <div className="flex items-center justify-between bg-white p-2 rounded-xl border border-slate-200">

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useApp } from '@/lib/store';
 import {
   Menu,
@@ -10,6 +10,9 @@ import {
   UserCheck,
   LogOut,
   Key,
+  ShieldAlert,
+  X,
+  Loader2,
 } from 'lucide-react';
 import { RoleBadge } from '@/components/ui/RoleBadge';
 
@@ -19,6 +22,7 @@ interface TopNavProps {
 
 export const TopNav: React.FC<TopNavProps> = ({ onOpenMobileMenu }) => {
   const pathname = usePathname();
+  const router = useRouter();
   const {
     users,
     loans,
@@ -33,7 +37,25 @@ export const TopNav: React.FC<TopNavProps> = ({ onOpenMobileMenu }) => {
   } = useApp();
 
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isSignOutOpen, setIsSignOutOpen] = useState(false);
+  const [isSigningOut, setIsSigningOut] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
+
+  const handleSignOut = async () => {
+    setIsSigningOut(true);
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } catch (error) {
+      console.error('Sign out request failed:', error);
+    } finally {
+      localStorage.removeItem('asr_token');
+      localStorage.removeItem('asr_user');
+      sessionStorage.removeItem('asr_token');
+      sessionStorage.removeItem('asr_user');
+      router.replace('/login');
+      router.refresh();
+    }
+  };
 
   // Close dropdown on click outside
   useEffect(() => {
@@ -118,6 +140,9 @@ export const TopNav: React.FC<TopNavProps> = ({ onOpenMobileMenu }) => {
   };
 
   const breadcrumbs = getBreadcrumbs();
+  const perspectiveRoles = currentActor.assignedRoleIds.includes(0)
+    ? roles
+    : roles.filter((role) => currentActor.assignedRoleIds.includes(role.id));
 
   return (
     <header className="bg-white border-b border-[#EBE7DF] sticky top-0 z-30 px-4 sm:px-6 py-3 flex items-center justify-between gap-4 relative">
@@ -215,7 +240,7 @@ export const TopNav: React.FC<TopNavProps> = ({ onOpenMobileMenu }) => {
                   Switch active persona to preview role-based permissions:
                 </p>
                 <div className="space-y-1 max-h-40 overflow-y-auto pr-1">
-                  {roles.map((r) => {
+                  {perspectiveRoles.map((r) => {
                     const isSelected = simulatedRoleId === r.id;
                     return (
                       <button
@@ -262,8 +287,8 @@ export const TopNav: React.FC<TopNavProps> = ({ onOpenMobileMenu }) => {
                 </button>
                 <button
                   onClick={() => {
-                    showToast('Logged Out', 'Your session has been securely ended.', 'info');
                     setIsProfileOpen(false);
+                    setIsSignOutOpen(true);
                   }}
                   className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs text-rose-600 hover:bg-rose-50 rounded-lg transition-colors font-medium cursor-pointer"
                 >
@@ -275,6 +300,65 @@ export const TopNav: React.FC<TopNavProps> = ({ onOpenMobileMenu }) => {
           )}
         </div>
       </div>
+
+      {isSignOutOpen && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/45 px-4 backdrop-blur-sm"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget && !isSigningOut) setIsSignOutOpen(false);
+          }}
+        >
+          <div
+            className="w-full max-w-md overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="sign-out-title"
+          >
+            <div className="flex items-start gap-4 border-b border-slate-100 px-6 py-5">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-rose-50 text-rose-600">
+                <ShieldAlert className="h-5 w-5" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <h2 id="sign-out-title" className="text-base font-bold text-slate-900">
+                  Sign out of ASR Groups?
+                </h2>
+                <p className="mt-1 text-sm leading-5 text-slate-500">
+                  Your current session will be securely ended on this device.
+                </p>
+              </div>
+              <button
+                type="button"
+                aria-label="Close sign out dialog"
+                disabled={isSigningOut}
+                onClick={() => setIsSignOutOpen(false)}
+                className="rounded-xl p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="flex flex-col-reverse gap-2 bg-slate-50 px-6 py-4 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                disabled={isSigningOut}
+                onClick={() => setIsSignOutOpen(false)}
+                className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Stay signed in
+              </button>
+              <button
+                type="button"
+                disabled={isSigningOut}
+                onClick={handleSignOut}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-rose-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                {isSigningOut && <Loader2 className="h-4 w-4 animate-spin" />}
+                {isSigningOut ? 'Signing out…' : 'Confirm sign out'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </header>
   );
 };

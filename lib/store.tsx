@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { usePathname } from 'next/navigation';
 import {
   User,
   Role,
@@ -247,6 +248,10 @@ const ROOT_ADMIN_FALLBACK: User = {
 };
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const pathname = usePathname();
+  const [authenticatedUser, setAuthenticatedUser] = useState<User | null>(null);
+  const [authReady, setAuthReady] = useState(false);
+
   // Navigation
   const [activeMainTab, setActiveMainTab] = useState<string>('dashboard');
   const [activeAdminTab, setActiveAdminTab] = useState<AdminTab>('overview');
@@ -273,6 +278,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isSavingReceipt, setIsSavingReceipt] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (pathname === '/login') {
+      setAuthenticatedUser(null);
+      setAuthReady(true);
+      return;
+    }
+
+    let cancelled = false;
+    setAuthReady(false);
+    fetch('/api/auth/me')
+      .then((response) => (response.ok ? response.json() : { success: false }))
+      .then((json) => {
+        if (cancelled) return;
+        setAuthenticatedUser(json.success ? json.data : null);
+        setAuthReady(true);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setAuthenticatedUser(null);
+          setAuthReady(true);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [pathname]);
 
   // Toast Helpers
   const showToast = useCallback(
@@ -360,11 +393,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [showToast, fetchReceipts]);
 
   useEffect(() => {
+    if (!authReady || pathname === '/login') {
+      setIsLoading(false);
+      return;
+    }
     refreshAll();
-  }, [refreshAll]);
+  }, [authReady, pathname, refreshAll]);
 
   // Current Actor
-  const currentActor = users.find((u) => u.primaryRoleId === simulatedRoleId) || users[0] || ROOT_ADMIN_FALLBACK;
+  const effectiveRoleId = authenticatedUser && !authenticatedUser.assignedRoleIds.includes(simulatedRoleId)
+    ? authenticatedUser.primaryRoleId
+    : simulatedRoleId;
+  const currentActor = authenticatedUser || users[0] || ROOT_ADMIN_FALLBACK;
 
   const fetchApprovalRequests = useCallback(async (status?: string, changeType?: string, query?: string) => {
     try {
@@ -1006,7 +1046,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setSelectedLoanId,
         userDetailsTab,
         setUserDetailsTab,
-        simulatedRoleId,
+        simulatedRoleId: effectiveRoleId,
         setSimulatedRoleId,
         currentActor,
 

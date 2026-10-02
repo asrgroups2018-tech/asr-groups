@@ -2,83 +2,39 @@
 
 import React, { useState, useMemo } from 'react';
 import { useApp } from '@/lib/store';
-import { Role, RoleId } from '@/lib/types';
+import { Role } from '@/lib/types';
 import {
   ShieldPlus,
   Lock,
-  Sliders,
   Edit2,
   Copy,
   Trash2,
-  Check,
 } from 'lucide-react';
 import { DataTable, ColumnDef } from '@/components/ui/DataTable';
-import { StatusPill } from '@/components/ui/StatusPill';
 import { CreateRoleModal } from './modals/CreateRoleModal';
 import { EditRoleModal } from './modals/EditRoleModal';
 
-interface EnhancedRole extends Role {
-  category: string;
-  accountType: string;
-  status: 'Active' | 'Pending' | 'Suspended';
-}
-
-const ROLE_METADATA: Record<number, { category: string; accountType: string; status: 'Active' | 'Pending' | 'Suspended' }> = {
-  0: { category: 'Administration', accountType: 'STAFF, SUPER_ADMIN', status: 'Active' },
-  1: { category: 'Administration', accountType: 'STAFF, ADMIN', status: 'Active' },
-  2: { category: 'Loans & Underwriting', accountType: 'STAFF, MANAGER', status: 'Active' },
-  3: { category: 'Accounting & Cashbook', accountType: 'STAFF, ACCOUNTANT', status: 'Active' },
-  4: { category: 'Collections & Field', accountType: 'FIELD_AGENT, STAFF', status: 'Active' },
-  5: { category: 'Salary & Payroll', accountType: 'STAFF, EMPLOYEE', status: 'Active' },
-  6: { category: 'General', accountType: 'CUSTOMER_PORTAL', status: 'Active' },
-};
-
-const CATEGORIES = [
-  'All',
-  'General',
-  'Loans & Underwriting',
-  'Collections & Field',
-  'Accounting & Cashbook',
-  'Salary & Payroll',
-  'Agents & Business',
-  'Reports & Analytics',
-  'Administration',
-];
+type RoleFilter = 'all' | 'protected' | 'custom';
 
 export const RolesPermissionsTab: React.FC = () => {
-  const { roles, setActiveAdminTab, showToast, createRole, simulatedRoleId } = useApp();
+  const { roles, users, showToast, createRole, simulatedRoleId } = useApp();
   const [isCreateRoleModalOpen, setIsCreateRoleModalOpen] = useState(false);
   const [editingRole, setEditingRole] = useState<Role | null>(null);
-  const [selectedCategory, setSelectedCategory] = useState('All');
+  const [roleFilter, setRoleFilter] = useState<RoleFilter>('all');
 
   const isSuperAdmin = simulatedRoleId === 0;
 
-  const enhancedRoles: EnhancedRole[] = useMemo(() => {
-    return roles.map((r) => {
-      const meta = ROLE_METADATA[r.id] || {
-        category: 'General',
-        accountType: 'STAFF_CUSTOM',
-        status: 'Active' as const,
-      };
-      return {
-        ...r,
-        category: meta.category,
-        accountType: meta.accountType,
-        status: meta.status,
-      };
-    });
-  }, [roles]);
-
   const filteredRoles = useMemo(() => {
-    if (selectedCategory === 'All') return enhancedRoles;
-    return enhancedRoles.filter((r) => r.category === selectedCategory);
-  }, [enhancedRoles, selectedCategory]);
+    if (roleFilter === 'protected') return roles.filter((role) => role.isSystemProtected);
+    if (roleFilter === 'custom') return roles.filter((role) => !role.isSystemProtected);
+    return roles;
+  }, [roles, roleFilter]);
 
   const handleCreateRoleClick = () => {
     if (!isSuperAdmin) {
       showToast(
         'Super Admin Required',
-        'Only Super Admin (Role 0) is authorized to create new roles.',
+        'Only a Super Admin is authorized to create new roles.',
         'warning'
       );
       return;
@@ -90,7 +46,7 @@ export const RolesPermissionsTab: React.FC = () => {
     if (!isSuperAdmin) {
       showToast(
         'Super Admin Required',
-        'Only Super Admin (Role 0) is authorized to clone or create new roles.',
+        'Only a Super Admin is authorized to clone or create new roles.',
         'warning'
       );
       return;
@@ -112,7 +68,7 @@ export const RolesPermissionsTab: React.FC = () => {
     }
   };
 
-  const columns: ColumnDef<EnhancedRole>[] = [
+  const columns: ColumnDef<Role>[] = [
     {
       key: 'id',
       header: 'Role ID',
@@ -132,48 +88,45 @@ export const RolesPermissionsTab: React.FC = () => {
       sortable: true,
       accessor: (r) => r.code,
       render: (r) => (
-        <button
-          onClick={() => setEditingRole(r)}
-          className="font-bold text-[#701A35] hover:underline text-xs font-mono block text-left cursor-pointer transition-colors"
-          title="Click to edit role and accessible pages"
-        >
-          {r.code}
+        <button onClick={() => setEditingRole(r)} className="block text-left" title="Edit role and page access">
+          <span className="block text-sm font-semibold text-[#701A35] hover:text-[#4E1026]">{r.name}</span>
+          <span className="mt-1 block font-mono text-[10px] text-slate-400">{r.code}</span>
         </button>
       ),
       exportValue: (r) => r.code,
     },
     {
       key: 'description',
-      header: 'Role Description',
+      header: 'Scope',
       sortable: true,
       accessor: (r) => r.description,
       render: (r) => (
-        <div className="text-xs text-slate-700 max-w-sm">
-          <span className="font-medium">{r.name}</span>
-          <span className="text-slate-400 block text-[11px] mt-0.5 truncate">{r.description}</span>
+        <div className="max-w-sm text-xs text-slate-700">
+          <span className="block font-medium text-slate-900">{r.description || 'No scope description configured.'}</span>
+          <span className="mt-1 block text-[11px] text-slate-400">Hierarchy level {r.hierarchyLevel}</span>
         </div>
       ),
       exportValue: (r) => `${r.name}: ${r.description}`,
     },
     {
-      key: 'category',
-      header: 'Role Category',
+      key: 'assignedUsers',
+      header: 'Assigned users',
       sortable: true,
-      accessor: (r) => r.category,
+      accessor: (r) => users.filter((user) => user.assignedRoleIds.includes(r.id)).length,
       render: (r) => (
-        <span className="text-xs text-slate-700">
-          {r.category}
+        <span className="text-sm font-semibold tabular-nums text-slate-800">
+          {users.filter((user) => user.assignedRoleIds.includes(r.id)).length}
         </span>
       ),
     },
     {
-      key: 'accountType',
-      header: 'Account Type',
+      key: 'roleType',
+      header: 'Type',
       sortable: true,
-      accessor: (r) => r.accountType,
+      accessor: (r) => r.isSystemProtected ? 'System role' : 'Custom role',
       render: (r) => (
-        <span className="text-[11px] font-mono text-slate-600 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
-          {r.accountType}
+        <span className="rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-[11px] font-semibold text-slate-600">
+          {r.isSystemProtected ? 'System role' : 'Custom role'}
         </span>
       ),
     },
@@ -182,9 +135,9 @@ export const RolesPermissionsTab: React.FC = () => {
       header: 'Status',
       align: 'center',
       sortable: true,
-      accessor: (r) => r.status,
-      render: (r) => (
-        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+      accessor: () => 'Active',
+      render: () => (
+        <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
           Active
         </span>
@@ -238,19 +191,19 @@ export const RolesPermissionsTab: React.FC = () => {
 
   return (
     <div className="space-y-5 animate-in fade-in duration-200">
-      {/* ─── Top Category Filter Card ─── */}
-      <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+      {/* ─── Top Category Filter Card (matching screenshot) ─── */}
+      <div className="space-y-4 rounded-2xl border border-[#E6E1D6] bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <span className="text-xs font-bold text-slate-700">
-            Filter by Category:
-          </span>
+          <div>
+            <h2 className="text-base font-semibold tracking-tight text-slate-900">Role catalogue</h2>
+            <p className="mt-1 text-xs text-slate-500">Define the access boundaries used across your organisation.</p>
+          </div>
           <button
             onClick={handleCreateRoleClick}
-            className={`px-4 py-2 text-xs font-bold rounded-xl transition-all shadow-sm flex items-center gap-1.5 shrink-0 self-start sm:self-center cursor-pointer ${
-              isSuperAdmin
+            className={`px-4 py-2 text-xs font-bold rounded-xl transition-all shadow-sm flex items-center gap-1.5 shrink-0 self-start sm:self-center cursor-pointer ${isSuperAdmin
                 ? 'text-[#EED8A1] bg-[#701A35] hover:bg-[#5C142B] active:scale-98 border border-[#C5A059]/30'
                 : 'text-slate-500 bg-slate-100 hover:bg-slate-200 border border-slate-200'
-            }`}
+              }`}
             title={isSuperAdmin ? 'Create New Role' : 'Only Super Admin can create custom roles'}
           >
             {isSuperAdmin ? (
@@ -258,27 +211,28 @@ export const RolesPermissionsTab: React.FC = () => {
             ) : (
               <Lock className="w-3.5 h-3.5 text-slate-400" />
             )}
-            <span>{isSuperAdmin ? '+ Create Role' : 'Create Role (Super Admin Only)'}</span>
+            <span>{isSuperAdmin ? 'Create role' : 'Creation restricted'}</span>
           </button>
         </div>
 
-        {/* Category Pills Bar */}
-        <div className="flex items-center gap-2 flex-wrap pt-1">
-          {CATEGORIES.map((cat) => {
-            const isActive = selectedCategory === cat;
+        <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 pt-4">
+          {([
+            { id: 'all', label: 'All roles' },
+            { id: 'protected', label: 'System roles' },
+            { id: 'custom', label: 'Custom roles' },
+          ] as { id: RoleFilter; label: string }[]).map((filter) => {
+            const isActive = roleFilter === filter.id;
 
             return (
               <button
-                key={cat}
-                onClick={() => setSelectedCategory(cat)}
-                className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer select-none ${
-                  isActive
+                key={filter.id}
+                onClick={() => setRoleFilter(filter.id)}
+                className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer select-none ${isActive
                     ? 'bg-[#701A35] text-white border border-[#C5A059]/50 shadow-xs font-bold'
                     : 'bg-slate-100/70 text-slate-600 hover:bg-slate-200/70 hover:text-slate-900 border border-slate-200'
-                }`}
+                  }`}
               >
-                {isActive && <Check className="w-3 h-3 text-[#EED8A1]" />}
-                <span>{cat}</span>
+                <span>{filter.label}</span>
               </button>
             );
           })}

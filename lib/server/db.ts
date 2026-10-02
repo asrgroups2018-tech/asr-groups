@@ -41,6 +41,10 @@ export const db = {
   // Administration & Users
   getUsers: adminOps.getUsers,
   getUserById: adminOps.getUserById,
+  authenticateUser: adminOps.authenticateUser,
+  createAuthSession: adminOps.createAuthSession,
+  getUserBySessionToken: adminOps.getUserBySessionToken,
+  revokeAuthSession: adminOps.revokeAuthSession,
   createUser: adminOps.createUser,
   updateUser: adminOps.updateUser,
   deleteUser: adminOps.deleteUser,
