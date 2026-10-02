@@ -146,10 +146,10 @@ export const HistoricalSheetView: React.FC = () => {
   return (
     <div className="p-4 sm:p-8 max-w-[100vw] space-y-5 animate-in fade-in duration-200">
       {/* ─── Top Control Header ─── */}
-      <div className="bg-white p-6 rounded-2xl border border-[#E6E1D6] shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2.5">
-            <div className="p-2.5 rounded-xl bg-[#701A35] text-white">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-[#701A35] text-[#EED8A1] shadow-sm flex items-center justify-center shrink-0">
               <FileSpreadsheet className="w-5 h-5 text-amber-200" />
             </div>
             <div>
@@ -166,7 +166,7 @@ export const HistoricalSheetView: React.FC = () => {
         <div className="flex items-center gap-3">
           <button
             onClick={() => fetchReceipts()}
-            className="px-3.5 py-2 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-50 border border-slate-300 rounded-xl transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
+            className="px-3.5 py-2 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl transition-all shadow-sm flex items-center gap-1.5 cursor-pointer"
           >
             <RefreshCw className="w-3.5 h-3.5" />
             <span>Reload Data</span>
@@ -174,7 +174,7 @@ export const HistoricalSheetView: React.FC = () => {
 
           <button
             onClick={handleExportExcel}
-            className="px-4 py-2 text-xs font-bold text-white bg-emerald-700 hover:bg-emerald-800 rounded-xl transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
+            className="px-4 py-2 text-xs font-bold text-[#EED8A1] bg-[#701A35] hover:bg-[#5C142B] border border-[#C5A059]/30 rounded-xl transition-all shadow-sm flex items-center gap-1.5 cursor-pointer"
           >
             <Download className="w-3.5 h-3.5" />
             <span>Export Real Excel (.xlsx)</span>
@@ -200,7 +200,7 @@ export const HistoricalSheetView: React.FC = () => {
       )}
 
       {/* ─── Filter & Search Bar with Category Toggle ─── */}
-      <div className="bg-white p-4 rounded-xl border border-[#E6E1D6] shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-3">
+      <div className="bg-white p-4.5 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-3 flex-1 w-full">
           {/* Search box */}
           <div className="relative flex-1 min-w-[200px] max-w-sm">
@@ -213,12 +213,12 @@ export const HistoricalSheetView: React.FC = () => {
                 setSearchQuery(e.target.value);
                 setPage(1);
               }}
-              className="w-full bg-[#FBF9F5] border border-[#E6E1D6] rounded-lg pl-9 pr-3.5 py-1.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-hidden focus:border-[#701A35]"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3.5 py-1.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-hidden focus:bg-white focus:border-[#701A35]"
             />
           </div>
 
           {/* Outside-Party Column Filter Toggle */}
-          <div className="flex items-center bg-[#F4F1EA] p-1 rounded-lg border border-[#E6E1D6] text-xs font-semibold overflow-x-auto max-w-full">
+          <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs font-semibold overflow-x-auto max-w-full">
             {[
               { id: 'ALL', label: 'All Companies (16)' },
               { id: 'ASR_ONLY', label: 'ASR Group Own (10)' },
@@ -227,7 +227,7 @@ export const HistoricalSheetView: React.FC = () => {
               <button
                 key={f.id}
                 onClick={() => setCategoryFilter(f.id as any)}
-                className={`px-3 py-1 rounded-md text-xs font-semibold transition-all whitespace-nowrap cursor-pointer ${
+                className={`px-3.5 py-1 rounded-lg text-xs font-semibold transition-all whitespace-nowrap cursor-pointer ${
                   categoryFilter === f.id
                     ? 'bg-[#701A35] text-white shadow-xs font-bold'
                     : 'text-slate-600 hover:text-slate-900'
@@ -249,17 +249,17 @@ export const HistoricalSheetView: React.FC = () => {
             <button
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page === 1}
-              className="p-1 rounded border border-[#E6E1D6] disabled:opacity-30 hover:bg-slate-100"
+              className="p-1 rounded-lg border border-slate-200 disabled:opacity-30 hover:bg-slate-100 cursor-pointer"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
-            <span className="px-2 font-bold">
+            <span className="px-2 font-bold text-slate-800">
               {page} / {totalPages}
             </span>
             <button
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               disabled={page >= totalPages}
-              className="p-1 rounded border border-[#E6E1D6] disabled:opacity-30 hover:bg-slate-100"
+              className="p-1 rounded-lg border border-slate-200 disabled:opacity-30 hover:bg-slate-100 cursor-pointer"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
@@ -268,7 +268,7 @@ export const HistoricalSheetView: React.FC = () => {
       </div>
 
       {/* ─── Excel-Style Editable Spreadsheet Grid with Frozen Columns ─── */}
-      <div className="bg-white rounded-2xl border border-[#E6E1D6] shadow-md overflow-hidden">
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="overflow-x-auto max-h-[64vh] relative">
           <table className="w-full text-left border-collapse text-xs select-none">
             {/* Sticky Header */}
@@ -341,6 +341,8 @@ export const HistoricalSheetView: React.FC = () => {
                   <tr
                     key={row.installmentId || row.sNo}
                     className={`hover:bg-[#FAF8F4] transition-colors ${
+                      isSavingThis ? 'motion-save-pulse bg-emerald-50/50' : ''
+                    } ${
                       row.isMismatch ? 'bg-rose-50/70' : ''
                     }`}
                   >
@@ -622,14 +624,14 @@ export const HistoricalSheetView: React.FC = () => {
               <button
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page === 1}
-                className="px-2 py-0.5 rounded border border-[#E6E1D6] disabled:opacity-30 bg-white"
+                className="px-2.5 py-1 rounded-lg border border-[#E6E1D6] disabled:opacity-30 bg-white hover:bg-slate-50 cursor-pointer btn-press transition-all duration-100"
               >
                 Prev
               </button>
               <button
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={page >= totalPages}
-                className="px-2 py-0.5 rounded border border-[#E6E1D6] disabled:opacity-30 bg-white"
+                className="px-2.5 py-1 rounded-lg border border-[#E6E1D6] disabled:opacity-30 bg-white hover:bg-slate-50 cursor-pointer btn-press transition-all duration-100"
               >
                 Next
               </button>

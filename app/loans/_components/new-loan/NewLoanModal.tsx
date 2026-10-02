@@ -357,8 +357,8 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
   const targetCustomer = customers.find((c) => c.id === selectedCustomerId);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs overflow-y-auto">
-      <div className="relative w-full max-w-4xl bg-[#1A0A13] border border-[#3D1A2C] rounded-2xl shadow-2xl text-slate-100 flex flex-col my-8 overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs overflow-y-auto animate-in fade-in duration-150">
+      <div className="relative w-full max-w-4xl bg-[#1A0A13] border border-[#3D1A2C] rounded-2xl shadow-2xl text-slate-100 flex flex-col my-8 overflow-hidden motion-modal">
         {/* Header */}
         <div className="p-6 border-b border-[#2C1420] flex items-center justify-between bg-[#230D1B]">
           <div>
@@ -506,7 +506,7 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
             <button
               type="button"
               onClick={() => setCurrentStep(currentStep - 1)}
-              className="px-4 py-2 bg-[#160810] hover:bg-white/5 border border-[#3D1A2C] rounded-lg text-xs font-semibold text-slate-300 flex items-center gap-1.5"
+              className="px-4 py-2 bg-[#160810] hover:bg-white/5 border border-[#3D1A2C] rounded-lg text-xs font-semibold text-slate-300 flex items-center gap-1.5 btn-press cursor-pointer"
             >
               <ChevronLeft className="w-4 h-4" /> Back
             </button>
@@ -518,7 +518,7 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 hover:bg-white/5 text-slate-400 rounded-lg text-xs font-semibold"
+              className="px-4 py-2 hover:bg-white/5 text-slate-400 rounded-lg text-xs font-semibold btn-press cursor-pointer"
             >
               Cancel
             </button>
@@ -531,11 +531,11 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
                   (currentStep === 3 && !isStep3Valid) ||
                   (currentStep === 4 && !isStep4Valid)
                 }
-                className={`px-5 py-2.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${
+                className={`px-5 py-2.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all btn-press ${
                   (currentStep === 3 && !isStep3Valid) ||
                   (currentStep === 4 && !isStep4Valid)
                     ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700'
-                    : 'bg-[#C5A059] text-slate-950 hover:bg-[#D4AF37] font-bold shadow-lg'
+                    : 'bg-[#C5A059] text-slate-950 hover:bg-[#D4AF37] font-bold shadow-lg cursor-pointer'
                 }`}
               >
                 Next Step <ChevronRight className="w-4 h-4" />
@@ -544,7 +544,7 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
               <button
                 type="button"
                 onClick={handleFinalCreate}
-                className="px-6 py-2.5 rounded-lg text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white flex items-center gap-1.5 shadow-lg cursor-pointer"
+                className="px-6 py-2.5 rounded-lg text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white flex items-center gap-1.5 shadow-lg cursor-pointer btn-press"
               >
                 <Check className="w-4 h-4" /> Save Loan
               </button>

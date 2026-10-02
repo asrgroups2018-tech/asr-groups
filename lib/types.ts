@@ -73,11 +73,14 @@ export type PermissionMatrixState = {
 
 export type ChangeType =
   | 'Loan Update'
+  | 'Loan Split'
+  | 'Loan Merge'
   | 'Collection Correction'
   | 'Expense Edit'
   | 'Salary Change'
   | 'Customer Update'
-  | 'Role Change';
+  | 'Role Change'
+  | 'Historical Correction';
 
 export interface ApprovalRule {
   id: string; // e.g. "RULE-101"
@@ -90,6 +93,33 @@ export interface ApprovalRule {
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+export type ApprovalRequestStatus = 'Pending' | 'Approved' | 'Rejected' | 'Auto-Approved';
+
+export type EntityType = 'loan' | 'customer' | 'company' | 'historical_receipt' | 'user';
+
+export interface ApprovalRequest {
+  id: string; // e.g. "REQ-2026-1001"
+  ruleId?: string; // e.g. "RULE-101"
+  changeType: ChangeType;
+  title: string;
+  description?: string;
+  entityType: EntityType;
+  entityId: string;
+  requesterId: string;
+  requesterName: string;
+  requesterRoleId: RoleId;
+  approverRoleId: RoleId;
+  amount: number;
+  status: ApprovalRequestStatus;
+  beforePayload?: string; // JSON string of old state
+  proposedPayload: string; // JSON string of proposed state
+  reviewerId?: string;
+  reviewerName?: string;
+  reviewerNotes?: string;
+  createdAt: string;
+  resolvedAt?: string;
 }
 
 export type AuditActionType =

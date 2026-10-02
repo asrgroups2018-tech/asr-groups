@@ -193,7 +193,7 @@ export const TopNav: React.FC<TopNavProps> = ({ onOpenMobileMenu }) => {
 
           {/* Profile Dropdown */}
           {isProfileOpen && (
-            <div className="absolute right-0 mt-2 w-72 bg-white rounded-2xl border border-slate-200 shadow-2xl p-3 z-50 animate-in fade-in slide-in-from-top-2">
+            <div className="absolute right-0 mt-2 w-72 bg-white rounded-2xl border border-slate-200 shadow-2xl p-3 z-50 motion-popover">
               <div className="p-2.5 border-b border-slate-100 mb-2">
                 <p className="text-xs font-bold text-slate-900">{currentActor.name}</p>
                 <p className="text-[11px] text-slate-500">{currentActor.email}</p>

@@ -33,6 +33,7 @@ import { SuspendUserModal } from './modals/SuspendUserModal';
 import { DeleteUserModal } from './modals/DeleteUserModal';
 import { DataTable, ColumnDef } from '@/components/ui/DataTable';
 import { AuditLogEntry } from '@/lib/types';
+import { evaluateApprovalAction } from '@/lib/utils/approvalRouting';
 
 export const UserDetailsView: React.FC = () => {
   const router = useRouter();
@@ -51,6 +52,9 @@ export const UserDetailsView: React.FC = () => {
     forceLogoutSession,
     toggleTwoFactor,
     showToast,
+    currentActor,
+    approvalRules,
+    createApprovalRequest,
   } = useApp();
 
   const cleanSelectedId = String(selectedUserId || '').trim().toLowerCase();
@@ -134,7 +138,33 @@ export const UserDetailsView: React.FC = () => {
     }
   };
 
-  const handleSaveRoles = () => {
+  const handleSaveRoles = async () => {
+    const isElevated = draftRoleIds.includes(0) || draftRoleIds.includes(1);
+    const wasElevated = user.assignedRoleIds.includes(0) || user.assignedRoleIds.includes(1);
+
+    if (isElevated && !wasElevated && currentActor.primaryRoleId !== 0) {
+      const evaluation = evaluateApprovalAction('Role Change', 0, currentActor.primaryRoleId, approvalRules);
+      if (evaluation.action === 'REQUIRE_APPROVAL') {
+        await createApprovalRequest({
+          ruleId: evaluation.rule?.id,
+          changeType: 'Role Change',
+          title: `Elevate ${user.name} (${user.id}) to Administrative Role`,
+          description: `Admin requesting role elevation for ${user.name}. Proposed primary role: ${roles.find((r) => r.id === draftPrimaryRole)?.name || 'Role ' + draftPrimaryRole}.`,
+          entityType: 'user',
+          entityId: user.id,
+          requesterId: currentActor.id,
+          requesterName: currentActor.name,
+          requesterRoleId: currentActor.primaryRoleId,
+          approverRoleId: 0,
+          amount: 0,
+          status: 'Pending',
+          beforePayload: { userId: user.id, assignedRoleIds: user.assignedRoleIds, primaryRoleId: user.primaryRoleId },
+          proposedPayload: { userId: user.id, assignedRoleIds: draftRoleIds, primaryRoleId: draftPrimaryRole },
+        });
+        return;
+      }
+    }
+
     updateUserRoles(user.id, draftRoleIds, draftPrimaryRole);
   };
 
@@ -220,13 +250,13 @@ export const UserDetailsView: React.FC = () => {
               setSelectedUserId(null);
               router.push('/administration/users');
             }}
-            className="p-2 rounded-xl bg-white hover:bg-slate-100 border border-[#E6E1D6] text-slate-700 transition-colors shadow-2xs cursor-pointer"
+            className="p-2 rounded-xl bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 transition-colors shadow-sm cursor-pointer"
             title="Back to User Management"
           >
             <ArrowLeft className="w-4 h-4" />
           </button>
           <div>
-            <h1 className="text-xl font-bold text-slate-900 tracking-tight">
+            <h1 className="text-xl font-bold text-slate-900 tracking-tight font-serif">
               User Details
             </h1>
             <p className="text-xs text-slate-500 mt-0.5">
@@ -258,10 +288,10 @@ export const UserDetailsView: React.FC = () => {
               <button
                 key={tab.id}
                 onClick={() => setUserDetailsTab(tab.id)}
-                className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-xs font-bold transition-all text-left cursor-pointer ${
+                className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-xs font-bold transition-all text-left cursor-pointer btn-press ${
                   isActive
-                    ? 'bg-white text-[#701A35] border-l-4 border-l-[#701A35] border border-[#E6E1D6] shadow-[0_1px_3px_rgba(0,0,0,0.03)]'
-                    : 'bg-white/60 hover:bg-white text-slate-600 hover:text-slate-900 border border-transparent hover:border-[#E6E1D6]'
+                    ? 'bg-white text-[#701A35] border-l-4 border-l-[#701A35] border border-slate-200 shadow-sm'
+                    : 'bg-white/60 hover:bg-white text-slate-600 hover:text-slate-900 border border-transparent hover:border-slate-200'
                 }`}
               >
                 <div className="flex items-center gap-2.5">
@@ -276,7 +306,7 @@ export const UserDetailsView: React.FC = () => {
         </div>
 
         {/* ──── CENTER: Main Content Card (Span 6) ──── */}
-        <div className="lg:col-span-6 bg-white rounded-2xl p-6 border border-[#E6E1D6] shadow-[0_1px_3px_rgba(0,0,0,0.02)] space-y-6">
+        <div className="lg:col-span-6 bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-6">
 
           {/* TAB 1: User Information */}
           {userDetailsTab === 'profile' && (
@@ -645,7 +675,7 @@ export const UserDetailsView: React.FC = () => {
 
         {/* ──── RIGHT: User Summary Profile Card (Span 3, matching screenshot) ──── */}
         <div className="lg:col-span-3 space-y-4">
-          <div className="bg-white rounded-2xl p-5 border border-[#E6E1D6] shadow-[0_1px_3px_rgba(0,0,0,0.02)] space-y-4 sticky top-4">
+          <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm space-y-4 sticky top-4">
             {/* Big Name */}
             <div>
               <h2 className="text-lg font-bold text-slate-900 leading-tight">
@@ -666,7 +696,7 @@ export const UserDetailsView: React.FC = () => {
               {/* Reset Password */}
               <button
                 onClick={handleResetPassword}
-                className="w-full flex items-center gap-2 p-2 rounded-xl text-xs font-semibold text-slate-700 hover:bg-[#FAF8F5] border border-slate-200 transition-colors text-left cursor-pointer shadow-2xs"
+                className="w-full flex items-center gap-2 p-2 rounded-xl text-xs font-semibold text-slate-700 hover:bg-[#FAF8F5] border border-slate-200 transition-colors text-left cursor-pointer shadow-2xs btn-press"
               >
                 <KeyRound className="w-3.5 h-3.5 text-slate-500" />
                 <span>Reset Password</span>
@@ -675,7 +705,7 @@ export const UserDetailsView: React.FC = () => {
               {/* Suspend / Reactivate */}
               <button
                 onClick={() => setIsSuspendModalOpen(true)}
-                className="w-full flex items-center gap-2 p-2 rounded-xl text-xs font-semibold text-amber-800 hover:bg-amber-50 border border-amber-200 transition-colors text-left cursor-pointer shadow-2xs"
+                className="w-full flex items-center gap-2 p-2 rounded-xl text-xs font-semibold text-amber-800 hover:bg-amber-50 border border-amber-200 transition-colors text-left cursor-pointer shadow-2xs btn-press"
               >
                 <Ban className="w-3.5 h-3.5 text-amber-600" />
                 <span>{user.status === 'Suspended' ? 'Reactivate User' : 'Suspend / Deactivate'}</span>
@@ -684,7 +714,7 @@ export const UserDetailsView: React.FC = () => {
               {/* Delete */}
               <button
                 onClick={() => setIsDeleteModalOpen(true)}
-                className="w-full flex items-center gap-2 p-2 rounded-xl text-xs font-semibold text-rose-700 hover:bg-rose-50 border border-rose-200 transition-colors text-left cursor-pointer shadow-2xs"
+                className="w-full flex items-center gap-2 p-2 rounded-xl text-xs font-semibold text-rose-700 hover:bg-rose-50 border border-rose-200 transition-colors text-left cursor-pointer shadow-2xs btn-press"
               >
                 <Trash2 className="w-3.5 h-3.5 text-rose-500" />
                 <span>Delete Account</span>
@@ -727,8 +757,8 @@ export const UserDetailsView: React.FC = () => {
 
       {/* Reset Credentials Modal for Standard Users */}
       {resetResult && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl border border-[#E6E1D6] shadow-2xl max-w-md w-full overflow-hidden p-6 space-y-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-white rounded-2xl border border-[#E6E1D6] shadow-2xl max-w-md w-full overflow-hidden p-6 space-y-4 motion-modal">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center justify-center">

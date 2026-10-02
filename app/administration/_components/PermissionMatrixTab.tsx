@@ -113,14 +113,14 @@ export const PermissionMatrixTab: React.FC = () => {
   return (
     <div className="space-y-6 pb-20">
       {/* Control Center Header */}
-      <div className="bg-white rounded-2xl p-5 border border-[#EBE7DF] shadow-[0_2px_8px_rgba(0,0,0,0.03)] space-y-4">
+      <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-2xl bg-purple-100 text-purple-800 border border-purple-200 flex items-center justify-center font-bold">
-              <Sliders className="w-6 h-6" />
+            <div className="w-10 h-10 rounded-xl bg-[#701A35] text-[#EED8A1] shadow-sm flex items-center justify-center shrink-0">
+              <Sliders className="w-5 h-5 text-amber-200" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-slate-900 font-serif">
+              <h3 className="text-lg font-bold text-slate-900 font-serif">
                 System Permission Matrix
               </h3>
               <p className="text-xs text-slate-500">
@@ -201,7 +201,7 @@ export const PermissionMatrixTab: React.FC = () => {
       </div>
 
       {/* Desktop Frozen-Pane Spreadsheet Matrix View */}
-      <div className="hidden lg:block bg-white rounded-2xl border border-[#EBE7DF] shadow-[0_2px_8px_rgba(0,0,0,0.03)] overflow-x-auto">
+      <div className="hidden lg:block bg-white rounded-2xl border border-slate-200 shadow-sm overflow-x-auto">
         <table className="w-full text-left text-xs border-collapse">
           <thead>
             <tr className="bg-[#FAF8F5] border-b-2 border-slate-200 sticky top-0 z-20">
@@ -343,7 +343,7 @@ export const PermissionMatrixTab: React.FC = () => {
 
       {/* Mobile Responsive Role-Picker Matrix Mode */}
       <div className="block lg:hidden space-y-4">
-        <div className="bg-white rounded-2xl p-4 border border-[#EBE7DF] shadow-xs space-y-3">
+        <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm space-y-3">
           <label className="block text-xs font-bold text-slate-700">
             Select Role to Inspect / Configure:
           </label>
@@ -370,7 +370,7 @@ export const PermissionMatrixTab: React.FC = () => {
             return (
               <div
                 key={mod.id}
-                className="bg-white rounded-2xl p-4 border border-[#EBE7DF] shadow-xs space-y-3"
+                className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm space-y-3"
               >
                 <div>
                   <div className="flex items-center justify-between">

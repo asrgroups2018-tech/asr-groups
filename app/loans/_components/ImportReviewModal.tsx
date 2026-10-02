@@ -10,7 +10,6 @@ import {
   FileSpreadsheet,
   ArrowRight,
   Layers,
-  Sparkles,
   HelpCircle,
   RotateCcw,
   Check,
@@ -226,7 +225,7 @@ export const ImportReviewModal: React.FC<ImportReviewModalProps> = ({ isOpen, on
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 overflow-y-auto animate-in fade-in duration-150">
-      <div className="bg-white rounded-3xl border border-[#E6E1D6] shadow-2xl w-full max-w-5xl max-h-[92vh] flex flex-col overflow-hidden">
+      <div className="bg-white rounded-3xl border border-[#E6E1D6] shadow-2xl w-full max-w-5xl max-h-[92vh] flex flex-col overflow-hidden motion-modal">
         {/* Header */}
         <div className="px-6 py-5 border-b border-[#E6E1D6] flex items-center justify-between bg-[#FAF8F5]">
           <div className="flex items-center gap-3">
@@ -306,7 +305,7 @@ export const ImportReviewModal: React.FC<ImportReviewModalProps> = ({ isOpen, on
 
                 <div className="bg-emerald-50/70 p-3.5 rounded-xl border border-emerald-200">
                   <span className="text-[10px] font-bold text-emerald-800 uppercase tracking-wider font-mono flex items-center gap-1">
-                    <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
                     Auto-Matched Continuations
                   </span>
                   <span className="text-xl font-bold text-emerald-700 font-mono block mt-0.5">

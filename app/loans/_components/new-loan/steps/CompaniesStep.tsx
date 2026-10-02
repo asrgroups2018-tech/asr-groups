@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Building2, Check, Sparkles, Layers, RefreshCw, X } from 'lucide-react';
+import { Building2, Check, Layers, RefreshCw, X } from 'lucide-react';
 import { Company } from '@/lib/types';
 import { MoneyDisplay } from '@/components/ui/MoneyDisplay';
 

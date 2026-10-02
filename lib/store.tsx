@@ -20,6 +20,7 @@ import {
   Loan,
   Installment,
   HistoricalReceiptRow,
+  ApprovalRequest,
 } from './types';
 import {
   ROLES_DATA,
@@ -114,6 +115,7 @@ interface AppContextType {
   companies: Company[];
   loans: Loan[];
   receipts: HistoricalReceiptRow[];
+  approvalRequests: ApprovalRequest[];
   dashboardData: DashboardData | null;
   toasts: ToastMessage[];
   isLoading: boolean;
@@ -122,8 +124,14 @@ interface AppContextType {
   // Backend API Operations
   refreshAll: () => Promise<void>;
   fetchReceipts: (category?: 'ALL' | 'ASR_ONLY' | 'OUTSIDE_ONLY', query?: string) => Promise<void>;
+  fetchApprovalRequests: (status?: string, changeType?: string, query?: string) => Promise<void>;
   showToast: (title: string, description?: string, type?: ToastMessage['type']) => void;
   removeToast: (id: string) => void;
+
+  // Requests & Approvals
+  createApprovalRequest: (data: any) => Promise<ApprovalRequest | null>;
+  approveRequest: (id: string, notes?: string) => Promise<boolean>;
+  rejectRequest: (id: string, notes: string) => Promise<boolean>;
 
   // Admin & User Operations
   updateUserRoles: (userId: string, roleIds: RoleId[], primaryRoleId: RoleId) => Promise<boolean>;
@@ -260,6 +268,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loans, setLoans] = useState<Loan[]>([]);
   const [receipts, setReceipts] = useState<HistoricalReceiptRow[]>([]);
+  const [approvalRequests, setApprovalRequests] = useState<ApprovalRequest[]>([]);
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -313,6 +322,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         compRes,
         loansRes,
         dashRes,
+        reqsRes,
       ] = await Promise.all([
         fetch('/api/admin/users').then((r) => r.json()).catch(() => ({ success: false })),
         fetch('/api/admin/roles').then((r) => r.json()).catch(() => ({ success: false })),
@@ -324,6 +334,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         fetch('/api/companies').then((r) => r.json()).catch(() => ({ success: false })),
         fetch('/api/loans').then((r) => r.json()).catch(() => ({ success: false })),
         fetch('/api/dashboard').then((r) => r.json()).catch(() => ({ success: false })),
+        fetch('/api/requests').then((r) => r.json()).catch(() => ({ success: false })),
       ]);
 
       if (usersRes.success && usersRes.data) setUsers(usersRes.data);
@@ -336,6 +347,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (compRes.success && compRes.data) setCompanies(compRes.data);
       if (loansRes.success && loansRes.data) setLoans(loansRes.data);
       if (dashRes.success && dashRes.data) setDashboardData(dashRes.data);
+      if (reqsRes && reqsRes.success && reqsRes.data) setApprovalRequests(reqsRes.data);
 
       // Also trigger initial receipt fetch
       fetchReceipts();
@@ -353,6 +365,102 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Current Actor
   const currentActor = users.find((u) => u.primaryRoleId === simulatedRoleId) || users[0] || ROOT_ADMIN_FALLBACK;
+
+  const fetchApprovalRequests = useCallback(async (status?: string, changeType?: string, query?: string) => {
+    try {
+      const params = new URLSearchParams();
+      if (status && status !== 'ALL') params.set('status', status);
+      if (changeType && changeType !== 'ALL') params.set('changeType', changeType);
+      if (query) params.set('q', query);
+      const res = await fetch(`/api/requests?${params.toString()}`);
+      const json = await res.json();
+      if (json.success) setApprovalRequests(json.data || []);
+    } catch (err) {
+      console.error('Failed to fetch approval requests:', err);
+    }
+  }, []);
+
+  const createApprovalRequest = async (data: any): Promise<ApprovalRequest | null> => {
+    try {
+      const res = await fetch('/api/requests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      const json = await res.json();
+      if (json.success) {
+        showToast(
+          data.status === 'Auto-Approved' ? 'Request Auto-Approved' : 'Request Submitted',
+          data.status === 'Auto-Approved'
+            ? `${data.title} was automatically approved per active threshold policy.`
+            : `${data.title} submitted to Approvals Queue for authorization.`,
+          data.status === 'Auto-Approved' ? 'success' : 'info'
+        );
+        await refreshAll();
+        return json.data;
+      } else {
+        showToast('Submission Failed', json.error || 'Failed to create request', 'error');
+        return null;
+      }
+    } catch (err: any) {
+      showToast('Error', err.message || 'Network error', 'error');
+      return null;
+    }
+  };
+
+  const approveRequest = async (id: string, notes?: string): Promise<boolean> => {
+    try {
+      const res = await fetch(`/api/requests/${encodeURIComponent(id)}/approve`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reviewerId: currentActor.id,
+          reviewerName: currentActor.name,
+          reviewerRoleId: currentActor.primaryRoleId,
+          notes: notes || 'Approved by reviewer',
+        }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        showToast('Request Approved', `Request ${id} approved and changes committed to ledger.`, 'success');
+        await refreshAll();
+        return true;
+      } else {
+        showToast('Approval Error', json.error || 'Failed to approve request', 'error');
+        return false;
+      }
+    } catch (err: any) {
+      showToast('Error', err.message || 'Failed to approve request', 'error');
+      return false;
+    }
+  };
+
+  const rejectRequest = async (id: string, notes: string): Promise<boolean> => {
+    try {
+      const res = await fetch(`/api/requests/${encodeURIComponent(id)}/reject`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reviewerId: currentActor.id,
+          reviewerName: currentActor.name,
+          reviewerRoleId: currentActor.primaryRoleId,
+          notes,
+        }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        showToast('Request Rejected', `Request ${id} was rejected. Reason: ${notes}`, 'warning');
+        await refreshAll();
+        return true;
+      } else {
+        showToast('Rejection Error', json.error || 'Failed to reject request', 'error');
+        return false;
+      }
+    } catch (err: any) {
+      showToast('Error', err.message || 'Failed to reject request', 'error');
+      return false;
+    }
+  };
 
   // ==========================================
   // Loan Creation Engine v2 & Propagation
@@ -912,6 +1020,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         companies,
         loans,
         receipts,
+        approvalRequests,
         dashboardData,
         toasts,
         isLoading,
@@ -919,8 +1028,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
         refreshAll,
         fetchReceipts,
+        fetchApprovalRequests,
         showToast,
         removeToast,
+
+        createApprovalRequest,
+        approveRequest,
+        rejectRequest,
 
         updateUserRoles,
         updateUserProfile,

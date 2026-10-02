@@ -11,7 +11,6 @@ import {
   FileSpreadsheet,
   ShieldAlert,
   ArrowRight,
-  Sparkles,
 } from 'lucide-react';
 import { RoleBadge } from '@/components/ui/RoleBadge';
 import { DataTable, ColumnDef } from '@/components/ui/DataTable';
@@ -154,15 +153,15 @@ export const AuditLogTab: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header Banner */}
-      <div className="bg-white rounded-2xl p-5 border border-[#EBE7DF] shadow-[0_2px_8px_rgba(0,0,0,0.03)] space-y-4">
+      <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#FAF8F5] border border-[#E6E1D6] flex items-center justify-center text-[#701A35]">
-              <History className="w-5 h-5" />
+            <div className="w-10 h-10 rounded-xl bg-[#701A35] text-[#EED8A1] shadow-sm flex items-center justify-center shrink-0">
+              <History className="w-5 h-5 text-amber-200" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="text-base font-bold text-slate-900 font-serif">
+                <h3 className="text-lg font-bold text-slate-900 font-serif">
                   System Audit Ledger
                 </h3>
                 <span className="inline-flex items-center gap-1 text-[10px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200">

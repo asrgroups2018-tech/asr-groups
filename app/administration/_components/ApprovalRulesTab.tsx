@@ -170,7 +170,7 @@ export const ApprovalRulesTab: React.FC = () => {
     <div className="space-y-6">
       {/* Top Stat Strip & Add Button */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white rounded-2xl p-4 border border-[#EBE7DF] shadow-[0_2px_8px_rgba(0,0,0,0.03)] flex items-center justify-between">
+        <div className="bg-white rounded-2xl p-4.5 border-2 border-slate-200/90 shadow-sm flex items-center justify-between">
           <div>
             <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500 font-mono">
               TOTAL RULES
@@ -179,42 +179,42 @@ export const ApprovalRulesTab: React.FC = () => {
               {approvalRules.length}
             </h3>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold">
+          <div className="w-10 h-10 rounded-xl bg-slate-100 border border-slate-200 text-slate-700 flex items-center justify-center font-bold">
             <FileCheck2 className="w-5 h-5" />
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl p-4 border border-[#EBE7DF] shadow-[0_2px_8px_rgba(0,0,0,0.03)] flex items-center justify-between">
+        <div className="bg-white rounded-2xl p-4.5 border-2 border-emerald-300 shadow-sm flex items-center justify-between">
           <div>
-            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500 font-mono">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-emerald-800 font-mono">
               ACTIVE WORKFLOWS
             </p>
             <h3 className="text-2xl font-bold text-emerald-700 tabular-nums mt-0.5">
               {activeRulesCount}
             </h3>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
+          <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 flex items-center justify-center font-bold">
             <CheckCircle2 className="w-5 h-5" />
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl p-4 border border-[#EBE7DF] shadow-[0_2px_8px_rgba(0,0,0,0.03)] flex items-center justify-between">
+        <div className="bg-white rounded-2xl p-4.5 border-2 border-amber-300 shadow-sm flex items-center justify-between">
           <div>
-            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500 font-mono">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-amber-800 font-mono">
               AUTO-APPROVE ENABLED
             </p>
             <h3 className="text-2xl font-bold text-amber-700 tabular-nums mt-0.5">
               {autoApproveCount}
             </h3>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold">
+          <div className="w-10 h-10 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 flex items-center justify-center font-bold">
             <Zap className="w-5 h-5" />
           </div>
         </div>
       </div>
 
       {/* Rules Toolbar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-[#EBE7DF] shadow-[0_2px_8px_rgba(0,0,0,0.03)]">
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-4.5 rounded-2xl border border-slate-200 shadow-sm">
         <div>
           <h3 className="text-base font-bold text-slate-900 font-serif">
             Financial & Operational Approval Matrix
@@ -226,7 +226,7 @@ export const ApprovalRulesTab: React.FC = () => {
 
         <button
           onClick={() => setIsAddModalOpen(true)}
-          className="px-4 py-2 text-xs font-bold text-white bg-[#701A35] hover:bg-[#5C142B] active:scale-98 rounded-xl transition-all shadow-xs flex items-center gap-1.5"
+          className="px-4 py-2 text-xs font-bold text-[#EED8A1] bg-[#701A35] hover:bg-[#5C142B] active:scale-98 rounded-xl transition-all shadow-sm flex items-center gap-1.5 border border-[#C5A059]/30 cursor-pointer"
         >
           <PlusCircle className="w-4 h-4 text-amber-200" />
           <span>Add Rule</span>
@@ -235,8 +235,8 @@ export const ApprovalRulesTab: React.FC = () => {
 
       {/* Rules Table or Modern Empty State */}
       {approvalRules.length === 0 ? (
-        <div className="bg-white rounded-2xl p-8 sm:p-12 border border-[#E6E1D6] shadow-[0_1px_3px_rgba(0,0,0,0.03)] text-center space-y-4">
-          <div className="w-12 h-12 rounded-xl bg-[#FAF8F5] text-[#701A35] border border-[#E6E1D6] flex items-center justify-center mx-auto">
+        <div className="bg-white rounded-2xl p-8 sm:p-12 border border-slate-200 shadow-sm text-center space-y-4">
+          <div className="w-12 h-12 rounded-xl bg-[#701A35] text-[#EED8A1] shadow-sm flex items-center justify-center mx-auto">
             <FileCheck2 className="w-6 h-6" />
           </div>
           <div className="max-w-md mx-auto space-y-1.5">
@@ -249,7 +249,7 @@ export const ApprovalRulesTab: React.FC = () => {
           </div>
           <button
             onClick={() => setIsAddModalOpen(true)}
-            className="px-5 py-2.5 text-xs font-bold text-white bg-[#701A35] hover:bg-[#5C142B] active:scale-98 rounded-xl transition-all shadow-xs inline-flex items-center gap-1.5"
+            className="px-5 py-2.5 text-xs font-bold text-[#EED8A1] bg-[#701A35] hover:bg-[#5C142B] active:scale-98 rounded-xl transition-all shadow-sm inline-flex items-center gap-1.5 border border-[#C5A059]/30 cursor-pointer"
           >
             <PlusCircle className="w-4 h-4 text-amber-200" />
             <span>Create Your First Approval Rule</span>

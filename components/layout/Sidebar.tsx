@@ -154,7 +154,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpenMobile, onCloseMobile })
                   <button
                     key={item.id}
                     onClick={() => handleNavClick(item.id, item.href)}
-                    className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-all group cursor-pointer ${
+                    className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-all duration-140 ease-out group cursor-pointer btn-press ${
                       isActive
                         ? 'bg-[#2E1220] text-[#EED8A1] border border-[#C5A059]/40 shadow-xs font-bold'
                         : 'text-slate-300/80 hover:text-white hover:bg-white/5 border border-transparent'

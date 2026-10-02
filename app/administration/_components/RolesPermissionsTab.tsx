@@ -172,7 +172,7 @@ export const RolesPermissionsTab: React.FC = () => {
       sortable: true,
       accessor: (r) => r.accountType,
       render: (r) => (
-        <span className="text-[11px] font-mono text-slate-600 bg-[#FAF8F5] px-2 py-0.5 rounded border border-[#E6E1D6]">
+        <span className="text-[11px] font-mono text-slate-600 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
           {r.accountType}
         </span>
       ),
@@ -238,17 +238,17 @@ export const RolesPermissionsTab: React.FC = () => {
 
   return (
     <div className="space-y-5 animate-in fade-in duration-200">
-      {/* ─── Top Category Filter Card (matching screenshot) ─── */}
-      <div className="bg-white p-5 rounded-2xl border border-[#E6E1D6] shadow-[0_1px_3px_rgba(0,0,0,0.02)] space-y-3">
+      {/* ─── Top Category Filter Card ─── */}
+      <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 shadow-sm space-y-3">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <span className="text-xs font-bold text-slate-700">
             Filter by Category:
           </span>
           <button
             onClick={handleCreateRoleClick}
-            className={`px-4 py-2 text-xs font-bold rounded-xl transition-all shadow-xs flex items-center gap-1.5 shrink-0 self-start sm:self-center cursor-pointer ${
+            className={`px-4 py-2 text-xs font-bold rounded-xl transition-all shadow-sm flex items-center gap-1.5 shrink-0 self-start sm:self-center cursor-pointer ${
               isSuperAdmin
-                ? 'text-white bg-[#701A35] hover:bg-[#5C142B] active:scale-98'
+                ? 'text-[#EED8A1] bg-[#701A35] hover:bg-[#5C142B] active:scale-98 border border-[#C5A059]/30'
                 : 'text-slate-500 bg-slate-100 hover:bg-slate-200 border border-slate-200'
             }`}
             title={isSuperAdmin ? 'Create New Role' : 'Only Super Admin can create custom roles'}
@@ -262,7 +262,7 @@ export const RolesPermissionsTab: React.FC = () => {
           </button>
         </div>
 
-        {/* Category Pills Bar matching screenshot */}
+        {/* Category Pills Bar */}
         <div className="flex items-center gap-2 flex-wrap pt-1">
           {CATEGORIES.map((cat) => {
             const isActive = selectedCategory === cat;
@@ -273,8 +273,8 @@ export const RolesPermissionsTab: React.FC = () => {
                 onClick={() => setSelectedCategory(cat)}
                 className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer select-none ${
                   isActive
-                    ? 'bg-[#701A35] text-white border border-[#C5A059]/50 shadow-2xs font-bold'
-                    : 'bg-[#FAF8F5] text-slate-600 hover:bg-[#F3EFE6] hover:text-slate-900 border border-[#E6E1D6]'
+                    ? 'bg-[#701A35] text-white border border-[#C5A059]/50 shadow-xs font-bold'
+                    : 'bg-slate-100/70 text-slate-600 hover:bg-slate-200/70 hover:text-slate-900 border border-slate-200'
                 }`}
               >
                 {isActive && <Check className="w-3 h-3 text-[#EED8A1]" />}

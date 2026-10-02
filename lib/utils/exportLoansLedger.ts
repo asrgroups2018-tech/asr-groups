@@ -124,121 +124,281 @@ export function flattenLoansForExport(loans: Loan[]): FlattenedLoanExportRow[] {
   return rows;
 }
 
-export function exportLoansToExcel(loans: Loan[], dateRangeLabel?: string) {
+import ExcelJS from 'exceljs';
+
+function getExportTimestamp(): string {
+  const now = new Date();
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}_${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`;
+}
+
+export async function exportLoansToExcel(loans: Loan[], dateRangeLabel?: string) {
   const rows = flattenLoansForExport(loans);
 
-  // Map to full edit structure with exact headers
-  const exportData = rows.map((r, i) => ({
-    'LOAN ID': r.loanId,
-    'S.NO': r.seqNo || i + 1,
-    'CLIENT NAME': r.clientName,
-    'CODE NO': r.codeNo,
-    'PLACE': r.place,
-    'DUE DATE': r.dueDate,
-    'AMOUNT': r.amountDue,
-    'STATUS': r.status,
-    'RECD DATE': r.recdDate,
-    'DEP NAME': r.depName,
-    'CHQ NO': r.chqNo,
-    'PASS ENTERPRISES': r.pass || '',
-    'KARS ENTERPRISES': r.kars || '',
-    'INFIN GROUP': r.ig || '',
-    'INFINITY ENTERPRISES': r.ine || '',
-    'INNOVATIVE SOLUTIONS': r.ins || '',
-    'MARS SOLUTION': r.mars || '',
-    'MM ASSOCIATES': r.mm || '',
-    'TRIVENI GROUP': r.tg || '',
-    'GLOBAL SOLITAIRE': r.gs || '',
-    'ALAGESH': r.ala || '',
-    'FINCUBE VENTURES': r.fin || '',
-    'CS ASSOCIATES': r.cs || '',
-    'M CHINNIAH': r.mc || '',
-    'TATVA ENTERPRISES': r.tatva || '',
-    'BHAVANA CORP': r.bhavna || '',
-    'THIRUCHENDURAON ASSOCIATE': r.taSS || '',
-    'REMARKS': r.remarks,
-  }));
+  const workbook = new ExcelJS.Workbook();
+  workbook.creator = 'ASR Groups Internal Finance ERP';
+  workbook.lastModifiedBy = 'ASR Groups ERP';
+  workbook.created = new Date();
+  workbook.modified = new Date();
 
-  // Append summary row
-  const totalAmount = rows.reduce((s, r) => s + r.amountDue, 0);
-  const totalPass = rows.reduce((s, r) => s + r.pass, 0);
-  const totalKars = rows.reduce((s, r) => s + r.kars, 0);
-  const totalIg = rows.reduce((s, r) => s + r.ig, 0);
-  const totalIne = rows.reduce((s, r) => s + r.ine, 0);
-  const totalIns = rows.reduce((s, r) => s + r.ins, 0);
-  const totalMars = rows.reduce((s, r) => s + r.mars, 0);
-  const totalMm = rows.reduce((s, r) => s + r.mm, 0);
-  const totalTg = rows.reduce((s, r) => s + r.tg, 0);
-  const totalGs = rows.reduce((s, r) => s + r.gs, 0);
-  const totalAla = rows.reduce((s, r) => s + r.ala, 0);
-  const totalFin = rows.reduce((s, r) => s + r.fin, 0);
-  const totalCs = rows.reduce((s, r) => s + r.cs, 0);
-  const totalMc = rows.reduce((s, r) => s + r.mc, 0);
-  const totalTatva = rows.reduce((s, r) => s + r.tatva, 0);
-  const totalBhavna = rows.reduce((s, r) => s + r.bhavna, 0);
-  const totalTaSS = rows.reduce((s, r) => s + r.taSS, 0);
-
-  exportData.push({
-    'LOAN ID': 'TOTAL',
-    'S.NO': '',
-    'CLIENT NAME': `Total (${rows.length} entries across ${loans.length} loans)`,
-    'CODE NO': '',
-    'PLACE': '',
-    'DUE DATE': '',
-    'AMOUNT': totalAmount,
-    'STATUS': '',
-    'RECD DATE': '',
-    'DEP NAME': '',
-    'CHQ NO': '',
-    'PASS ENTERPRISES': totalPass || '',
-    'KARS ENTERPRISES': totalKars || '',
-    'INFIN GROUP': totalIg || '',
-    'INFINITY ENTERPRISES': totalIne || '',
-    'INNOVATIVE SOLUTIONS': totalIns || '',
-    'MARS SOLUTION': totalMars || '',
-    'MM ASSOCIATES': totalMm || '',
-    'TRIVENI GROUP': totalTg || '',
-    'GLOBAL SOLITAIRE': totalGs || '',
-    'ALAGESH': totalAla || '',
-    'FINCUBE VENTURES': totalFin || '',
-    'CS ASSOCIATES': totalCs || '',
-    'M CHINNIAH': totalMc || '',
-    'TATVA ENTERPRISES': totalTatva || '',
-    'BHAVANA CORP': totalBhavna || '',
-    'THIRUCHENDURAON ASSOCIATE': totalTaSS || '',
-    'REMARKS': '',
+  const ws = workbook.addWorksheet('LOANS DATA', {
+    views: [{ state: 'frozen', xSplit: 3, ySplit: 1, activeCell: 'A2' }],
+    pageSetup: { orientation: 'landscape', fitToPage: true },
   });
 
-  const ws = XLSX.utils.json_to_sheet(exportData);
+  // Define All 28 Columns with Metadata & Alignment
+  const columnsDef = [
+    { header: 'LOAN ID', key: 'loanId', width: 15, align: 'center', type: 'base' },
+    { header: 'S.NO', key: 'seqNo', width: 8, align: 'center', type: 'base' },
+    { header: 'CLIENT NAME', key: 'clientName', width: 34, align: 'left', type: 'base' },
+    { header: 'CODE NO', key: 'codeNo', width: 12, align: 'center', type: 'base' },
+    { header: 'PLACE', key: 'place', width: 15, align: 'left', type: 'base' },
+    { header: 'DUE DATE', key: 'dueDate', width: 14, align: 'center', type: 'base' },
+    { header: 'AMOUNT', key: 'amountDue', width: 18, align: 'right', type: 'amount' },
+    { header: 'STATUS', key: 'status', width: 13, align: 'center', type: 'base' },
+    { header: 'RECD DATE', key: 'recdDate', width: 14, align: 'center', type: 'base' },
+    { header: 'DEP NAME', key: 'depName', width: 15, align: 'center', type: 'base' },
+    { header: 'CHQ NO', key: 'chqNo', width: 14, align: 'center', type: 'base' },
+    // 10 ASR Group Own Companies
+    { header: 'PASS ENTERPRISES', key: 'pass', width: 18, align: 'right', type: 'asr' },
+    { header: 'KARS ENTERPRISES', key: 'kars', width: 18, align: 'right', type: 'asr' },
+    { header: 'INFIN GROUP', key: 'ig', width: 16, align: 'right', type: 'asr' },
+    { header: 'INFINITY ENTERPRISES', key: 'ine', width: 18, align: 'right', type: 'asr' },
+    { header: 'INNOVATIVE SOLUTIONS', key: 'ins', width: 20, align: 'right', type: 'asr' },
+    { header: 'MARS SOLUTION', key: 'mars', width: 16, align: 'right', type: 'asr' },
+    { header: 'MM ASSOCIATES', key: 'mm', width: 16, align: 'right', type: 'asr' },
+    { header: 'TRIVENI GROUP', key: 'tg', width: 16, align: 'right', type: 'asr' },
+    { header: 'GLOBAL SOLITAIRE', key: 'gs', width: 18, align: 'right', type: 'asr' },
+    { header: 'ALAGESH', key: 'ala', width: 15, align: 'right', type: 'asr' },
+    // 6 Outside Party Companies
+    { header: 'FINCUBE VENTURES', key: 'fin', width: 18, align: 'right', type: 'outside' },
+    { header: 'CS ASSOCIATES', key: 'cs', width: 16, align: 'right', type: 'outside' },
+    { header: 'M CHINNIAH', key: 'mc', width: 15, align: 'right', type: 'outside' },
+    { header: 'TATVA ENTERPRISES', key: 'tatva', width: 18, align: 'right', type: 'outside' },
+    { header: 'BHAVANA CORP', key: 'bhavna', width: 16, align: 'right', type: 'outside' },
+    { header: 'THIRUCHENDURAON ASSOCIATE', key: 'taSS', width: 24, align: 'right', type: 'outside' },
+    // Remarks
+    { header: 'REMARKS', key: 'remarks', width: 28, align: 'left', type: 'base' },
+  ];
+
+  // Map Data Rows into 2D Array for Table
+  const tableDataRows = rows.map((r, rowIdx) => [
+    r.loanId,
+    r.seqNo || rowIdx + 1,
+    r.clientName,
+    r.codeNo || '',
+    r.place || 'CHENNAI',
+    r.dueDate || '',
+    r.amountDue || 0,
+    r.status || 'PENDING',
+    r.recdDate || '',
+    r.depName || '',
+    r.chqNo || '',
+    r.pass || 0,
+    r.kars || 0,
+    r.ig || 0,
+    r.ine || 0,
+    r.ins || 0,
+    r.mars || 0,
+    r.mm || 0,
+    r.tg || 0,
+    r.gs || 0,
+    r.ala || 0,
+    r.fin || 0,
+    r.cs || 0,
+    r.mc || 0,
+    r.tatva || 0,
+    r.bhavna || 0,
+    r.taSS || 0,
+    r.remarks || '',
+  ]);
+
+  // Add True Native Excel Table with Built-In Filter Buttons & Totals
+  ws.addTable({
+    name: 'LoansLedgerTable',
+    ref: 'A1',
+    headerRow: true,
+    totalsRow: true,
+    style: {
+      theme: 'TableStyleMedium16',
+      showRowStripes: true,
+    },
+    columns: columnsDef.map((c) => ({
+      name: c.header,
+      filterButton: true,
+      totalsRowLabel: c.key === 'loanId' ? 'TOTAL' : undefined,
+      totalsRowFunction: (c.type === 'amount' || c.type === 'asr' || c.type === 'outside') ? 'sum' : undefined,
+    })),
+    rows: tableDataRows,
+  });
 
   // Set friendly column widths
-  const colWidths = [
-    { wch: 14 }, // LOAN ID
-    { wch: 8 },  // S.NO
-    { wch: 28 }, // CLIENT NAME
-    { wch: 10 }, // CODE NO
-    { wch: 14 }, // PLACE
-    { wch: 12 }, // DUE DATE
-    { wch: 16 }, // AMOUNT
-    { wch: 12 }, // STATUS
-    { wch: 12 }, // RECD DATE
-    { wch: 16 }, // DEP NAME
-    { wch: 14 }, // CHQ NO
-    // 10 ASR Companies
-    { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 16 },
-    { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 16 },
-    // 6 Outside Companies
-    { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 16 },
-    { wch: 24 }, // REMARKS
-  ];
-  ws['!cols'] = colWidths;
+  columnsDef.forEach((col, idx) => {
+    ws.getColumn(idx + 1).width = col.width;
+  });
 
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'LOANS DATA');
+  // Style Header Row (Row 1) with Application Brand Colors
+  const headerRow = ws.getRow(1);
+  headerRow.height = 32;
 
+  columnsDef.forEach((col, idx) => {
+    const cell = headerRow.getCell(idx + 1);
+
+    let fillArgb = 'FF701A35'; // Deep Maroon (Application Brand)
+    let fontColor = 'FFFFFFFF'; // White
+
+    if (col.type === 'asr') {
+      fillArgb = 'FF831843'; // ASR Internal Wine
+      fontColor = 'FFEED8A1'; // Gold text
+    } else if (col.type === 'outside') {
+      fillArgb = 'FF451A03'; // Outside Party Bronze
+      fontColor = 'FFFCD34D'; // Amber text
+    }
+
+    cell.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: fillArgb },
+    };
+
+    cell.font = {
+      name: 'Segoe UI',
+      size: 10,
+      bold: true,
+      color: { argb: fontColor },
+    };
+
+    cell.alignment = {
+      vertical: 'middle',
+      horizontal: (col.align as any) || 'center',
+      wrapText: true,
+    };
+
+    cell.border = {
+      top: { style: 'thin', color: { argb: 'FF3D0E1C' } },
+      left: { style: 'thin', color: { argb: 'FF3D0E1C' } },
+      bottom: { style: 'medium', color: { argb: 'FF240710' } },
+      right: { style: 'thin', color: { argb: 'FF3D0E1C' } },
+    };
+  });
+
+  // Style Data Rows
+  for (let rIdx = 0; rIdx < rows.length; rIdx++) {
+    const rowNumber = rIdx + 2;
+    const row = ws.getRow(rowNumber);
+    row.height = 20;
+
+    const isEven = rIdx % 2 === 1;
+
+    columnsDef.forEach((col, colIdx) => {
+      const cell = row.getCell(colIdx + 1);
+
+      cell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: isEven ? 'FFFAF8F5' : 'FFFFFFFF' },
+      };
+
+      cell.font = {
+        name: 'Segoe UI',
+        size: 9.5,
+        color: { argb: 'FF1E293B' },
+      };
+
+      cell.alignment = {
+        vertical: 'middle',
+        horizontal: (col.align as any) || 'left',
+      };
+
+      cell.border = {
+        top: { style: 'thin', color: { argb: 'FFE6E1D6' } },
+        left: { style: 'thin', color: { argb: 'FFE6E1D6' } },
+        bottom: { style: 'thin', color: { argb: 'FFE6E1D6' } },
+        right: { style: 'thin', color: { argb: 'FFE6E1D6' } },
+      };
+
+      // Numeric columns formatting
+      if (col.type === 'amount' || col.type === 'asr' || col.type === 'outside') {
+        cell.numFmt = '#,##,##0';
+        if (typeof cell.value === 'number') {
+          cell.font = {
+            name: 'Segoe UI',
+            size: 9.5,
+            bold: col.type === 'amount',
+            color: { argb: col.type === 'amount' ? 'FF111827' : 'FF334155' },
+          };
+        }
+      }
+
+      // Status pill color coding
+      if (col.key === 'status') {
+        const st = String(cell.value || '').toUpperCase();
+        if (['PASS', 'PAID', 'NEFT', 'CASH', 'CLS'].includes(st)) {
+          cell.font = { name: 'Segoe UI', size: 9.5, bold: true, color: { argb: 'FF047857' } };
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFECFDF5' } };
+        } else if (['RET', 'RET NEFT', 'RET PASS', 'BOUNCED'].includes(st)) {
+          cell.font = { name: 'Segoe UI', size: 9.5, bold: true, color: { argb: 'FFB91C1C' } };
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEF2F2' } };
+        } else if (st === 'PENDING') {
+          cell.font = { name: 'Segoe UI', size: 9.5, bold: true, color: { argb: 'FFB45309' } };
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFBEB' } };
+        }
+      }
+    });
+  }
+
+  // Style the Totals Row (Row N + 2)
+  const totalRowNumber = rows.length + 2;
+  const totalRow = ws.getRow(totalRowNumber);
+  totalRow.height = 26;
+
+  columnsDef.forEach((col, colIdx) => {
+    const cell = totalRow.getCell(colIdx + 1);
+
+    cell.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFF2EBE1' },
+    };
+
+    cell.font = {
+      name: 'Segoe UI',
+      size: 10,
+      bold: true,
+      color: { argb: 'FF701A35' },
+    };
+
+    cell.alignment = {
+      vertical: 'middle',
+      horizontal: (col.align as any) || 'left',
+    };
+
+    cell.border = {
+      top: { style: 'thin', color: { argb: 'FF701A35' } },
+      bottom: { style: 'double', color: { argb: 'FF701A35' } },
+      left: { style: 'thin', color: { argb: 'FFD4C8B8' } },
+      right: { style: 'thin', color: { argb: 'FFD4C8B8' } },
+    };
+
+    if (col.type === 'amount' || col.type === 'asr' || col.type === 'outside') {
+      cell.numFmt = '#,##,##0';
+    }
+  });
+
+  // Generate Excel Buffer and trigger browser download
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], {
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
   const sanitizedRange = (dateRangeLabel || 'All_Dates').replace(/[^a-zA-Z0-9_-]/g, '_');
-  const filename = `ASR_Loans_Ledger_${sanitizedRange}_${new Date().toISOString().slice(0, 10)}.xlsx`;
-  XLSX.writeFile(wb, filename);
+  a.download = `ASR_Loans_Ledger_${sanitizedRange}_${getExportTimestamp()}.xlsx`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
 export function exportLoansToPDF(loans: Loan[], dateRangeLabel?: string) {
@@ -319,14 +479,12 @@ export function exportLoansToPDF(loans: Loan[], dateRangeLabel?: string) {
     'Status',
     'Recd Date',
     'Cheque / Ref',
-    'Main Funding Entity',
+    'All Funding Entities Involved',
   ];
 
   const tableBody = rows.map((r) => {
-    // Find top funding entity
-    let maxComp = '-';
-    let maxAmt = 0;
-    const comps: [string, number][] = [
+    // List ALL companies involved with their split amounts
+    const allCompanySplits: [string, number][] = [
       ['PASS', r.pass],
       ['KARS', r.kars],
       ['IG', r.ig],
@@ -344,12 +502,11 @@ export function exportLoansToPDF(loans: Loan[], dateRangeLabel?: string) {
       ['BHAVNA', r.bhavna],
       ['TA', r.taSS],
     ];
-    comps.forEach(([name, amt]) => {
-      if (amt > maxAmt) {
-        maxAmt = amt;
-        maxComp = `${name} (${amt.toLocaleString('en-IN')})`;
-      }
-    });
+
+    const activeSplits = allCompanySplits.filter(([_, amt]) => amt > 0);
+    const splitText = activeSplits.length > 0
+      ? activeSplits.map(([name, amt]) => `${name} (${amt.toLocaleString('en-IN')})`).join(' · ')
+      : (r.depName ? `${r.depName} (${r.amountDue.toLocaleString('en-IN')})` : '-');
 
     return [
       r.loanId,
@@ -362,7 +519,7 @@ export function exportLoansToPDF(loans: Loan[], dateRangeLabel?: string) {
       r.status || 'PENDING',
       r.recdDate || '-',
       r.chqNo || '-',
-      maxComp,
+      splitText,
     ];
   });
 
@@ -374,7 +531,7 @@ export function exportLoansToPDF(loans: Loan[], dateRangeLabel?: string) {
       [
         'TOTAL',
         '',
-        `Total ${loans.length} Loans`,
+        `Total ${loans.length} Loans (${rows.length} entries)`,
         '',
         '',
         '',
@@ -382,7 +539,7 @@ export function exportLoansToPDF(loans: Loan[], dateRangeLabel?: string) {
         '',
         '',
         '',
-        '',
+        'All 16 Portfolios Consolidated',
       ],
     ],
     theme: 'striped',
@@ -408,19 +565,19 @@ export function exportLoansToPDF(loans: Loan[], dateRangeLabel?: string) {
       fillColor: [250, 248, 245],
     },
     columnStyles: {
-      0: { fontStyle: 'bold', cellWidth: 65 }, // Loan ID
-      1: { halign: 'center', cellWidth: 20 },  // #
-      2: { fontStyle: 'bold', cellWidth: 140 }, // Client Name
-      3: { cellWidth: 40 },                    // Code
-      4: { cellWidth: 60 },                    // Place
-      5: { cellWidth: 55 },                    // Due Date
-      6: { halign: 'right', fontStyle: 'bold', cellWidth: 65 }, // Amount
-      7: { halign: 'center', cellWidth: 50 },  // Status
-      8: { cellWidth: 55 },                    // Recd Date
-      9: { cellWidth: 55 },                    // Cheque
-      10: { cellWidth: 120 },                  // Main Funding
+      0: { fontStyle: 'bold', cellWidth: 62 },  // Loan ID
+      1: { halign: 'center', cellWidth: 18 },   // #
+      2: { fontStyle: 'bold', cellWidth: 120 }, // Client Name
+      3: { cellWidth: 38 },                     // Code
+      4: { cellWidth: 48 },                     // Place
+      5: { cellWidth: 48 },                     // Due Date
+      6: { halign: 'right', fontStyle: 'bold', cellWidth: 60 }, // Amount
+      7: { halign: 'center', cellWidth: 42 },   // Status
+      8: { cellWidth: 48 },                     // Recd Date
+      9: { cellWidth: 48 },                     // Cheque
+      10: { cellWidth: 245 },                   // All Funding Entities Involved
     },
-    margin: { top: 115, right: 30, bottom: 40, left: 30 },
+    margin: { top: 115, right: 25, bottom: 40, left: 25 },
     didDrawPage: (data) => {
       // Footer page numbering
       doc.setFontSize(8);
@@ -432,6 +589,6 @@ export function exportLoansToPDF(loans: Loan[], dateRangeLabel?: string) {
   });
 
   const sanitizedRange = (dateRangeLabel || 'All_Dates').replace(/[^a-zA-Z0-9_-]/g, '_');
-  const filename = `ASR_Loans_Report_${sanitizedRange}_${new Date().toISOString().slice(0, 10)}.pdf`;
+  const filename = `ASR_Loans_Report_${sanitizedRange}_${getExportTimestamp()}.pdf`;
   doc.save(filename);
 }

@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { X, GitMerge, AlertCircle, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { Loan } from '@/lib/types';
 import { useApp } from '@/lib/store';
+import { evaluateApprovalAction } from '@/lib/utils/approvalRouting';
 
 interface MergeLoansModalProps {
   isOpen: boolean;
@@ -12,7 +13,7 @@ interface MergeLoansModalProps {
 }
 
 export const MergeLoansModal: React.FC<MergeLoansModalProps> = ({ isOpen, onClose, initialLoan }) => {
-  const { loans, showToast, refreshAll } = useApp();
+  const { loans, showToast, refreshAll, currentActor, approvalRules, createApprovalRequest } = useApp();
 
   const [targetLoanId, setTargetLoanId] = useState<string>(initialLoan?.id || (loans[0]?.id ?? ''));
   const [sourceLoanId, setSourceLoanId] = useState<string>('');
@@ -38,6 +39,29 @@ export const MergeLoansModal: React.FC<MergeLoansModalProps> = ({ isOpen, onClos
 
     setIsSubmitting(true);
     try {
+      const evaluation = evaluateApprovalAction('Loan Merge', combinedAmount, currentActor.primaryRoleId, approvalRules);
+
+      if (evaluation.action === 'REQUIRE_APPROVAL') {
+        await createApprovalRequest({
+          ruleId: evaluation.rule?.id,
+          changeType: 'Loan Merge',
+          title: `Merge ${sourceLoanId} into ${targetLoanId} (Combined ₹${combinedAmount.toLocaleString('en-IN')})`,
+          description: `Consolidating ${sourceLoan?.customerName} (${sourceLoanId}) into ${targetLoan?.customerName} (${targetLoanId}) with ${combinedEMIs} total EMIs.`,
+          entityType: 'loan',
+          entityId: targetLoanId,
+          requesterId: currentActor.id,
+          requesterName: currentActor.name,
+          requesterRoleId: currentActor.primaryRoleId,
+          approverRoleId: evaluation.approverRoleId,
+          amount: combinedAmount,
+          status: 'Pending',
+          beforePayload: { targetLoan: targetLoanId, targetAmount: targetLoan?.totalAmount, sourceLoan: sourceLoanId, sourceAmount: sourceLoan?.totalAmount },
+          proposedPayload: { targetLoanId, sourceLoanId, combinedAmount, combinedEMIs },
+        });
+        onClose();
+        return;
+      }
+
       const res = await fetch('/api/loans/merge', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -47,6 +71,25 @@ export const MergeLoansModal: React.FC<MergeLoansModalProps> = ({ isOpen, onClos
       const resJson = await res.json();
       if (!resJson.success) {
         throw new Error(resJson.error || 'Failed to merge loans.');
+      }
+
+      if (evaluation.action === 'AUTO_APPROVE_QUEUE') {
+        await createApprovalRequest({
+          ruleId: evaluation.rule?.id,
+          changeType: 'Loan Merge',
+          title: `Merge ${sourceLoanId} into ${targetLoanId}`,
+          description: `Auto-approved per active policy: facility amount within threshold.`,
+          entityType: 'loan',
+          entityId: targetLoanId,
+          requesterId: currentActor.id,
+          requesterName: currentActor.name,
+          requesterRoleId: currentActor.primaryRoleId,
+          approverRoleId: evaluation.approverRoleId,
+          amount: combinedAmount,
+          status: 'Auto-Approved',
+          beforePayload: { targetLoan: targetLoanId, sourceLoan: sourceLoanId },
+          proposedPayload: { targetLoanId, sourceLoanId, combinedAmount },
+        });
       }
 
       await refreshAll();
@@ -61,7 +104,7 @@ export const MergeLoansModal: React.FC<MergeLoansModalProps> = ({ isOpen, onClos
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150">
-      <div className="bg-white rounded-3xl border border-[#E6E1D6] shadow-2xl w-full max-w-xl overflow-hidden">
+      <div className="bg-white rounded-3xl border border-[#E6E1D6] shadow-2xl w-full max-w-xl overflow-hidden motion-modal">
         {/* Header */}
         <div className="px-6 py-5 border-b border-[#E6E1D6] flex items-center justify-between bg-[#FAF8F5]">
           <div className="flex items-center gap-3">

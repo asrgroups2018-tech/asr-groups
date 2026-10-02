@@ -387,8 +387,8 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
   if (!isOpen || !loan) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/80 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="bg-[#FAF8F5] rounded-2xl border border-[#D0C8B8] shadow-2xl w-full max-w-[99vw] h-[96vh] flex flex-col overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/80 backdrop-blur-xs animate-in fade-in duration-150">
+      <div className="bg-[#FAF8F5] rounded-2xl border border-[#D0C8B8] shadow-2xl w-full max-w-[99vw] h-[96vh] flex flex-col overflow-hidden motion-modal">
         {/* ─── Excel Modal Top Toolbar ─── */}
         <div className="p-4 bg-white border-b border-[#D0C8B8] flex flex-col md:flex-row md:items-center justify-between gap-3 shrink-0">
           <div className="flex items-center gap-3">
@@ -417,7 +417,7 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
           <div className="flex items-center gap-2 self-end md:self-auto">
             <button
               onClick={handleAddRow}
-              className="px-3.5 py-2 bg-white border border-[#D0C8B8] hover:bg-[#FAF8F5] text-slate-800 text-xs font-bold rounded-lg shadow-2xs flex items-center gap-1.5 transition-all cursor-pointer"
+              className="px-3.5 py-2 bg-white border border-[#D0C8B8] hover:bg-[#FAF8F5] text-slate-800 text-xs font-bold rounded-lg shadow-2xs flex items-center gap-1.5 transition-all cursor-pointer btn-press"
             >
               <Plus className="w-4 h-4 text-[#701A35]" />
               <span>Insert Row</span>
@@ -426,7 +426,7 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
             <button
               onClick={handleSave}
               disabled={isSaving}
-              className="px-5 py-2 bg-[#701A35] hover:bg-[#5C142B] text-white text-xs font-bold rounded-lg shadow-xs flex items-center gap-2 transition-all cursor-pointer disabled:opacity-50 active:scale-98"
+              className="px-5 py-2 bg-[#701A35] hover:bg-[#5C142B] text-white text-xs font-bold rounded-lg shadow-xs flex items-center gap-2 transition-all cursor-pointer disabled:opacity-50 btn-press"
             >
               <Save className="w-4 h-4 text-amber-200" />
               <span>{isSaving ? 'Saving...' : 'Save & Sync'}</span>
@@ -434,7 +434,7 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
 
             <button
               onClick={onClose}
-              className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+              className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer btn-press"
             >
               <X className="w-5 h-5" />
             </button>

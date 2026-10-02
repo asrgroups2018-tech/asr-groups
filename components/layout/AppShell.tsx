@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { Sidebar } from './Sidebar';
 import { TopNav } from './TopNav';
 import { Footer } from './Footer';
@@ -11,6 +12,7 @@ interface AppShellProps {
 }
 
 export const AppShell: React.FC<AppShellProps> = ({ children }) => {
+  const pathname = usePathname();
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   return (
@@ -29,7 +31,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
           <TopNav onOpenMobileMenu={() => setIsMobileSidebarOpen(true)} />
 
           {/* Dynamic Viewport */}
-          <main className="flex-1 min-h-0 pb-6">
+          <main key={pathname} className="flex-1 min-h-0 pb-6 page-enter">
             {children}
           </main>
         </div>

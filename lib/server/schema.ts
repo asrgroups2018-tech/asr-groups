@@ -177,6 +177,33 @@ export const SCHEMA_STATEMENTS = [
     backup_status TEXT DEFAULT 'Idle',
     updated_at TEXT NOT NULL
   );`,
+
+  // 13. Approval Requests Queue
+  `CREATE TABLE IF NOT EXISTS approval_requests (
+    id TEXT PRIMARY KEY,
+    rule_id TEXT,
+    change_type TEXT NOT NULL,
+    title TEXT NOT NULL,
+    description TEXT,
+    entity_type TEXT NOT NULL,
+    entity_id TEXT NOT NULL,
+    requester_id TEXT NOT NULL,
+    requester_name TEXT NOT NULL,
+    requester_role_id INTEGER NOT NULL DEFAULT 2,
+    approver_role_id INTEGER NOT NULL DEFAULT 1,
+    amount REAL NOT NULL DEFAULT 0,
+    status TEXT NOT NULL DEFAULT 'Pending',
+    before_payload TEXT,
+    proposed_payload TEXT NOT NULL,
+    reviewer_id TEXT,
+    reviewer_name TEXT,
+    reviewer_notes TEXT,
+    created_at TEXT NOT NULL,
+    resolved_at TEXT
+  );`,
+  `CREATE INDEX IF NOT EXISTS idx_approval_requests_status ON approval_requests(status);`,
+  `CREATE INDEX IF NOT EXISTS idx_approval_requests_entity ON approval_requests(entity_type, entity_id);`,
+  `CREATE INDEX IF NOT EXISTS idx_approval_requests_created_at ON approval_requests(created_at);`,
 ];
 
 /**

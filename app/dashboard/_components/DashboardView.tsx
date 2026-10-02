@@ -15,7 +15,6 @@ import {
   Building2,
   Users,
   ChevronRight,
-  Sparkles,
   PieChart as PieIcon,
   Info,
   Inbox,
@@ -369,23 +368,28 @@ export const DashboardView: React.FC = () => {
   }
 
   return (
-    <div className="p-4 sm:p-8 max-w-7xl mx-auto space-y-6 animate-in fade-in duration-200">
+    <main className="p-4 sm:p-8 max-w-7xl w-full mx-auto space-y-6 animate-in fade-in duration-200">
       {/* ─── Top Brand Header & Filter Bar ─── */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2.5">
-            <h1 className="text-2xl sm:text-3xl font-bold font-serif text-slate-900 tracking-tight">
-              Executive Financial Command
-            </h1>
+            <div className="w-10 h-10 rounded-xl bg-[#701A35] text-[#EED8A1] shadow-sm flex items-center justify-center shrink-0">
+              <TrendingUp className="w-5 h-5" />
+            </div>
+            <div>
+              <h1 className="text-xl font-bold font-serif text-slate-950 tracking-tight">
+                Executive Financial Command
+              </h1>
+              <p className="text-xs text-slate-600 font-medium mt-0.5">
+                ASR Group Syndication & Collections Management · {portfolioMetrics.totalLoansCount} Active Client Loans · {portfolioMetrics.totalInstallments} Scheduled EMIs
+              </p>
+            </div>
           </div>
-          <p className="text-xs text-slate-500 mt-1">
-            ASR Group Syndication & Collections Management · {portfolioMetrics.totalLoansCount} Active Client Loans · {portfolioMetrics.totalInstallments} Scheduled EMIs
-          </p>
         </div>
 
         {/* Time Period Filter (Applies ONLY to Period-scoped cards & lists below) */}
         <div className="flex items-center gap-2 overflow-x-auto max-w-full pb-1 sm:pb-0">
-          <div className="flex items-center gap-1.5 bg-white p-1 rounded-2xl border border-[#E6E1D6] shadow-2xs whitespace-nowrap">
+          <div className="flex items-center gap-1.5 bg-slate-100/80 p-1 rounded-xl border border-slate-200/80 whitespace-nowrap">
             {[
               { id: 'all', label: 'All Time' },
               { id: 'today', label: 'Today' },
@@ -398,10 +402,10 @@ export const DashboardView: React.FC = () => {
                 <button
                   key={f.id}
                   onClick={() => setTimeFilter(f.id as any)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold btn-press transition-all duration-120 cursor-pointer ${
                     isActive
-                      ? 'bg-[#701A35] text-white font-bold shadow-xs'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                      ? 'bg-[#701A35] text-white shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
                   }`}
                 >
                   {f.label}
@@ -413,13 +417,13 @@ export const DashboardView: React.FC = () => {
       </div>
 
       {/* ─── Hero Metric Banner: ALL-TIME PORTFOLIO (NEVER MOVES WITH TIME FILTER) ─── */}
-      <div className="relative rounded-2xl bg-gradient-to-br from-[#1A0A13] via-[#2A1020] to-[#14060E] border border-[#3D1A2C] p-6 sm:p-8 text-white shadow-xl">
+      <div className="relative rounded-2xl bg-gradient-to-br from-[#1A0A13] via-[#2A1020] to-[#14060E] border-2 border-[#701A35]/50 p-6 sm:p-8 text-white shadow-sm overflow-hidden">
         <div className="absolute right-0 top-0 -mt-8 -mr-8 w-64 h-64 rounded-full bg-[#C5A059]/10 blur-3xl pointer-events-none" />
 
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-4 w-full">
             <div className="flex items-center gap-2 text-[#C5A059] text-xs font-mono font-bold uppercase tracking-widest">
-              <Sparkles className="w-4 h-4 shrink-0" />
+              <TrendingUp className="w-4 h-4 shrink-0 text-[#C5A059]" />
               <span>All-Time Portfolio Overview · Lifetime</span>
             </div>
 
@@ -433,9 +437,9 @@ export const DashboardView: React.FC = () => {
                 <MoneyDisplay
                   amount={portfolioMetrics.totalOutstanding}
                   size="3xl"
-                  amountClassName="text-[#EED8A1] tracking-tight block"
+                  amountClassName="text-[#EED8A1] tracking-tight block font-black"
                 />
-                <span className="text-[10px] text-slate-400 block pt-0.5">
+                <span className="text-[10px] text-slate-400 block pt-0.5 font-medium">
                   Capital remaining to be collected
                 </span>
               </div>
@@ -448,9 +452,9 @@ export const DashboardView: React.FC = () => {
                 <MoneyDisplay
                   amount={portfolioMetrics.totalDeployed}
                   size="2xl"
-                  amountClassName="text-white tracking-tight block"
+                  amountClassName="text-white tracking-tight block font-black"
                 />
-                <span className="text-[10px] text-slate-400 block pt-0.5">
+                <span className="text-[10px] text-slate-400 block pt-0.5 font-medium">
                   Principal across {portfolioMetrics.totalLoansCount} borrower accounts
                 </span>
               </div>
@@ -464,13 +468,13 @@ export const DashboardView: React.FC = () => {
                   <MoneyDisplay
                     amount={portfolioMetrics.totalRecovered}
                     size="2xl"
-                    amountClassName="text-emerald-400 tracking-tight"
+                    amountClassName="text-emerald-400 tracking-tight font-black"
                   />
                   <span className="inline-flex items-center justify-center text-[10px] text-emerald-300 bg-emerald-950/60 border border-emerald-500/30 px-1.5 py-0.5 rounded font-mono font-bold leading-none">
                     {portfolioMetrics.collectionRate}%
                   </span>
                 </div>
-                <span className="text-[10px] text-slate-400 block pt-0.5">
+                <span className="text-[10px] text-slate-400 block pt-0.5 font-medium">
                   Confirmed settled installment receipts
                 </span>
               </div>
@@ -478,8 +482,6 @@ export const DashboardView: React.FC = () => {
           </div>
         </div>
       </div>
-
-      {/* ─── Period Scoped Header Tag ─── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-2 pt-2">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-xs font-bold text-slate-900 font-serif">
@@ -489,17 +491,17 @@ export const DashboardView: React.FC = () => {
             PERIOD: {filterLabel}
           </span>
         </div>
-        <span className="text-[11px] text-slate-500">
+        <span className="text-[11px] text-slate-500 font-medium">
           Showing activity metrics for selected timeframe
         </span>
       </div>
 
-      {/* ─── 4 Period-Scoped KPI Cards ─── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* ─── 4 High-Impact Period-Scoped KPI Badges ─── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
         {/* Card 1: Active Syndicated Loans (Count) */}
-        <div className="bg-white p-5 rounded-2xl border border-[#E6E1D6] shadow-2xs flex flex-col justify-between">
+        <div className="bg-white p-4.5 rounded-2xl border-2 border-slate-200/90 shadow-sm hover:border-slate-300 transition-all flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-slate-400 font-mono uppercase tracking-wider">
+            <span className="text-[11px] font-bold text-slate-500 font-mono uppercase tracking-wider">
               Active Client Facilities
             </span>
             <div className="p-2 rounded-xl bg-[#701A35]/10 text-[#701A35]">
@@ -508,21 +510,21 @@ export const DashboardView: React.FC = () => {
           </div>
           <div className="mt-3">
             <div className="flex items-baseline gap-2">
-              <span className="text-2xl font-bold font-mono text-slate-900">
+              <span className="text-2xl font-black font-mono text-slate-950">
                 {portfolioMetrics.activeLoansCount}
               </span>
-              <span className="text-xs text-slate-500 font-sans">Active Loans</span>
+              <span className="text-xs text-slate-500 font-medium">Active Loans</span>
             </div>
-            <span className="text-[11px] text-slate-500 mt-1 block">
-              {portfolioMetrics.totalLoansCount} Total Borrower Accounts
+            <span className="text-[11px] text-slate-500 font-medium mt-1 block">
+              Across <strong className="text-slate-800">{portfolioMetrics.totalLoansCount}</strong> total borrowers
             </span>
           </div>
         </div>
 
         {/* Card 2: Period Collections */}
-        <div className="bg-white p-5 rounded-2xl border border-[#E6E1D6] shadow-2xs flex flex-col justify-between">
+        <div className="bg-gradient-to-br from-emerald-100/90 via-emerald-50 to-white p-4.5 rounded-2xl border-2 border-emerald-300 shadow-sm hover:border-emerald-400 transition-all flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-slate-400 font-mono uppercase tracking-wider">
+            <span className="text-[11px] font-bold text-emerald-900 font-mono uppercase tracking-wider">
               Period Collections
             </span>
             <div className="p-2 rounded-xl bg-emerald-100 text-emerald-700">
@@ -533,18 +535,18 @@ export const DashboardView: React.FC = () => {
             <MoneyDisplay
               amount={periodData.periodCollections}
               size="2xl"
-              amountClassName="text-emerald-700 block"
+              amountClassName="text-emerald-700 block font-black text-2xl tracking-tight"
             />
-            <span className="text-[11px] text-emerald-600 mt-1 block">
+            <span className="text-[11px] text-emerald-800 font-bold mt-1 block">
               Direct settlements in {filterLabel}
             </span>
           </div>
         </div>
 
         {/* Card 3: Unpaid Past Due */}
-        <div className="bg-white p-5 rounded-2xl border border-[#E6E1D6] shadow-2xs flex flex-col justify-between">
+        <div className="bg-gradient-to-br from-amber-100/90 via-amber-50 to-white p-4.5 rounded-2xl border-2 border-amber-300 shadow-sm hover:border-amber-400 transition-all flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-slate-400 font-mono uppercase tracking-wider">
+            <span className="text-[11px] font-bold text-amber-900 font-mono uppercase tracking-wider">
               Unpaid Past Due
             </span>
             <div className="p-2 rounded-xl bg-amber-100 text-amber-800">
@@ -555,18 +557,18 @@ export const DashboardView: React.FC = () => {
             <MoneyDisplay
               amount={periodData.periodUnpaidPastDue}
               size="2xl"
-              amountClassName="text-amber-800 block"
+              amountClassName="text-amber-800 block font-black text-2xl tracking-tight"
             />
-            <span className="text-[11px] text-amber-700 mt-1 block">
+            <span className="text-[11px] text-amber-800 font-bold mt-1 block">
               {periodData.periodUnpaidCount} Pending EMIs
             </span>
           </div>
         </div>
 
         {/* Card 4: Bounced / Returned Cheques */}
-        <div className="bg-white p-5 rounded-2xl border border-[#E6E1D6] shadow-2xs flex flex-col justify-between">
+        <div className="bg-gradient-to-br from-rose-100/90 via-rose-50 to-white p-4.5 rounded-2xl border-2 border-rose-300 shadow-sm hover:border-rose-400 transition-all flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-slate-400 font-mono uppercase tracking-wider">
+            <span className="text-[11px] font-bold text-rose-900 font-mono uppercase tracking-wider">
               Bounced Cheques (RET)
             </span>
             <div className="p-2 rounded-xl bg-rose-100 text-rose-700">
@@ -577,9 +579,9 @@ export const DashboardView: React.FC = () => {
             <MoneyDisplay
               amount={periodData.periodBounced}
               size="2xl"
-              amountClassName="text-rose-700 block"
+              amountClassName="text-rose-700 block font-black text-2xl tracking-tight"
             />
-            <span className="text-[11px] text-rose-600 mt-1 block">
+            <span className="text-[11px] text-rose-700 font-bold mt-1 block">
               {periodData.periodBouncedCount} Returned Cheques
             </span>
           </div>
@@ -589,7 +591,7 @@ export const DashboardView: React.FC = () => {
       {/* ─── Graphical Band: Portfolio Health Donut + Sparkline + Company Distribution ─── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Card 1: Portfolio Installment Health Breakdown */}
-        <div className="bg-white p-6 rounded-2xl border border-[#E6E1D6] shadow-xs flex flex-col justify-between space-y-4">
+        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between space-y-4">
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-bold text-slate-900 font-serif flex items-center gap-2">
@@ -631,15 +633,15 @@ export const DashboardView: React.FC = () => {
               </div>
 
               <div className="grid grid-cols-4 gap-1.5 pt-1 text-center font-mono">
-                <div className="p-2 bg-emerald-50 rounded-xl border border-emerald-100/80">
+                <div className="p-2 bg-emerald-50 rounded-xl border border-emerald-200/80">
                   <span className="text-[9px] font-bold text-emerald-800 block">SETTLED</span>
                   <span className="font-bold text-emerald-700 text-xs block mt-0.5">{portfolioMetrics.settledCount}</span>
                 </div>
-                <div className="p-2 bg-rose-50 rounded-xl border border-rose-100/80">
+                <div className="p-2 bg-rose-50 rounded-xl border border-rose-200/80">
                   <span className="text-[9px] font-bold text-rose-800 block">RETURNED</span>
                   <span className="font-bold text-rose-700 text-xs block mt-0.5">{portfolioMetrics.bouncedCount}</span>
                 </div>
-                <div className="p-2 bg-amber-50 rounded-xl border border-amber-100/80">
+                <div className="p-2 bg-amber-50 rounded-xl border border-amber-200/80">
                   <span className="text-[9px] font-bold text-amber-800 block">PENDING</span>
                   <span className="font-bold text-amber-700 text-xs block mt-0.5">{portfolioMetrics.pendingCount}</span>
                 </div>
@@ -651,9 +653,9 @@ export const DashboardView: React.FC = () => {
             </div>
 
             {/* Settled Payment Channels */}
-            <div className="pt-3 border-t border-[#EDE8DF] space-y-2">
+            <div className="pt-3 border-t border-slate-200 space-y-2">
               <div className="flex items-center justify-between text-xs font-mono">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
                   Settled Payment Modes
                 </span>
                 <span className="text-[10px] text-emerald-700 font-bold">
@@ -662,7 +664,7 @@ export const DashboardView: React.FC = () => {
               </div>
 
               <div className="space-y-1.5 text-xs font-mono">
-                <div className="flex items-center justify-between p-2 bg-[#FAF8F5] rounded-xl border border-[#EDE8DF]">
+                <div className="flex items-center justify-between p-2 bg-slate-50 rounded-xl border border-slate-200">
                   <div className="flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-emerald-600 shrink-0" />
                     <span className="text-slate-700 font-semibold text-[11px]">Cheque (PASS)</span>
@@ -673,7 +675,7 @@ export const DashboardView: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between p-2 bg-[#FAF8F5] rounded-xl border border-[#EDE8DF]">
+                <div className="flex items-center justify-between p-2 bg-slate-50 rounded-xl border border-slate-200">
                   <div className="flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-blue-600 shrink-0" />
                     <span className="text-slate-700 font-semibold text-[11px]">Bank Transfer (NEFT)</span>
@@ -685,7 +687,7 @@ export const DashboardView: React.FC = () => {
                 </div>
 
                 {portfolioMetrics.cashCount > 0 && (
-                  <div className="flex items-center justify-between p-2 bg-[#FAF8F5] rounded-xl border border-[#EDE8DF]">
+                  <div className="flex items-center justify-between p-2 bg-slate-50 rounded-xl border border-slate-200">
                     <div className="flex items-center gap-2">
                       <span className="w-2 h-2 rounded-full bg-amber-600 shrink-0" />
                       <span className="text-slate-700 font-semibold text-[11px]">Cash Collections</span>
@@ -701,10 +703,10 @@ export const DashboardView: React.FC = () => {
           </div>
 
           {/* Recovery Trajectory Sparkline */}
-          <div className="pt-3 border-t border-[#EDE8DF] space-y-2">
+          <div className="pt-3 border-t border-slate-200 space-y-2">
             <div className="flex items-center justify-between text-xs">
               <span className="text-slate-600 font-medium">Recovery Trajectory</span>
-              <span className="font-mono font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100">
+              <span className="font-mono font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
                 {portfolioMetrics.collectionRate}% Peak
               </span>
             </div>
@@ -723,13 +725,13 @@ export const DashboardView: React.FC = () => {
         </div>
 
         {/* Card 2 & 3: Horizontal Company-Wise Funding Distribution */}
-        <div className="lg:col-span-2 bg-white p-6 rounded-2xl border border-[#E6E1D6] shadow-xs space-y-4">
+        <div className="lg:col-span-2 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-sm font-bold text-slate-900 font-serif flex items-center gap-2">
                 <Building2 className="w-4 h-4 text-[#701A35]" /> Company-Wise Capital Deployment
               </h3>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-slate-500 font-medium mt-0.5">
                 Capital funded by ASR Group Own Entities vs. Outside Parties
               </p>
             </div>
@@ -737,7 +739,7 @@ export const DashboardView: React.FC = () => {
               <MoneyDisplay
                 amount={totalFundedSum}
                 size="sm"
-                amountClassName="text-[#701A35] font-bold block"
+                amountClassName="text-[#701A35] font-bold block font-mono"
               />
             </div>
           </div>
@@ -752,7 +754,7 @@ export const DashboardView: React.FC = () => {
                     setActiveMainTab('companies');
                     router.push('/companies');
                   }}
-                  className="space-y-1 cursor-pointer hover:bg-slate-50/80 p-1.5 -mx-1.5 rounded-xl transition-colors"
+                  className="space-y-1 cursor-pointer hover:bg-slate-50/80 p-1.5 -mx-1.5 rounded-xl transition-all duration-100 btn-press"
                 >
                   <div className="flex items-center justify-between text-xs font-mono">
                     <div className="flex items-center gap-2">
@@ -772,7 +774,7 @@ export const DashboardView: React.FC = () => {
                     <div
                       style={{ width: `${pct}%` }}
                       className={`h-full rounded-full ${
-                        c.isOutsideParty ? 'bg-amber-500' : 'bg-[#701A35]'
+                        c.isOutsideParty ? 'bg-purple-600' : 'bg-[#701A35]'
                       }`}
                     />
                   </div>
@@ -786,7 +788,7 @@ export const DashboardView: React.FC = () => {
       {/* ─── Lower Band: 6-Month Trend + Current Period Due Schedule List ─── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* 6-Month Dynamic Calendar Trend */}
-        <div className="lg:col-span-2 bg-white p-6 rounded-2xl border border-[#E6E1D6] shadow-xs space-y-4">
+        <div className="lg:col-span-2 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-bold text-slate-900 font-serif flex items-center gap-2">
               <TrendingUp className="w-4 h-4 text-[#701A35]" /> 6-Month Disbursements vs Recoveries
@@ -801,7 +803,7 @@ export const DashboardView: React.FC = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-6 gap-2 h-44 items-end pt-4 border-b border-[#E6E1D6]">
+          <div className="grid grid-cols-6 gap-2 h-44 items-end pt-4 border-b border-slate-200">
             {monthlyTrend.map((m) => {
               const maxVal = Math.max(1000000, ...monthlyTrend.map((t) => Math.max(t.disbursed, t.collected)));
               const disHeight = Math.max(12, (m.disbursed / maxVal) * 140);
@@ -831,7 +833,7 @@ export const DashboardView: React.FC = () => {
         </div>
 
         {/* Dynamic Period Due Schedule Quick List */}
-        <div className="bg-white p-6 rounded-2xl border border-[#E6E1D6] shadow-xs space-y-4 flex flex-col justify-between">
+        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4 flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-bold text-slate-900 font-serif flex items-center gap-2">
@@ -850,7 +852,7 @@ export const DashboardView: React.FC = () => {
             <p className="text-xs text-slate-500 mt-1">Active collection entries requiring settlement</p>
 
             {periodData.periodSchedule.length === 0 ? (
-              <div className="py-8 px-4 text-center space-y-2 border border-dashed border-[#E6E1D6] rounded-xl mt-3 bg-[#FAF8F5]">
+              <div className="py-8 px-4 text-center space-y-2 border border-dashed border-slate-200 rounded-xl mt-3 bg-slate-50/50">
                 <Inbox className="w-8 h-8 text-slate-300 mx-auto" />
                 <p className="text-xs font-bold text-slate-700">No installments due in this timeframe</p>
                 <p className="text-[11px] text-slate-500 max-w-xs mx-auto">
@@ -858,13 +860,13 @@ export const DashboardView: React.FC = () => {
                 </p>
                 <button
                   onClick={() => setTimeFilter('all')}
-                  className="mt-2 px-3 py-1 bg-white border border-[#E6E1D6] hover:bg-slate-50 text-[#701A35] text-[11px] font-bold rounded-lg cursor-pointer"
+                  className="mt-2 px-3 py-1 bg-white border border-slate-300 hover:bg-slate-50 text-[#701A35] text-[11px] font-bold rounded-lg cursor-pointer"
                 >
                   Show All Time
                 </button>
               </div>
             ) : (
-              <div className="divide-y divide-[#EDE8DF] mt-3 max-h-56 overflow-y-auto pr-3 space-y-1">
+              <div className="divide-y divide-slate-100 mt-3 max-h-56 overflow-y-auto pr-3 space-y-1">
                 {periodData.periodSchedule.map((item) => (
                   <div
                     key={item.installmentId}
@@ -873,7 +875,7 @@ export const DashboardView: React.FC = () => {
                       setActiveMainTab('loans');
                       router.push(`/loans/${item.loanId}`);
                     }}
-                    className="py-2.5 px-2 flex items-center justify-between cursor-pointer hover:bg-slate-50 text-xs font-mono transition-colors rounded-xl"
+                    className="py-2.5 px-2 flex items-center justify-between cursor-pointer hover:bg-slate-50 text-xs font-mono transition-all duration-100 rounded-xl btn-press"
                   >
                     <div className="min-w-0 pr-3">
                       <span className="font-bold text-slate-900 block truncate">{item.customerName}</span>
@@ -897,6 +899,6 @@ export const DashboardView: React.FC = () => {
           </div>
         </div>
       </div>
-    </div>
+    </main>
   );
 };

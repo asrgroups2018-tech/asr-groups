@@ -293,7 +293,7 @@ export const UserManagementTab: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Top Filter Chips & Actions Header */}
-      <div className="flex flex-wrap items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-[#E6E1D6] shadow-[0_1px_3px_rgba(0,0,0,0.03)]">
+      <div className="flex flex-wrap items-center justify-between gap-4 bg-white p-4.5 rounded-2xl border border-slate-200 shadow-sm">
         {/* Segmented Filter Pills */}
         <div className="flex items-center gap-1.5 flex-wrap overflow-x-auto pb-1 sm:pb-0">
           {chips.map((chip) => {
@@ -305,7 +305,7 @@ export const UserManagementTab: React.FC = () => {
                 className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold tracking-tight transition-all flex items-center gap-2 shrink-0 ${
                   isActive
                     ? 'bg-[#701A35] text-white border border-[#C5A059]/40 shadow-xs font-bold'
-                    : 'bg-[#F8F6F1] text-slate-600 hover:bg-[#F3EFE6] hover:text-slate-900 border border-[#E6E1D6]/60'
+                    : 'bg-slate-100/70 text-slate-600 hover:bg-slate-200/70 hover:text-slate-900 border border-slate-200'
                 }`}
               >
                 <span>{chip.label}</span>
@@ -323,7 +323,7 @@ export const UserManagementTab: React.FC = () => {
 
         {/* Right Controls: Role filter + Bulk Actions + + Create User in Maroon */}
         <div className="flex items-center gap-2.5 flex-wrap">
-          <div className="flex items-center gap-1.5 bg-[#FAF8F5] border border-[#E6E1D6] rounded-xl px-3 py-1.5 text-xs">
+          <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs">
             <Filter className="w-3.5 h-3.5 text-slate-400" />
             <select
               value={selectedRoleFilter}
@@ -346,19 +346,19 @@ export const UserManagementTab: React.FC = () => {
               </span>
               <button
                 onClick={handleBulkActivate}
-                className="px-2.5 py-0.5 text-[11px] font-bold text-emerald-700 bg-emerald-100 hover:bg-emerald-200 rounded-lg transition-colors"
+                className="px-2.5 py-0.5 text-[11px] font-bold text-emerald-700 bg-emerald-100 hover:bg-emerald-200 rounded-lg transition-colors cursor-pointer"
               >
                 Activate
               </button>
               <button
                 onClick={handleBulkSuspend}
-                className="px-2.5 py-0.5 text-[11px] font-bold text-amber-800 bg-amber-100 hover:bg-amber-200 rounded-lg transition-colors"
+                className="px-2.5 py-0.5 text-[11px] font-bold text-amber-800 bg-amber-100 hover:bg-amber-200 rounded-lg transition-colors cursor-pointer"
               >
                 Suspend
               </button>
               <button
                 onClick={handleBulkDelete}
-                className="px-2.5 py-0.5 text-[11px] font-bold text-rose-700 bg-rose-100 hover:bg-rose-200 rounded-lg transition-colors"
+                className="px-2.5 py-0.5 text-[11px] font-bold text-rose-700 bg-rose-100 hover:bg-rose-200 rounded-lg transition-colors cursor-pointer"
               >
                 Delete
               </button>
@@ -368,7 +368,7 @@ export const UserManagementTab: React.FC = () => {
           {/* Single primary button in Maroon */}
           <button
             onClick={() => setIsCreateModalOpen(true)}
-            className="px-4 py-2 text-xs font-bold text-white bg-[#701A35] hover:bg-[#5C142B] active:scale-98 rounded-xl transition-all shadow-xs flex items-center gap-1.5 shrink-0"
+            className="px-4 py-2 text-xs font-bold text-[#EED8A1] bg-[#701A35] hover:bg-[#5C142B] active:scale-98 rounded-xl transition-all shadow-sm flex items-center gap-1.5 shrink-0 border border-[#C5A059]/30 cursor-pointer"
           >
             <UserPlus className="w-4 h-4 text-amber-200" />
             <span>Create User</span>

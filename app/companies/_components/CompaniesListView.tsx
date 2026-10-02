@@ -282,87 +282,107 @@ export const CompaniesListView: React.FC = () => {
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
       {/* ─── Top Control Bar ─── */}
-      <div className="bg-white p-5 rounded-2xl border border-[#E6E1D6] shadow-[0_1px_3px_rgba(0,0,0,0.02)] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl font-bold text-slate-900 font-serif">
-              Companies
-            </h1>
+          <div className="flex items-center gap-2.5">
+            <div className="w-10 h-10 rounded-xl bg-[#701A35] text-[#EED8A1] shadow-sm flex items-center justify-center shrink-0">
+              <Building2 className="w-5 h-5" />
+            </div>
+            <div>
+              <h1 className="text-xl font-bold text-slate-950 font-serif">
+                Funding Companies
+              </h1>
+              <p className="text-xs text-slate-600 font-medium mt-0.5">
+                Internal ASR entities and outside investor funding sources
+              </p>
+            </div>
           </div>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Internal Entities & Outside Investor Funding Sources
-          </p>
         </div>
 
         {/* Action Buttons */}
         <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={() => setIsAddModalOpen(true)}
-            className="px-4 py-2 text-xs font-bold text-white bg-[#701A35] hover:bg-[#5C142B] active:scale-98 rounded-xl transition-all shadow-xs flex items-center gap-1.5 cursor-pointer shrink-0"
+            className="px-4 py-2 text-xs font-bold text-slate-950 bg-gradient-to-r from-amber-400 via-amber-300 to-[#C5A059] hover:from-amber-300 hover:to-amber-400 active:scale-98 rounded-xl transition-all shadow-sm flex items-center gap-1.5 cursor-pointer shrink-0"
           >
-            <Plus className="w-4 h-4 text-amber-200" />
+            <Plus className="w-4 h-4 font-bold" />
             <span>New Company</span>
           </button>
         </div>
       </div>
 
-      {/* ─── 3 High-Impact Cards ─── */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div className="bg-white p-4 rounded-xl border border-[#E6E1D6] shadow-2xs">
-          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider font-mono">
+      {/* ─── 3 High-Impact KPI Badges ─── */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+        <div className="bg-white p-4.5 rounded-2xl border-2 border-slate-200/90 shadow-sm hover:border-slate-300 transition-all">
+          <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider font-mono">
             Total Capital Funded
           </span>
-          <div className="mt-1">
+          <div className="mt-1.5">
             <MoneyDisplay
               amount={totalFundedSum}
               size="xl"
-              amountClassName="text-slate-900 font-bold block"
+              amountClassName="text-slate-950 font-black text-2xl block tracking-tight"
             />
           </div>
-          <span className="text-[10px] text-slate-400 mt-0.5 block">Sum across all 15 active partner splits</span>
+          <span className="text-[11px] text-slate-500 font-medium mt-1 block">
+            Sum across all partner company split allocations
+          </span>
         </div>
 
-        <div className="bg-white p-4 rounded-xl border border-[#E6E1D6] shadow-2xs">
-          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider font-mono">
+        <div className="bg-gradient-to-br from-emerald-100/90 via-emerald-50 to-white p-4.5 rounded-2xl border-2 border-emerald-300 shadow-sm hover:border-emerald-400 transition-all">
+          <span className="text-[11px] font-bold text-emerald-900 uppercase tracking-wider font-mono">
             ASR Group Internal
           </span>
-          <span className="text-xl font-bold text-emerald-700 font-mono block mt-1">
-            {asrCount} Companies
+          <div className="mt-1.5">
+            <span className="text-2xl font-black font-mono text-emerald-700 block tracking-tight">
+              {asrCount} Companies
+            </span>
+          </div>
+          <span className="text-[11px] text-emerald-800 font-bold mt-1 block truncate">
+            PASS, KARS, INFIN, INFINITY, INNOVATIVE, MARS, TRIVENI, GLOBAL, ALAGESH
           </span>
-          <span className="text-[10px] text-slate-400 mt-0.5 block truncate">PASS, KARS, INFIN, INFINITY, INNOVATIVE, MARS, TRIVENI, GLOBAL, ALAGESH</span>
         </div>
 
-        <div className="bg-white p-4 rounded-xl border border-[#E6E1D6] shadow-2xs">
-          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider font-mono">
+        <div className="bg-gradient-to-br from-purple-100/90 via-purple-50 to-white p-4.5 rounded-2xl border-2 border-purple-300 shadow-sm hover:border-purple-400 transition-all">
+          <span className="text-[11px] font-bold text-purple-900 uppercase tracking-wider font-mono">
             Outside Parties
           </span>
-          <span className="text-xl font-bold text-purple-700 font-mono block mt-1">
-            {outsideCount} Entities
+          <div className="mt-1.5">
+            <span className="text-2xl font-black font-mono text-purple-700 block tracking-tight">
+              {outsideCount} Entities
+            </span>
+          </div>
+          <span className="text-[11px] text-purple-800 font-bold mt-1 block truncate">
+            FINCUBE, CS ASSOCIATES, M CHINNIAH, TATVA, BHAVANA, THIRUCHENDURAON
           </span>
-          <span className="text-[10px] text-slate-400 mt-0.5 block truncate">FINCUBE, CS ASSOCIATES, M CHINNIAH, TATVA, BHAVANA, THIRUCHENDURAON</span>
         </div>
       </div>
 
-      {/* ─── Filter Toggle ─── */}
-      <div className="flex items-center gap-2 overflow-x-auto max-w-full pb-1">
-        {(['ALL', 'ASR', 'OUTSIDE'] as const).map((f) => (
-          <button
-            key={f}
-            onClick={() => setPartyFilter(f)}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors whitespace-nowrap cursor-pointer ${
-              partyFilter === f
-                ? 'bg-[#701A35] text-white'
-                : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
-            }`}
-          >
-            {f === 'ALL' ? 'All Entities' : f === 'ASR' ? 'ASR Group Own' : 'Outside Parties'}
-          </button>
-        ))}
+      {/* ─── Filter Toggle Bar ─── */}
+      <div className="bg-white p-4.5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between gap-3.5 flex-wrap">
+        <div className="flex items-center gap-1.5 bg-slate-100/80 p-1 rounded-xl border border-slate-200/80 overflow-x-auto max-w-full">
+          {(['ALL', 'ASR', 'OUTSIDE'] as const).map((f) => (
+            <button
+              key={f}
+              onClick={() => setPartyFilter(f)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold btn-press transition-all duration-120 whitespace-nowrap cursor-pointer ${
+                partyFilter === f
+                  ? 'bg-[#701A35] text-white shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+              }`}
+            >
+              {f === 'ALL' ? 'All Entities' : f === 'ASR' ? 'ASR Group Internal' : 'Outside Parties'}
+            </button>
+          ))}
+        </div>
+        <span className="text-xs text-slate-500 font-medium">
+          Showing <strong className="text-slate-800 font-mono">{filteredCompanies.length}</strong> companies
+        </span>
       </div>
 
       {/* ─── Companies DataTable ─── */}
       {companies.length === 0 ? (
-        <div className="bg-white rounded-2xl p-12 border border-[#E6E1D6] text-center space-y-3">
+        <div className="bg-white rounded-2xl p-12 border border-slate-200 shadow-sm text-center space-y-3">
           <div className="w-12 h-12 rounded-2xl bg-[#701A35]/10 text-[#701A35] flex items-center justify-center mx-auto">
             <Building2 className="w-6 h-6" />
           </div>

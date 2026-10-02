@@ -32,9 +32,8 @@ export const ScheduleView: React.FC = () => {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'Active' | 'Closed'>('ALL');
-  const [expandedLoanIds, setExpandedLoanIds] = useState<Set<string>>(() => {
-    return new Set(loans.length > 0 ? [loans[0].id] : []);
-  });
+  // Accordion state - all collapsed by default
+  const [expandedLoanIds, setExpandedLoanIds] = useState<Set<string>>(new Set());
 
   // Toggle loan expand/collapse
   const toggleExpandLoan = (id: string) => {
@@ -123,21 +122,23 @@ export const ScheduleView: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-in fade-in duration-200">
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2">
-            <span className="p-2 rounded-xl bg-[#701A35]/10 text-[#701A35]">
+          <div className="flex items-center gap-2.5">
+            <div className="w-10 h-10 rounded-xl bg-[#701A35] text-[#EED8A1] shadow-sm flex items-center justify-center shrink-0">
               <CalendarDays className="w-5 h-5" />
-            </span>
-            <h1 className="text-xl font-bold text-slate-900 font-serif">
-              Collections & Installment Schedules
-            </h1>
+            </div>
+            <div>
+              <h1 className="text-xl font-bold text-slate-950 font-serif">
+                Collections & Installment Schedules
+              </h1>
+              <p className="text-xs text-slate-600 font-medium mt-0.5">
+                Track EMI schedules, payment records, and collection status across active loan portfolios
+              </p>
+            </div>
           </div>
-          <p className="text-xs text-slate-500 mt-1">
-            Track EMI schedules and manage collection status across all active loan portfolios.
-          </p>
         </div>
 
         <button
@@ -145,81 +146,87 @@ export const ScheduleView: React.FC = () => {
             setActiveMainTab('loans');
             router.push('/loans');
           }}
-          className="px-4 py-2 bg-[#701A35] hover:bg-[#5C142B] text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 self-start sm:self-auto cursor-pointer"
+          className="px-4 py-2 text-xs font-bold text-slate-950 bg-gradient-to-r from-amber-400 via-amber-300 to-[#C5A059] hover:from-amber-300 hover:to-amber-400 active:scale-98 rounded-xl transition-all shadow-sm flex items-center gap-1.5 self-start md:self-auto cursor-pointer shrink-0"
         >
-          <CreditCard className="w-4 h-4" />
-          <span>Create Loan</span>
+          <CreditCard className="w-4 h-4 font-bold" />
+          <span>New Loan</span>
         </button>
       </div>
 
-      {/* Top KPI Metrics Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="p-4 bg-white rounded-2xl border border-slate-200 shadow-2xs">
-          <div className="flex items-center justify-between text-slate-400">
+      {/* Top High-Impact KPI Badges */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+        <div className="p-4.5 bg-white rounded-2xl border-2 border-slate-200/90 shadow-sm hover:border-slate-300 transition-all flex flex-col justify-between">
+          <div className="flex items-center justify-between text-slate-500">
             <span className="text-[11px] font-bold uppercase tracking-wider font-mono">
               Total Portfolio
             </span>
             <CreditCard className="w-4 h-4 text-[#701A35]" />
           </div>
-          <div className="mt-1">
+          <div className="mt-2">
             <MoneyDisplay
               amount={kpiStats.totalCapital}
-              size="2xl"
-              amountClassName="font-bold text-slate-900 block"
+              size="xl"
+              amountClassName="font-black text-2xl text-slate-950 block tracking-tight"
             />
           </div>
-          <span className="text-[10px] text-slate-400 mt-0.5 block">
-            Across {loans.length} client loans
+          <span className="text-[11px] text-slate-500 font-medium mt-1 block">
+            Across {loans.length} borrower facilities
           </span>
         </div>
 
-        <div className="p-4 bg-white rounded-2xl border border-slate-200 shadow-2xs">
-          <div className="flex items-center justify-between text-slate-400">
+        <div className="p-4.5 bg-gradient-to-br from-amber-100/90 via-amber-50 to-white rounded-2xl border-2 border-amber-300 shadow-sm hover:border-amber-400 transition-all flex flex-col justify-between">
+          <div className="flex items-center justify-between text-amber-900">
             <span className="text-[11px] font-bold uppercase tracking-wider font-mono">
               Total EMIs
             </span>
-            <Calendar className="w-4 h-4 text-amber-600" />
+            <Calendar className="w-4 h-4 text-amber-700" />
           </div>
-          <span className="text-2xl font-bold text-amber-700 font-mono block mt-1">
-            {kpiStats.totalCycles}
-          </span>
-          <span className="text-[11px] text-slate-500 mt-1 block">
+          <div className="mt-2">
+            <span className="text-2xl font-black text-amber-800 font-mono block tracking-tight">
+              {kpiStats.totalCycles}
+            </span>
+          </div>
+          <span className="text-[11px] text-amber-800 font-bold mt-1 block">
             Scheduled installments
           </span>
         </div>
 
-        <div className="p-4 bg-white rounded-2xl border border-slate-200 shadow-2xs">
-          <div className="flex items-center justify-between text-slate-400">
+        <div className="p-4.5 bg-gradient-to-br from-emerald-100/90 via-emerald-50 to-white rounded-2xl border-2 border-emerald-300 shadow-sm hover:border-emerald-400 transition-all flex flex-col justify-between">
+          <div className="flex items-center justify-between text-emerald-900">
             <span className="text-[11px] font-bold uppercase tracking-wider font-mono">
               Settled Collections
             </span>
-            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+            <CheckCircle2 className="w-4 h-4 text-emerald-700" />
           </div>
-          <span className="text-2xl font-bold text-emerald-700 font-mono block mt-1">
-            {kpiStats.paidCycles}
-            <span className="text-xs text-slate-400 font-normal ml-1.5">
-              / {kpiStats.totalCycles}
+          <div className="mt-2">
+            <span className="text-2xl font-black text-emerald-700 font-mono block tracking-tight">
+              {kpiStats.paidCycles}
+              <span className="text-xs text-slate-500 font-normal ml-1.5">
+                / {kpiStats.totalCycles}
+              </span>
             </span>
-          </span>
-          <span className="text-[11px] text-emerald-600 mt-1 block">
+          </div>
+          <span className="text-[11px] text-emerald-800 font-bold mt-1 block">
             {kpiStats.totalCycles > 0
-              ? `${Math.round((kpiStats.paidCycles / kpiStats.totalCycles) * 100)}% settled`
+              ? `${Math.round((kpiStats.paidCycles / kpiStats.totalCycles) * 100)}% recovery rate`
               : '0%'}
           </span>
         </div>
 
-        <div className="p-4 bg-white rounded-2xl border border-slate-200 shadow-2xs">
-          <div className="flex items-center justify-between text-slate-400">
+        <div className="p-4.5 bg-gradient-to-br from-rose-100/90 via-rose-50 to-white rounded-2xl border-2 border-rose-300 shadow-sm hover:border-rose-400 transition-all flex flex-col justify-between">
+          <div className="flex items-center justify-between text-rose-900">
             <span className="text-[11px] font-bold uppercase tracking-wider font-mono">
-              Pending / Bounced
+              Pending / Returned
             </span>
-            <Clock className="w-4 h-4 text-rose-600" />
+            <Clock className="w-4 h-4 text-rose-700" />
           </div>
-          <span className="text-2xl font-bold text-rose-700 font-mono block mt-1">
-            {kpiStats.pendingCycles + kpiStats.returnedCycles}
-          </span>
-          <span className="text-[11px] text-slate-500 mt-1 block">
-            {kpiStats.returnedCycles} Returned · {kpiStats.pendingCycles} Due
+          <div className="mt-2">
+            <span className="text-2xl font-black text-rose-700 font-mono block tracking-tight">
+              {kpiStats.pendingCycles + kpiStats.returnedCycles}
+            </span>
+          </div>
+          <span className="text-[11px] text-rose-700 font-bold mt-1 block">
+            {kpiStats.returnedCycles} Returned · {kpiStats.pendingCycles} Pending Due
           </span>
         </div>
       </div>
@@ -227,7 +234,7 @@ export const ScheduleView: React.FC = () => {
       {/* Main Schedule Loan Accordion List */}
       <div className="space-y-4">
         {/* Controls: Search & Status Filters */}
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="bg-white p-4.5 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="relative flex-1 max-w-sm">
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
@@ -235,23 +242,23 @@ export const ScheduleView: React.FC = () => {
               placeholder="Search by borrower, code, city..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-800 placeholder:text-slate-400 focus:outline-hidden focus:bg-white focus:border-[#701A35] transition-all"
+              className="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder:text-slate-400 focus:outline-hidden focus:bg-white focus:border-[#701A35] transition-all"
             />
           </div>
 
-          <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl">
+          <div className="flex items-center gap-1.5 bg-slate-100/80 p-1 rounded-xl border border-slate-200/80">
             {(['ALL', 'Active', 'Closed'] as const).map((filter) => (
               <button
                 key={filter}
                 type="button"
                 onClick={() => setStatusFilter(filter)}
-                className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                   statusFilter === filter
-                    ? 'bg-[#701A35] text-white font-bold shadow-2xs'
-                    : 'text-slate-600 hover:text-slate-900'
+                    ? 'bg-[#701A35] text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
                 }`}
               >
-                {filter}
+                {filter === 'ALL' ? 'All Schedules' : filter}
               </button>
             ))}
           </div>
@@ -259,9 +266,9 @@ export const ScheduleView: React.FC = () => {
 
         {/* Schedule Accordion Cards */}
         {filteredLoans.length === 0 ? (
-          <div className="bg-white rounded-2xl p-12 text-center border border-slate-200 shadow-2xs space-y-3">
+          <div className="bg-white rounded-2xl p-12 text-center border border-slate-200 shadow-sm space-y-3">
             <Calendar className="w-10 h-10 text-slate-300 mx-auto" />
-            <h3 className="text-base font-bold text-slate-800 font-serif">No schedule records found</h3>
+            <h3 className="text-base font-bold text-slate-900 font-serif">No schedule records found</h3>
             <p className="text-xs text-slate-500 max-w-sm mx-auto">
               No active repayment schedules match your current search criteria.
             </p>
@@ -279,7 +286,7 @@ export const ScheduleView: React.FC = () => {
               return (
                 <div
                   key={loan.id}
-                  className="bg-white rounded-2xl border border-[#E6E1D6] shadow-xs overflow-hidden transition-all"
+                  className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden transition-all"
                 >
                   {/* Accordion Row Header */}
                   <div
@@ -288,11 +295,11 @@ export const ScheduleView: React.FC = () => {
                   >
                     <div className="flex items-center gap-3 min-w-0">
                       <div className="p-2 rounded-xl bg-[#701A35]/10 text-[#701A35] shrink-0">
-                        {isExpanded ? (
-                          <ChevronDown className="w-4 h-4 font-bold" />
-                        ) : (
-                          <ChevronRight className="w-4 h-4 font-bold" />
-                        )}
+                        <ChevronRight
+                          className={`w-4 h-4 font-bold transition-transform duration-120 ${
+                            isExpanded ? 'rotate-90 text-[#701A35]' : 'text-slate-400'
+                          }`}
+                        />
                       </div>
 
                       <div className="min-w-0">
@@ -354,14 +361,13 @@ export const ScheduleView: React.FC = () => {
                       )}
 
                       <button
-                        type="button"
                         onClick={(e) => {
                           e.stopPropagation();
                           setSelectedLoanId(loan.id);
                           setActiveMainTab('loans');
                           router.push(`/loans/${loan.id}`);
                         }}
-                        className="px-2.5 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:text-[#701A35] hover:border-[#701A35] text-xs font-bold transition-all flex items-center gap-1 cursor-pointer shrink-0"
+                        className="px-2.5 py-1.5 rounded-lg border border-slate-300 text-slate-700 hover:text-[#701A35] hover:border-[#701A35] text-xs font-bold transition-all flex items-center gap-1 cursor-pointer shrink-0 shadow-2xs btn-press"
                       >
                         <Eye className="w-3.5 h-3.5" />
                         <span className="hidden sm:inline">Details</span>
@@ -369,80 +375,82 @@ export const ScheduleView: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Expanded Section */}
-                  {isExpanded && (
-                    <div className="p-4 sm:p-5 bg-white space-y-3 animate-in fade-in duration-150">
-                      <div className="border border-[#E6E1D6] rounded-xl overflow-hidden shadow-2xs">
-                        <div className="overflow-x-auto">
-                          <table className="w-full text-xs text-left border-collapse min-w-[600px]">
-                            <thead className="bg-[#FAF8F5] border-b border-[#E6E1D6] text-[11px] font-mono text-slate-600">
-                              <tr>
-                                <th className="p-2.5 border-r border-[#E6E1D6] w-12 text-center">EMI #</th>
-                                <th className="p-2.5 border-r border-[#E6E1D6] w-28">Due Date</th>
-                                <th className="p-2.5 border-r border-[#E6E1D6] text-right font-mono">Amount (₹)</th>
-                                <th className="p-2.5 border-r border-[#E6E1D6] text-center w-24">Status</th>
-                                <th className="p-2.5 border-r border-[#E6E1D6] w-28">Recd Date</th>
-                                <th className="p-2.5 border-r border-[#E6E1D6] w-24">Dep Name</th>
-                                <th className="p-2.5 border-r border-[#E6E1D6]">Remarks</th>
-                                <th className="p-2.5 text-right w-28">Action</th>
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100 font-mono">
-                              {insts.map((row) => (
-                                <tr key={row.id || row.seqNo} className="hover:bg-[#FAF8F5]/60 transition-colors">
-                                  <td className="p-2.5 border-r border-[#E6E1D6] text-center text-slate-500 font-bold">
-                                    #{row.seqNo}
-                                  </td>
-                                  <td className="p-2.5 border-r border-[#E6E1D6] font-bold text-slate-800">
-                                    {row.dueDate}
-                                  </td>
-                                  <td className="p-2.5 border-r border-[#E6E1D6] text-right font-bold text-slate-900">
-                                    <MoneyDisplay
-                                      amount={row.amountDue}
-                                      size="sm"
-                                      amountClassName="block font-bold text-slate-900 text-right"
-                                    />
-                                  </td>
-                                  <td className="p-2.5 border-r border-[#E6E1D6] text-center">
-                                    <StatusPill status={row.status} />
-                                  </td>
-                                  <td className="p-2.5 border-r border-[#E6E1D6] text-slate-600">
-                                    {row.recdDate || '—'}
-                                  </td>
-                                  <td className="p-2.5 border-r border-[#E6E1D6] font-bold text-slate-700">
-                                    {row.depName || '—'}
-                                  </td>
-                                  <td className="p-2.5 border-r border-[#E6E1D6] text-slate-500 font-sans truncate max-w-[150px]">
-                                    {row.remarks || '—'}
-                                  </td>
-                                  <td className="p-2.5 text-right">
-                                    <button
-                                      type="button"
-                                      onClick={async () => {
-                                        const newStatus = row.status === 'PASS' ? 'PENDING' : 'PASS';
-                                        const today = new Date().toISOString().split('T')[0];
-                                        await updateLoanInstallment(row.id, {
-                                          status: newStatus,
-                                          recdDate: newStatus === 'PASS' ? today : null,
-                                        });
-                                      }}
-                                      className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-                                        row.status === 'PASS'
-                                          ? 'bg-slate-100 text-slate-600 hover:text-rose-700 hover:bg-rose-50 border border-slate-200'
-                                          : 'bg-emerald-700 text-white hover:bg-emerald-800 shadow-2xs'
-                                      }`}
-                                    >
-                                      {row.status === 'PASS' ? 'Undo' : 'Mark PASS'}
-                                    </button>
-                                  </td>
+                  {/* Expanded Section with Smooth Grid Accordion */}
+                  <div className={`grid-accordion ${isExpanded ? 'open' : ''}`}>
+                    <div>
+                      <div className="p-4 sm:p-5 bg-white space-y-3">
+                        <div className="border border-slate-200 rounded-xl overflow-hidden shadow-2xs">
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-xs text-left border-collapse min-w-[600px]">
+                              <thead className="bg-slate-100 border-b-2 border-slate-200 text-[11px] font-mono text-slate-700 font-bold uppercase tracking-wider">
+                                <tr>
+                                  <th className="p-2.5 border-r border-slate-200 w-12 text-center">EMI #</th>
+                                  <th className="p-2.5 border-r border-slate-200 w-28">Due Date</th>
+                                  <th className="p-2.5 border-r border-slate-200 text-right font-mono">Amount (₹)</th>
+                                  <th className="p-2.5 border-r border-slate-200 text-center w-24">Status</th>
+                                  <th className="p-2.5 border-r border-slate-200 w-28">Recd Date</th>
+                                  <th className="p-2.5 border-r border-slate-200 w-24">Dep Name</th>
+                                  <th className="p-2.5 border-r border-slate-200">Remarks</th>
+                                  <th className="p-2.5 text-right w-28">Action</th>
                                 </tr>
-                              ))}
-                            </tbody>
-                          </table>
+                              </thead>
+                              <tbody className="divide-y divide-slate-100 font-mono">
+                                {insts.map((row) => (
+                                  <tr key={row.id || row.seqNo} className="hover:bg-[#FAF5ED]/50 transition-colors">
+                                    <td className="p-2.5 border-r border-slate-200 text-center text-slate-500 font-bold">
+                                      #{row.seqNo}
+                                    </td>
+                                    <td className="p-2.5 border-r border-slate-200 font-bold text-slate-800">
+                                      {row.dueDate}
+                                    </td>
+                                    <td className="p-2.5 border-r border-slate-200 text-right font-bold text-slate-900">
+                                      <MoneyDisplay
+                                        amount={row.amountDue}
+                                        size="sm"
+                                        amountClassName="block font-bold text-slate-900 text-right"
+                                      />
+                                    </td>
+                                    <td className="p-2.5 border-r border-slate-200 text-center">
+                                      <StatusPill status={row.status} />
+                                    </td>
+                                    <td className="p-2.5 border-r border-slate-200 text-slate-600">
+                                      {row.recdDate || '—'}
+                                    </td>
+                                    <td className="p-2.5 border-r border-slate-200 font-bold text-slate-700">
+                                      {row.depName || '—'}
+                                    </td>
+                                    <td className="p-2.5 border-r border-slate-200 text-slate-500 font-sans truncate max-w-[150px]">
+                                      {row.remarks || '—'}
+                                    </td>
+                                    <td className="p-2.5 text-right">
+                                      <button
+                                        type="button"
+                                        onClick={async () => {
+                                          const newStatus = row.status === 'PASS' ? 'PENDING' : 'PASS';
+                                          const today = new Date().toISOString().split('T')[0];
+                                          await updateLoanInstallment(row.id, {
+                                            status: newStatus,
+                                            recdDate: newStatus === 'PASS' ? today : null,
+                                          });
+                                        }}
+                                        className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer btn-press ${
+                                          row.status === 'PASS'
+                                            ? 'bg-slate-100 text-slate-600 hover:text-rose-700 hover:bg-rose-50 border border-slate-200'
+                                            : 'bg-emerald-700 text-white hover:bg-emerald-800 shadow-2xs'
+                                        }`}
+                                      >
+                                        {row.status === 'PASS' ? 'Undo' : 'Mark PASS'}
+                                      </button>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  )}
+                  </div>
                 </div>
               );
             })}
