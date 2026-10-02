@@ -68,126 +68,129 @@ export const RolesPermissionsTab: React.FC = () => {
     }
   };
 
-  const columns: ColumnDef<Role>[] = [
-    {
-      key: 'id',
-      header: 'Role ID',
-      sortable: true,
-      align: 'left',
-      accessor: (r) => r.id,
-      render: (r) => (
-        <span className="font-mono text-xs font-bold text-slate-700">
-          {r.id}
-        </span>
-      ),
-      exportValue: (r) => r.id,
-    },
-    {
-      key: 'code',
-      header: 'Role Name',
-      sortable: true,
-      accessor: (r) => r.code,
-      render: (r) => (
-        <button onClick={() => setEditingRole(r)} className="block text-left" title="Edit role and page access">
-          <span className="block text-sm font-semibold text-[#701A35] hover:text-[#4E1026]">{r.name}</span>
-          <span className="mt-1 block font-mono text-[10px] text-slate-400">{r.code}</span>
-        </button>
-      ),
-      exportValue: (r) => r.code,
-    },
-    {
-      key: 'description',
-      header: 'Scope',
-      sortable: true,
-      accessor: (r) => r.description,
-      render: (r) => (
-        <div className="max-w-sm text-xs text-slate-700">
-          <span className="block font-medium text-slate-900">{r.description || 'No scope description configured.'}</span>
-          <span className="mt-1 block text-[11px] text-slate-400">Hierarchy level {r.hierarchyLevel}</span>
-        </div>
-      ),
-      exportValue: (r) => `${r.name}: ${r.description}`,
-    },
-    {
-      key: 'assignedUsers',
-      header: 'Assigned users',
-      sortable: true,
-      accessor: (r) => users.filter((user) => user.assignedRoleIds.includes(r.id)).length,
-      render: (r) => (
-        <span className="text-sm font-semibold tabular-nums text-slate-800">
-          {users.filter((user) => user.assignedRoleIds.includes(r.id)).length}
-        </span>
-      ),
-    },
-    {
-      key: 'roleType',
-      header: 'Type',
-      sortable: true,
-      accessor: (r) => r.isSystemProtected ? 'System role' : 'Custom role',
-      render: (r) => (
-        <span className="rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-[11px] font-semibold text-slate-600">
-          {r.isSystemProtected ? 'System role' : 'Custom role'}
-        </span>
-      ),
-    },
-    {
-      key: 'status',
-      header: 'Status',
-      align: 'center',
-      sortable: true,
-      accessor: () => 'Active',
-      render: () => (
-        <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-          Active
-        </span>
-      ),
-    },
-    {
-      key: 'actions',
-      header: 'Actions',
-      align: 'right',
-      sortable: false,
-      filterable: false,
-      render: (r) => (
-        <div
-          className="flex items-center justify-end gap-1"
-          onClick={(e) => e.stopPropagation()}
-        >
-          {/* Edit Role & Page Access Action */}
-          <button
-            onClick={() => setEditingRole(r)}
-            className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
-            title="Edit Role & Page Access"
-          >
-            <Edit2 className="w-3.5 h-3.5" />
+  const columns: ColumnDef<Role>[] = useMemo(
+    () => [
+      {
+        key: 'id',
+        header: 'Role ID',
+        sortable: true,
+        align: 'left',
+        accessor: (r) => r.id,
+        render: (r) => (
+          <span className="font-mono text-xs font-bold text-slate-700">
+            {r.id}
+          </span>
+        ),
+        exportValue: (r) => r.id,
+      },
+      {
+        key: 'code',
+        header: 'Role Name',
+        sortable: true,
+        accessor: (r) => r.code,
+        render: (r) => (
+          <button onClick={() => setEditingRole(r)} className="block text-left" title="Edit role and page access">
+            <span className="block text-sm font-semibold text-[#701A35] hover:text-[#4E1026]">{r.name}</span>
+            <span className="mt-1 block font-mono text-[10px] text-slate-400">{r.code}</span>
           </button>
-
-          {/* Duplicate / Clone Role (Only Super Admin) */}
-          {isSuperAdmin && (
+        ),
+        exportValue: (r) => r.code,
+      },
+      {
+        key: 'description',
+        header: 'Scope',
+        sortable: true,
+        accessor: (r) => r.description,
+        render: (r) => (
+          <div className="max-w-sm text-xs text-slate-700">
+            <span className="block font-medium text-slate-900">{r.description || 'No scope description configured.'}</span>
+            <span className="mt-1 block text-[11px] text-slate-400">Hierarchy level {r.hierarchyLevel}</span>
+          </div>
+        ),
+        exportValue: (r) => `${r.name}: ${r.description}`,
+      },
+      {
+        key: 'assignedUsers',
+        header: 'Assigned users',
+        sortable: true,
+        accessor: (r) => users.filter((user) => user.assignedRoleIds.includes(r.id)).length,
+        render: (r) => (
+          <span className="text-sm font-semibold tabular-nums text-slate-800">
+            {users.filter((user) => user.assignedRoleIds.includes(r.id)).length}
+          </span>
+        ),
+      },
+      {
+        key: 'roleType',
+        header: 'Type',
+        sortable: true,
+        accessor: (r) => (r.isSystemProtected ? 'System role' : 'Custom role'),
+        render: (r) => (
+          <span className="rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-[11px] font-semibold text-slate-600">
+            {r.isSystemProtected ? 'System role' : 'Custom role'}
+          </span>
+        ),
+      },
+      {
+        key: 'status',
+        header: 'Status',
+        align: 'center',
+        sortable: true,
+        accessor: () => 'Active',
+        render: () => (
+          <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+            Active
+          </span>
+        ),
+      },
+      {
+        key: 'actions',
+        header: 'Actions',
+        align: 'right',
+        sortable: false,
+        filterable: false,
+        render: (r) => (
+          <div
+            className="flex items-center justify-end gap-1"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Edit Role & Page Access Action */}
             <button
-              onClick={() => handleCloneRole(r)}
-              className="p-1.5 rounded-lg text-slate-500 hover:text-amber-700 hover:bg-amber-50 transition-colors cursor-pointer"
-              title="Clone Role Template (Super Admin)"
+              onClick={() => setEditingRole(r)}
+              className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
+              title="Edit Role & Page Access"
             >
-              <Copy className="w-3.5 h-3.5" />
+              <Edit2 className="w-3.5 h-3.5" />
             </button>
-          )}
 
-          {/* Delete Action (only for non-protected roles by Super Admin) */}
-          {!r.isSystemProtected && isSuperAdmin && (
-            <button
-              onClick={() => showToast('Protected', 'Default system tiers cannot be deleted.', 'warning')}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
-              title="Delete Role"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-            </button>
-          )}
-        </div>
-      ),
-    },
-  ];
+            {/* Duplicate / Clone Role (Only Super Admin) */}
+            {isSuperAdmin && (
+              <button
+                onClick={() => handleCloneRole(r)}
+                className="p-1.5 rounded-lg text-slate-500 hover:text-amber-700 hover:bg-amber-50 transition-colors cursor-pointer"
+                title="Clone Role Template (Super Admin)"
+              >
+                <Copy className="w-3.5 h-3.5" />
+              </button>
+            )}
+
+            {/* Delete Action (only for non-protected roles by Super Admin) */}
+            {!r.isSystemProtected && isSuperAdmin && (
+              <button
+                onClick={() => showToast('Protected', 'Default system tiers cannot be deleted.', 'warning')}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                title="Delete Role"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+        ),
+      },
+    ],
+    [users, isSuperAdmin]
+  );
 
   return (
     <div className="space-y-5 animate-in fade-in duration-200">

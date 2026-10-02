@@ -29,6 +29,8 @@ export const SCHEMA_STATEMENTS = [
     customer_id TEXT NOT NULL REFERENCES customers(id),
     code_no TEXT,
     total_amount REAL NOT NULL,
+    disbursed_amount REAL,
+    interest_amount REAL,
     start_date TEXT,
     installment_count INTEGER NOT NULL DEFAULT 1,
     frequency TEXT NOT NULL DEFAULT 'Monthly',
@@ -224,4 +226,12 @@ export async function initializeSchema(client: Client): Promise<void> {
   for (const statement of SCHEMA_STATEMENTS) {
     await client.execute(statement);
   }
+
+  // Safe migrations for new columns
+  try {
+    await client.execute('ALTER TABLE loans ADD COLUMN disbursed_amount REAL DEFAULT NULL');
+  } catch {}
+  try {
+    await client.execute('ALTER TABLE loans ADD COLUMN interest_amount REAL DEFAULT NULL');
+  } catch {}
 }

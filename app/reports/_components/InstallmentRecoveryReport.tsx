@@ -152,7 +152,16 @@ export const InstallmentRecoveryReport: React.FC = () => {
       sortable: true,
       align: 'right',
       accessor: (r) => r.amountDue,
-      render: (r) => <MoneyDisplay amount={r.amountDue} size="sm" amountClassName="font-bold text-slate-900" />,
+      render: (r) => {
+        const isPaid = ['PASS', 'NEFT', 'CASH', 'PAID', 'CLOSED', 'SETTLED', 'Paid'].includes(r.status?.trim().toUpperCase());
+        return (
+          <MoneyDisplay
+            amount={r.amountDue}
+            size="sm"
+            amountClassName={`font-bold ${isPaid ? 'text-emerald-700' : 'text-slate-900'}`}
+          />
+        );
+      },
       exportValue: (r) => r.amountDue,
     },
     {

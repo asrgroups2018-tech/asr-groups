@@ -79,6 +79,36 @@ export const HistoricalSheetView: React.FC = () => {
       [field]: newValue,
     };
 
+    if (field === 'amount') {
+      const newAmt = Number(newValue) || 0;
+      const COMPANY_KEYS: (keyof HistoricalReceiptRow)[] = [
+        'pass', 'kars', 'ig', 'ine', 'ins', 'mars', 'mm', 'tg', 'gs', 'ala',
+        'fin', 'cs', 'mc', 'tatva', 'bhavna', 'taSS',
+      ];
+      if (newAmt <= 0) {
+        COMPANY_KEYS.forEach((k) => {
+          (updates as any)[k] = 0;
+        });
+      } else {
+        const activeSplits = COMPANY_KEYS.filter((k) => (Number(row[k]) || 0) > 0);
+        const currentSplitSum = activeSplits.reduce((sum, k) => sum + (Number(row[k]) || 0), 0);
+
+        if (activeSplits.length > 0 && currentSplitSum > 0) {
+          let allocated = 0;
+          activeSplits.forEach((k, idx) => {
+            if (idx === activeSplits.length - 1) {
+              (updates as any)[k] = Math.max(0, newAmt - allocated);
+            } else {
+              const prevVal = Number(row[k]) || 0;
+              const share = Math.round((newAmt * prevVal) / currentSplitSum);
+              (updates as any)[k] = share;
+              allocated += share;
+            }
+          });
+        }
+      }
+    }
+
     const ok = await updateHistoricalReceipt(row.installmentId, updates);
     if (ok) {
       showToast('Record Updated', `Row #${row.sNo} (${row.clientName}) updated successfully.`, 'success');
@@ -416,16 +446,21 @@ export const HistoricalSheetView: React.FC = () => {
                     </td>
 
                     {/* Scrollable Col 8: AMOUNT (₹) */}
-                    <td className="p-1.5 border-r border-[#EDE8DF] text-right">
-                      <input
-                        type="number"
-                        defaultValue={row.amount}
-                        onBlur={(e) => handleCellBlur(row, 'amount', Number(e.target.value))}
-                        className={`w-full bg-transparent px-1.5 py-1 text-right font-bold focus:bg-white focus:outline-hidden focus:ring-1 focus:ring-[#701A35] rounded ${
-                          row.isMismatch ? 'text-rose-700' : 'text-slate-900'
-                        }`}
-                      />
-                    </td>
+                    {(() => {
+                      const isPaid = ['PASS', 'NEFT', 'CASH', 'PAID', 'CLOSED', 'SETTLED', 'Paid'].includes(row.status?.trim().toUpperCase());
+                      return (
+                        <td className={`p-1.5 border-r border-[#EDE8DF] text-right ${isPaid ? 'bg-emerald-50/70' : ''}`}>
+                          <input
+                            type="number"
+                            defaultValue={row.amount}
+                            onBlur={(e) => handleCellBlur(row, 'amount', Number(e.target.value))}
+                            className={`w-full bg-transparent px-1.5 py-1 text-right font-bold focus:bg-white focus:outline-hidden focus:ring-1 focus:ring-[#701A35] rounded ${
+                              row.isMismatch ? 'text-rose-700' : isPaid ? 'text-emerald-800' : 'text-slate-900'
+                            }`}
+                          />
+                        </td>
+                      );
+                    })()}
 
                     {/* Scrollable Col 9: STATUS */}
                     <td className="p-1.5 border-r border-[#EDE8DF] text-center">

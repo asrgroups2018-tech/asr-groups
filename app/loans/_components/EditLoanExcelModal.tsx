@@ -82,6 +82,32 @@ function formatToIso(dStr: string | null | undefined): string {
   return '';
 }
 
+const COMPANY_KEYS: (keyof EditableInstallmentRow)[] = [
+  'pass', 'kars', 'ig', 'ine', 'ins', 'mars', 'mm', 'tg', 'gs', 'ala',
+  'fin', 'cs', 'mc', 'tatva', 'bhavna', 'taSS',
+];
+
+function getFieldKeyForCompanyCode(code: string): keyof EditableInstallmentRow | null {
+  const c = code.trim().toUpperCase();
+  if (c === 'PASS' || c.includes('PASS')) return 'pass';
+  if (c === 'KARS' || c.includes('KARS')) return 'kars';
+  if (c === 'IG' || c === 'INFIN' || c.includes('INFIN')) return 'ig';
+  if (c === 'INE' || c.includes('INFINITY')) return 'ine';
+  if (c === 'INS' || c.includes('INNOVAT')) return 'ins';
+  if (c === 'MARS' || c.includes('MARS')) return 'mars';
+  if (c === 'MM' || c.includes('MM')) return 'mm';
+  if (c === 'TG' || c.includes('TRIVENI') || c.includes('TREVINI')) return 'tg';
+  if (c === 'GS' || c.includes('SOLITAIRE') || c.includes('SOLITARE')) return 'gs';
+  if (c === 'ALA' || c.includes('ALAGESH')) return 'ala';
+  if (c === 'FIN' || c.includes('FINCUBE')) return 'fin';
+  if (c === 'CS' || c.includes('CS ASSOC')) return 'cs';
+  if (c === 'MC' || c.includes('CHINNIAH')) return 'mc';
+  if (c === 'TATVA' || c.includes('TATVA')) return 'tatva';
+  if (c === 'BHAVNA' || c === 'BHAVANA' || c.includes('BHAVAN')) return 'bhavna';
+  if (c.includes('TA') || c.includes('THIRUCHENDUR')) return 'taSS';
+  return null;
+}
+
 export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
   isOpen,
   onClose,
@@ -96,6 +122,8 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
   const [startDate, setStartDate] = useState('');
   const [frequency, setFrequency] = useState<'Weekly' | 'Monthly'>('Monthly');
   const [status, setStatus] = useState<Loan['status']>('Active');
+  const [disbursedAmount, setDisbursedAmount] = useState<number | ''>('');
+  const [interestAmount, setInterestAmount] = useState<number | ''>('');
 
   // Spreadsheet Rows
   const [rows, setRows] = useState<EditableInstallmentRow[]>([]);
@@ -114,6 +142,8 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
     setStartDate(formatToIso(loan.startDate) || new Date().toISOString().slice(0, 10));
     setFrequency(loan.frequency || 'Monthly');
     setStatus(loan.status || 'Active');
+    setDisbursedAmount(loan.disbursedAmount != null ? loan.disbursedAmount : '');
+    setInterestAmount(loan.interestAmount != null ? loan.interestAmount : '');
 
     const mappedRows: EditableInstallmentRow[] = (loan.installments || []).map((inst, idx) => {
       const splits = inst.companySplits || {};
@@ -214,11 +244,67 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
 
   const hasAnyMismatches = rowMismatches.some((m) => m.isMismatch);
 
-  // Update cell handler
+  // Update cell handler with auto split proportional adjustment for amountDue
   const handleCellChange = (index: number, field: keyof EditableInstallmentRow, val: any) => {
     setRows((prev) => {
       const next = [...prev];
-      next[index] = { ...next[index], [field]: val };
+      const currentRow = next[index];
+      if (!currentRow) return prev;
+
+      if (field === 'amountDue') {
+        const newAmt = Number(val) || 0;
+        const updatedRow: EditableInstallmentRow = { ...currentRow, amountDue: newAmt };
+
+        if (newAmt <= 0) {
+          COMPANY_KEYS.forEach((k) => {
+            (updatedRow as any)[k] = 0;
+          });
+        } else {
+          // Check if current row already has active splits
+          const activeSplits = COMPANY_KEYS.filter((k) => (Number(currentRow[k]) || 0) > 0);
+          const currentSplitSum = activeSplits.reduce((sum, k) => sum + (Number(currentRow[k]) || 0), 0);
+
+          if (activeSplits.length > 0 && currentSplitSum > 0) {
+            // Proportionally adjust existing active company splits to match new amountDue
+            let allocated = 0;
+            activeSplits.forEach((k, idx) => {
+              if (idx === activeSplits.length - 1) {
+                // Exact remainder to prevent rounding discrepancies
+                (updatedRow as any)[k] = Math.max(0, newAmt - allocated);
+              } else {
+                const prevVal = Number(currentRow[k]) || 0;
+                const share = Math.round((newAmt * prevVal) / currentSplitSum);
+                (updatedRow as any)[k] = share;
+                allocated += share;
+              }
+            });
+          } else if (loan && loan.splits && loan.splits.length > 0) {
+            // Fallback to loan's syndicate ratio if row currently has no splits
+            const validSplits = loan.splits.filter((sp) => (sp.splitPercent || 0) > 0 || (sp.splitAmount || 0) > 0);
+            const totalPct = validSplits.reduce((sum, sp) => sum + (sp.splitPercent || 0), 0);
+            let allocated = 0;
+
+            validSplits.forEach((sp, idx) => {
+              const fieldKey = getFieldKeyForCompanyCode(sp.companyCode || '');
+              if (!fieldKey) return;
+
+              if (idx === validSplits.length - 1) {
+                (updatedRow as any)[fieldKey] = Math.max(0, newAmt - allocated);
+              } else {
+                const pct = totalPct > 0 ? (sp.splitPercent || 0) / totalPct : 1 / validSplits.length;
+                const share = Math.round(newAmt * pct);
+                (updatedRow as any)[fieldKey] = share;
+                allocated += share;
+              }
+            });
+          }
+        }
+
+        next[index] = updatedRow;
+        return next;
+      }
+
+      next[index] = { ...currentRow, [field]: val };
       return next;
     });
   };
@@ -263,6 +349,26 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
       taSS: 0,
     };
 
+    // Auto-balance new row based on loan syndicate splits
+    if (loan && loan.splits && loan.splits.length > 0 && defaultAmt > 0) {
+      const validSplits = loan.splits.filter((sp) => (sp.splitPercent || 0) > 0 || (sp.splitAmount || 0) > 0);
+      const totalPct = validSplits.reduce((sum, sp) => sum + (sp.splitPercent || 0), 0);
+      let allocated = 0;
+
+      validSplits.forEach((sp, idx) => {
+        const fieldKey = getFieldKeyForCompanyCode(sp.companyCode || '');
+        if (!fieldKey) return;
+        if (idx === validSplits.length - 1) {
+          (newRow as any)[fieldKey] = Math.max(0, defaultAmt - allocated);
+        } else {
+          const pct = totalPct > 0 ? (sp.splitPercent || 0) / totalPct : 1 / validSplits.length;
+          const share = Math.round(defaultAmt * pct);
+          (newRow as any)[fieldKey] = share;
+          allocated += share;
+        }
+      });
+    }
+
     setRows((prev) => [...prev, newRow]);
   };
 
@@ -278,7 +384,7 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
     });
   };
 
-  // Auto-balance row splits based on initial percentages
+  // Auto-balance row splits based on initial percentages with exact remainder balancing
   const handleAutoBalanceRow = (index: number) => {
     if (!loan || !loan.splits || loan.splits.length === 0) return;
     const row = rows[index];
@@ -287,32 +393,72 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
     if (amt <= 0) return;
 
     const updatedRow = { ...row };
-    loan.splits.forEach((sp) => {
-      const splitVal = Math.round((amt * sp.splitPercent) / 100);
-      const code = sp.companyCode.toUpperCase();
-      if (code === 'PASS') updatedRow.pass = splitVal;
-      else if (code === 'KARS') updatedRow.kars = splitVal;
-      else if (code === 'IG' || code === 'INFIN') updatedRow.ig = splitVal;
-      else if (code === 'INE') updatedRow.ine = splitVal;
-      else if (code === 'INS') updatedRow.ins = splitVal;
-      else if (code === 'MARS') updatedRow.mars = splitVal;
-      else if (code === 'MM') updatedRow.mm = splitVal;
-      else if (code === 'TG') updatedRow.tg = splitVal;
-      else if (code === 'GS') updatedRow.gs = splitVal;
-      else if (code === 'ALA') updatedRow.ala = splitVal;
-      else if (code === 'FIN') updatedRow.fin = splitVal;
-      else if (code === 'CS') updatedRow.cs = splitVal;
-      else if (code === 'MC') updatedRow.mc = splitVal;
-      else if (code === 'TATVA') updatedRow.tatva = splitVal;
-      else if (code === 'BHAVNA' || code === 'BHAVANA') updatedRow.bhavna = splitVal;
-      else if (code.includes('TA')) updatedRow.taSS = splitVal;
+    COMPANY_KEYS.forEach((k) => {
+      (updatedRow as any)[k] = 0;
     });
+
+    const validSplits = loan.splits.filter((sp) => (sp.splitPercent || 0) > 0 || (sp.splitAmount || 0) > 0);
+    const totalPct = validSplits.reduce((sum, sp) => sum + (sp.splitPercent || 0), 0);
+    let allocated = 0;
+
+    validSplits.forEach((sp, idx) => {
+      const fieldKey = getFieldKeyForCompanyCode(sp.companyCode || '');
+      if (!fieldKey) return;
+
+      if (idx === validSplits.length - 1) {
+        (updatedRow as any)[fieldKey] = Math.max(0, amt - allocated);
+      } else {
+        const pct = totalPct > 0 ? (sp.splitPercent || 0) / totalPct : 1 / validSplits.length;
+        const share = Math.round(amt * pct);
+        (updatedRow as any)[fieldKey] = share;
+        allocated += share;
+      }
+    });
+
     setRows((prev) => {
       const next = [...prev];
       next[index] = updatedRow;
       return next;
     });
     showToast('Row Balanced', `EMI #${row.seqNo} company splits aligned to loan ratio.`, 'info');
+  };
+
+  // Auto-balance all rows in one click
+  const handleAutoBalanceAllRows = () => {
+    if (!loan || !loan.splits || loan.splits.length === 0) return;
+    const validSplits = loan.splits.filter((sp) => (sp.splitPercent || 0) > 0 || (sp.splitAmount || 0) > 0);
+    if (validSplits.length === 0) return;
+    const totalPct = validSplits.reduce((sum, sp) => sum + (sp.splitPercent || 0), 0);
+
+    setRows((prev) =>
+      prev.map((row) => {
+        const amt = Number(row.amountDue) || 0;
+        if (amt <= 0) return row;
+
+        const updatedRow = { ...row };
+        COMPANY_KEYS.forEach((k) => {
+          (updatedRow as any)[k] = 0;
+        });
+
+        let allocated = 0;
+        validSplits.forEach((sp, idx) => {
+          const fieldKey = getFieldKeyForCompanyCode(sp.companyCode || '');
+          if (!fieldKey) return;
+
+          if (idx === validSplits.length - 1) {
+            (updatedRow as any)[fieldKey] = Math.max(0, amt - allocated);
+          } else {
+            const pct = totalPct > 0 ? (sp.splitPercent || 0) / totalPct : 1 / validSplits.length;
+            const share = Math.round(amt * pct);
+            (updatedRow as any)[fieldKey] = share;
+            allocated += share;
+          }
+        });
+
+        return updatedRow;
+      })
+    );
+    showToast('All Rows Balanced', 'All installment rows re-aligned to loan company ratios.', 'success');
   };
 
   // Save changes back to Turso Cloud DB
@@ -336,6 +482,8 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
       status,
       frequency,
       startDate: startDate || new Date().toISOString().slice(0, 10),
+      disbursedAmount: disbursedAmount !== '' && disbursedAmount !== null ? Number(disbursedAmount) : null,
+      interestAmount: interestAmount !== '' && interestAmount !== null ? Number(interestAmount) : null,
       installments: rows.map((r) => {
         const companySplits: Record<string, number> = {};
         // ASR Companies (10)
@@ -396,20 +544,32 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
               <FileSpreadsheet className="w-5 h-5" />
             </div>
             <div>
-              <div className="flex items-center gap-2.5 flex-wrap">
+              <div className="flex items-center gap-2 flex-wrap">
                 <h2 className="text-base font-bold text-slate-900 font-serif">
                   Spreadsheet Editor: {loan.customerName}
                 </h2>
                 <span className="font-mono text-xs font-bold px-2.5 py-0.5 rounded bg-[#701A35] text-white">
                   {loan.id}
                 </span>
-                <span className="font-mono text-xs font-bold px-3 py-0.5 rounded-full bg-amber-100 text-amber-950 border border-amber-300 flex items-center gap-1">
+                <span className="font-mono text-xs font-bold px-2.5 py-0.5 rounded-lg bg-amber-100 text-amber-950 border border-amber-300 flex items-center gap-1">
                   <span>Total Loan:</span>
                   <MoneyDisplay amount={totalLoanAmount} size="xs" amountClassName="text-amber-950 font-bold" />
                 </span>
+                {disbursedAmount !== '' && Number(disbursedAmount) > 0 && (
+                  <span className="font-mono text-xs font-bold px-2.5 py-0.5 rounded-lg bg-emerald-100 text-emerald-950 border border-emerald-300 flex items-center gap-1">
+                    <span>Disbursed:</span>
+                    <span>₹{Number(disbursedAmount).toLocaleString('en-IN')}</span>
+                  </span>
+                )}
+                {interestAmount !== '' && Number(interestAmount) > 0 && (
+                  <span className="font-mono text-xs font-bold px-2.5 py-0.5 rounded-lg bg-amber-500/20 text-[#701A35] border border-amber-400 flex items-center gap-1">
+                    <span>Interest (Margin):</span>
+                    <span>₹{Number(interestAmount).toLocaleString('en-IN')}</span>
+                  </span>
+                )}
               </div>
               <p className="text-[11px] text-slate-500 font-mono mt-0.5">
-                Official Company Ledgers • Full Company Names • Direct Cell Editing
+                Official Company Ledgers • Upfront Interest & Disbursed Tracking • Direct Cell Editing
               </p>
             </div>
           </div>
@@ -442,7 +602,7 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
         </div>
 
         {/* ─── Excel Metadata Properties Bar ─── */}
-        <div className="px-5 py-3 bg-[#FDFCFA] border-b border-[#D0C8B8] grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 text-xs shrink-0">
+        <div className="px-5 py-3 bg-[#FDFCFA] border-b border-[#D0C8B8] grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3 text-xs shrink-0">
           <div>
             <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1 font-mono">
               Borrower Name <span className="text-rose-500">*</span>
@@ -493,6 +653,45 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
                 } catch {}
               }}
               className="w-full px-2.5 py-1.5 rounded border border-slate-300 bg-white font-mono font-semibold text-slate-900 cursor-pointer focus:outline-2 focus:outline-[#701A35] [appearance:textfield] [&::-webkit-inner-spin-button]:hidden [&::-webkit-calendar-picker-indicator]:cursor-pointer"
+            />
+          </div>
+
+          <div>
+            <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1 font-mono">
+              Paid / Disbursed (₹)
+            </label>
+            <input
+              type="number"
+              placeholder="e.g. 850000"
+              value={disbursedAmount}
+              onChange={(e) => {
+                const val = e.target.value === '' ? '' : Number(e.target.value);
+                setDisbursedAmount(val);
+                if (val !== '' && totalLoanAmount > 0 && Number(val) <= totalLoanAmount) {
+                  setInterestAmount(totalLoanAmount - Number(val));
+                }
+              }}
+              className="w-full px-2.5 py-1.5 rounded border border-slate-300 bg-white font-mono font-bold text-slate-900 focus:outline-2 focus:outline-[#701A35]"
+            />
+          </div>
+
+          <div>
+            <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1 font-mono flex items-center justify-between">
+              <span>Interest (₹)</span>
+              <span className="text-[9px] text-[#701A35] font-bold">ASR Earning</span>
+            </label>
+            <input
+              type="number"
+              placeholder="e.g. 150000"
+              value={interestAmount}
+              onChange={(e) => {
+                const val = e.target.value === '' ? '' : Number(e.target.value);
+                setInterestAmount(val);
+                if (val !== '' && totalLoanAmount > 0 && Number(val) <= totalLoanAmount) {
+                  setDisbursedAmount(totalLoanAmount - Number(val));
+                }
+              }}
+              className="w-full px-2.5 py-1.5 rounded border border-amber-300 bg-amber-50/70 font-mono font-bold text-amber-950 focus:outline-2 focus:outline-[#701A35]"
             />
           </div>
 
@@ -554,6 +753,17 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
           </div>
 
           <div className="flex items-center gap-3">
+            {loan && loan.splits && loan.splits.length > 0 && (
+              <button
+                type="button"
+                onClick={handleAutoBalanceAllRows}
+                className="text-[#701A35] bg-[#701A35]/10 hover:bg-[#701A35]/20 border border-[#701A35]/30 px-2.5 py-1 rounded text-[11px] font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
+                title="Re-balance all company splits to match loan ratios"
+              >
+                <RotateCcw className="w-3 h-3 text-[#701A35]" />
+                <span>Auto-balance All Splits</span>
+              </button>
+            )}
             {hasAnyMismatches ? (
               <span className="text-rose-700 font-mono font-bold flex items-center gap-1 text-[11px] bg-rose-50 px-2 py-0.5 rounded border border-rose-300">
                 <AlertTriangle className="w-3.5 h-3.5 text-rose-600" />
@@ -719,15 +929,24 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
                       />
                     </td>
 
-                    {/* Amount Due */}
-                    <td className="p-0 bg-amber-50/50">
-                      <input
-                        type="number"
-                        value={row.amountDue || ''}
-                        onChange={(e) => handleCellChange(idx, 'amountDue', Number(e.target.value) || 0)}
-                        className="w-full h-full px-2.5 py-2 text-right bg-transparent focus:bg-white focus:outline-2 focus:outline-amber-600 font-bold text-slate-900 [appearance:textfield] [&::-webkit-inner-spin-button]:hidden"
-                      />
-                    </td>
+                    {/* Amount Due (Highlighted green for confirmed paid installments) */}
+                    {(() => {
+                      const isRowPaid = ['PASS', 'NEFT', 'CASH', 'PAID', 'CLOSED', 'SETTLED', 'Paid'].includes(row.status?.trim().toUpperCase());
+                      return (
+                        <td className={`p-0 transition-colors ${isRowPaid ? 'bg-emerald-100/70 border-emerald-300' : 'bg-amber-50/50'}`}>
+                          <input
+                            type="number"
+                            value={row.amountDue || ''}
+                            onChange={(e) => handleCellChange(idx, 'amountDue', Number(e.target.value) || 0)}
+                            className={`w-full h-full px-2.5 py-2 text-right bg-transparent focus:bg-white focus:outline-2 ${
+                              isRowPaid
+                                ? 'text-emerald-900 font-black focus:outline-emerald-600'
+                                : 'text-slate-900 font-bold focus:outline-amber-600'
+                            } [appearance:textfield] [&::-webkit-inner-spin-button]:hidden`}
+                          />
+                        </td>
+                      );
+                    })()}
 
                     {/* Status Dropdown */}
                     <td className="p-0 text-center">
@@ -955,8 +1174,8 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
                 <td className="p-2.5 text-right bg-amber-200 text-amber-950 font-extrabold border-x border-slate-400">
                   ₹{totalLoanAmount.toLocaleString('en-IN')}
                 </td>
-                <td className="p-2.5 text-center text-slate-700 font-semibold">
-                  {rows.filter((r) => ['PASS', 'Paid'].includes(r.status)).length} Paid
+                <td className="p-2.5 text-center text-emerald-800 font-bold bg-emerald-50/60">
+                  {rows.filter((r) => ['PASS', 'NEFT', 'CASH', 'PAID', 'CLOSED', 'SETTLED', 'Paid'].includes(r.status?.trim().toUpperCase())).length} Paid
                 </td>
                 <td className="p-2.5" />
 

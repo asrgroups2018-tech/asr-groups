@@ -332,7 +332,9 @@ export interface Loan {
   customerName: string;
   place?: string;
   codeNo?: string; // Reference/display code (e.g. "TN0019") - NOT a unique key
-  totalAmount: number; // Sum of all installment amounts
+  totalAmount: number; // Sum of all installment amounts (Total repayable account)
+  disbursedAmount?: number | null; // Net principal amount paid / given to customer (e.g. ₹90,000)
+  interestAmount?: number | null; // Upfront interest amount earned by ASR (e.g. ₹10,000)
   startDate: string;
   installmentCount: number; // e.g. 2, 4, 12
   frequency: 'Weekly' | 'Monthly';

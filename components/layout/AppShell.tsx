@@ -31,7 +31,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
           <TopNav onOpenMobileMenu={() => setIsMobileSidebarOpen(true)} />
 
           {/* Dynamic Viewport */}
-          <main key={pathname} className="flex-1 min-h-0 pb-6 page-enter">
+          <main className="flex-1 min-h-0 pb-6">
             {children}
           </main>
         </div>

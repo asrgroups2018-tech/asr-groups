@@ -58,7 +58,7 @@ function parseToDate(dStr: string | null | undefined): Date | null {
   return isNaN(parsed.getTime()) ? null : parsed;
 }
 
-type SortField = 'customerName' | 'id' | 'startDate' | 'totalAmount' | 'installmentCount' | 'fundedBy' | 'nextDueDate' | 'status';
+type SortField = 'customerName' | 'id' | 'startDate' | 'totalCollected' | 'interestAmount' | 'totalAmount' | 'installmentCount' | 'fundedBy' | 'nextDueDate' | 'status';
 type SortDirection = 'asc' | 'desc';
 
 export const LoansListView: React.FC = () => {
@@ -248,6 +248,18 @@ export const LoansListView: React.FC = () => {
           comparison = timeA - timeB;
           break;
         }
+        case 'totalCollected': {
+          const valA = a.totalCollected || 0;
+          const valB = b.totalCollected || 0;
+          comparison = valA - valB;
+          break;
+        }
+        case 'interestAmount': {
+          const valA = a.interestAmount || 0;
+          const valB = b.interestAmount || 0;
+          comparison = valA - valB;
+          break;
+        }
         case 'totalAmount':
           comparison = a.totalAmount - b.totalAmount;
           break;
@@ -282,6 +294,14 @@ export const LoansListView: React.FC = () => {
   // Aggregate Metrics based on filtered view
   const totalPortfolioAmount = useMemo(
     () => filteredAndSortedLoans.reduce((sum, l) => sum + (l.totalAmount || 0), 0),
+    [filteredAndSortedLoans]
+  );
+  const totalDisbursedAmount = useMemo(
+    () => filteredAndSortedLoans.reduce((sum, l) => sum + (l.disbursedAmount || 0), 0),
+    [filteredAndSortedLoans]
+  );
+  const totalInterestAmount = useMemo(
+    () => filteredAndSortedLoans.reduce((sum, l) => sum + (l.interestAmount || 0), 0),
     [filteredAndSortedLoans]
   );
   const totalCollectedAmount = useMemo(
@@ -424,52 +444,85 @@ export const LoansListView: React.FC = () => {
         </div>
       </div>
 
-      {/* 3 High-Impact KPI Badges */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
-        <div className="bg-white p-4.5 rounded-2xl border-2 border-slate-200/90 shadow-sm hover:border-slate-300 transition-all">
-          <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider font-mono">
-            {dateRange.startDate ? 'Filtered Loan Amount' : 'Total Portfolio Amount'}
+      {/* 5 High-Impact KPI Badges */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+        <div className="bg-white p-4 rounded-2xl border-2 border-slate-200/90 shadow-sm hover:border-slate-300 transition-all">
+          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider font-mono">
+            {dateRange.startDate ? 'Filtered Loans' : 'Total Loan Amount'}
           </span>
-          <div className="mt-1.5">
+          <div className="mt-1">
             <MoneyDisplay
               amount={totalPortfolioAmount}
-              size="xl"
-              amountClassName="text-slate-950 font-black text-2xl block tracking-tight"
+              size="lg"
+              amountClassName="text-slate-950 font-black text-xl block tracking-tight"
             />
           </div>
-          <span className="text-[11px] text-slate-500 font-medium mt-1 block">
-            Across <strong className="text-slate-800">{filteredAndSortedLoans.length}</strong> loan facilities
+          <span className="text-[10px] text-slate-500 font-medium mt-0.5 block">
+            Across <strong className="text-slate-800">{filteredAndSortedLoans.length}</strong> loan accounts
           </span>
         </div>
 
-        <div className="bg-gradient-to-br from-emerald-100/90 via-emerald-50 to-white p-4.5 rounded-2xl border-2 border-emerald-300 shadow-sm hover:border-emerald-400 transition-all">
-          <span className="text-[11px] font-bold text-emerald-900 uppercase tracking-wider font-mono">
-            Total Amount Collected
+        <div className="bg-white p-4 rounded-2xl border-2 border-slate-200/90 shadow-sm hover:border-slate-300 transition-all">
+          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider font-mono">
+            Paid / Disbursed
           </span>
-          <div className="mt-1.5">
+          <div className="mt-1">
             <MoneyDisplay
-              amount={totalCollectedAmount}
-              size="xl"
-              amountClassName="text-emerald-700 font-black text-2xl block tracking-tight"
+              amount={totalDisbursedAmount}
+              size="lg"
+              amountClassName="text-slate-900 font-black text-xl block tracking-tight"
             />
           </div>
-          <span className="text-[11px] text-emerald-800 font-bold mt-1 block">
+          <span className="text-[10px] text-slate-500 font-medium mt-0.5 block">
+            Net capital deployed
+          </span>
+        </div>
+
+        <div className="bg-gradient-to-br from-amber-100/90 via-amber-50 to-white p-4 rounded-2xl border-2 border-amber-300 shadow-sm hover:border-amber-400 transition-all">
+          <span className="text-[10px] font-bold text-amber-900 uppercase tracking-wider font-mono flex items-center justify-between">
+            <span>Interest Earnings</span>
+            <span className="text-[9px] bg-amber-200/80 px-1 rounded font-bold">ASR Margin</span>
+          </span>
+          <div className="mt-1">
+            <MoneyDisplay
+              amount={totalInterestAmount}
+              size="lg"
+              amountClassName="text-[#701A35] font-black text-xl block tracking-tight"
+            />
+          </div>
+          <span className="text-[10px] text-amber-800 font-bold mt-0.5 block">
+            {totalPortfolioAmount > 0 ? ((totalInterestAmount / totalPortfolioAmount) * 100).toFixed(1) : 0}% portfolio margin
+          </span>
+        </div>
+
+        <div className="bg-gradient-to-br from-emerald-100/90 via-emerald-50 to-white p-4 rounded-2xl border-2 border-emerald-300 shadow-sm hover:border-emerald-400 transition-all">
+          <span className="text-[10px] font-bold text-emerald-900 uppercase tracking-wider font-mono">
+            Total Collected
+          </span>
+          <div className="mt-1">
+            <MoneyDisplay
+              amount={totalCollectedAmount}
+              size="lg"
+              amountClassName="text-emerald-700 font-black text-xl block tracking-tight"
+            />
+          </div>
+          <span className="text-[10px] text-emerald-800 font-bold mt-0.5 block">
             {totalPortfolioAmount > 0 ? ((totalCollectedAmount / totalPortfolioAmount) * 100).toFixed(1) : 0}% recovery rate
           </span>
         </div>
 
-        <div className="bg-gradient-to-br from-rose-100/90 via-rose-50 to-white p-4.5 rounded-2xl border-2 border-rose-300 shadow-sm hover:border-rose-400 transition-all">
-          <span className="text-[11px] font-bold text-rose-900 uppercase tracking-wider font-mono">
+        <div className="bg-gradient-to-br from-rose-100/90 via-rose-50 to-white p-4 rounded-2xl border-2 border-rose-300 shadow-sm hover:border-rose-400 transition-all sm:col-span-2 lg:col-span-1">
+          <span className="text-[10px] font-bold text-rose-900 uppercase tracking-wider font-mono">
             Total Balance Due
           </span>
-          <div className="mt-1.5">
+          <div className="mt-1">
             <MoneyDisplay
               amount={totalOutstandingAmount}
-              size="xl"
-              amountClassName="text-[#701A35] font-black text-2xl block tracking-tight"
+              size="lg"
+              amountClassName="text-[#701A35] font-black text-xl block tracking-tight"
             />
           </div>
-          <span className="text-[11px] text-rose-700 font-bold mt-1 block">
+          <span className="text-[10px] text-rose-700 font-bold mt-0.5 block">
             Pending collection
           </span>
         </div>
@@ -782,21 +835,41 @@ export const LoansListView: React.FC = () => {
         ) : (
           <div>
             {/* Desktop Table Header (Visible on lg+) */}
-            <div className="hidden lg:grid grid-cols-12 gap-3 px-5 py-3.5 bg-slate-100 border-b-2 border-slate-200 text-[11px] font-mono font-bold text-slate-700 uppercase tracking-wider select-none">
+            <div className="hidden lg:grid grid-cols-[2.5fr_1.1fr_1.1fr_1.4fr_0.6fr_2fr_1fr_0.9fr_1fr] gap-3 px-5 py-3.5 bg-slate-100 border-b-2 border-slate-200 text-[11px] font-mono font-bold text-slate-700 uppercase tracking-wider select-none items-center">
               {/* Client & Loan ID */}
               <div
                 onClick={() => handleSort('customerName')}
-                className="col-span-4 sm:col-span-3 flex items-center cursor-pointer hover:text-slate-900 transition-colors"
+                className="flex items-center cursor-pointer hover:text-slate-900 transition-colors"
                 title="Sort by Borrower Name"
               >
                 <span>Borrower / Loan ID</span>
                 {renderSortIndicator('customerName')}
               </div>
 
-              {/* Total Amount */}
+              {/* Paid Amount */}
+              <div
+                onClick={() => handleSort('totalCollected')}
+                className="text-right flex items-center justify-end cursor-pointer hover:text-slate-900 transition-colors"
+                title="Sort by Amount Paid"
+              >
+                <span>Paid (₹)</span>
+                {renderSortIndicator('totalCollected')}
+              </div>
+
+              {/* Interest */}
+              <div
+                onClick={() => handleSort('interestAmount')}
+                className="text-right flex items-center justify-end cursor-pointer hover:text-slate-900 transition-colors"
+                title="Sort by Upfront Interest (ASR Profit)"
+              >
+                <span>Interest (₹)</span>
+                {renderSortIndicator('interestAmount')}
+              </div>
+
+              {/* Loan Amount */}
               <div
                 onClick={() => handleSort('totalAmount')}
-                className="col-span-3 sm:col-span-2 text-right flex items-center justify-end cursor-pointer hover:text-slate-900 transition-colors"
+                className="text-right flex items-center justify-end cursor-pointer hover:text-slate-900 transition-colors"
                 title="Sort by Loan Amount"
               >
                 <span>Loan Amount (₹)</span>
@@ -806,7 +879,7 @@ export const LoansListView: React.FC = () => {
               {/* EMIs */}
               <div
                 onClick={() => handleSort('installmentCount')}
-                className="col-span-2 sm:col-span-1 text-center flex items-center justify-center cursor-pointer hover:text-slate-900 transition-colors"
+                className="text-center flex items-center justify-center cursor-pointer hover:text-slate-900 transition-colors"
                 title="Sort by Installment Count"
               >
                 <span>EMIs</span>
@@ -816,7 +889,7 @@ export const LoansListView: React.FC = () => {
               {/* Funded By */}
               <div
                 onClick={() => handleSort('fundedBy')}
-                className="hidden sm:flex sm:col-span-3 items-center cursor-pointer hover:text-slate-900 transition-colors"
+                className="flex items-center cursor-pointer hover:text-slate-900 transition-colors"
                 title="Sort by Funding Entities"
               >
                 <span>Funded By</span>
@@ -826,7 +899,7 @@ export const LoansListView: React.FC = () => {
               {/* Next Due Date */}
               <div
                 onClick={() => handleSort('nextDueDate')}
-                className="hidden sm:flex sm:col-span-1 items-center justify-center cursor-pointer hover:text-slate-900 transition-colors"
+                className="flex items-center justify-center cursor-pointer hover:text-slate-900 transition-colors"
                 title="Sort by Next Due Date"
               >
                 <span>Next Due</span>
@@ -836,7 +909,7 @@ export const LoansListView: React.FC = () => {
               {/* Status */}
               <div
                 onClick={() => handleSort('status')}
-                className="col-span-2 sm:col-span-1 text-center flex items-center justify-center cursor-pointer hover:text-slate-900 transition-colors"
+                className="text-center flex items-center justify-center cursor-pointer hover:text-slate-900 transition-colors"
                 title="Sort by Loan Status"
               >
                 <span>Status</span>
@@ -844,7 +917,7 @@ export const LoansListView: React.FC = () => {
               </div>
 
               {/* Actions Header */}
-              <div className="col-span-1 text-right">
+              <div className="text-right">
                 <span>Actions</span>
               </div>
             </div>
@@ -875,10 +948,10 @@ export const LoansListView: React.FC = () => {
                     {/* Summary Row */}
                     <div
                       onClick={() => toggleExpand(loan.id)}
-                      className="grid grid-cols-12 gap-3 px-5 py-4 items-center cursor-pointer select-none"
+                      className="grid grid-cols-[2.5fr_1.1fr_1.1fr_1.4fr_0.6fr_2fr_1fr_0.9fr_1fr] gap-3 px-5 py-4 items-center cursor-pointer select-none"
                     >
                       {/* Client Name & Loan ID Badge */}
-                      <div className="col-span-3 flex items-center gap-2 min-w-0">
+                      <div className="flex items-center gap-2 min-w-0">
                         <button
                           type="button"
                           onClick={(e) => {
@@ -915,20 +988,63 @@ export const LoansListView: React.FC = () => {
                         </div>
                       </div>
 
-                      {/* Total Loan Amount */}
-                      <div className="col-span-2 text-right font-mono">
+                      {/* Paid Amount */}
+                      <div className="text-right font-mono">
+                        {(loan.totalCollected || 0) > 0 ? (
+                          <div>
+                            <MoneyDisplay
+                              amount={loan.totalCollected || 0}
+                              size="xs"
+                              amountClassName={`font-bold text-xs block text-right ${
+                                (loan.totalCollected || 0) >= loan.totalAmount
+                                  ? 'text-emerald-700 font-extrabold'
+                                  : 'text-slate-900'
+                              }`}
+                            />
+                            {loan.disbursedAmount != null && loan.disbursedAmount > 0 && (
+                              <span className="text-[10px] text-slate-500 font-medium block">
+                                Disb: ₹{loan.disbursedAmount.toLocaleString('en-IN')}
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-slate-400 font-mono text-xs block text-right">—</span>
+                        )}
+                      </div>
+
+                      {/* Interest Amount */}
+                      <div className="text-right font-mono">
+                        {loan.interestAmount != null && loan.interestAmount > 0 ? (
+                          <div className="flex justify-end">
+                            <span className="inline-block px-2 py-0.5 rounded bg-amber-100/90 text-amber-950 border border-amber-300/80 font-mono text-xs font-bold shadow-2xs">
+                              ₹{loan.interestAmount.toLocaleString('en-IN')}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-slate-400 font-mono text-xs block text-right">—</span>
+                        )}
+                      </div>
+
+                      {/* Loan Amount */}
+                      <div className="text-right font-mono">
                         <MoneyDisplay
                           amount={loan.totalAmount}
                           size="sm"
                           amountClassName="font-bold text-slate-950 text-xs block text-right"
                         />
-                        <span className="text-[10px] text-slate-500 font-medium block mt-0.5">
-                          ₹{(loan.totalCollected || 0).toLocaleString('en-IN')} collected
-                        </span>
+                        {(loan.totalCollected || 0) >= loan.totalAmount ? (
+                          <span className="text-[10px] text-emerald-700 font-bold block mt-0.5">
+                            Fully Settled
+                          </span>
+                        ) : (
+                          <span className="text-[10px] text-slate-500 font-medium block mt-0.5">
+                            ₹{Math.max(0, loan.totalAmount - (loan.totalCollected || 0)).toLocaleString('en-IN')} due
+                          </span>
+                        )}
                       </div>
 
                       {/* EMI Count */}
-                      <div className="col-span-1 text-center font-mono text-xs">
+                      <div className="text-center font-mono text-xs">
                         <span className="px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-800 border border-indigo-200 font-bold">
                           {loan.installmentCount || loan.installments?.length || 0}
                         </span>
@@ -940,7 +1056,7 @@ export const LoansListView: React.FC = () => {
                       </div>
 
                       {/* Funding Companies Split Badges */}
-                      <div className="col-span-3 flex items-center gap-1.5 flex-wrap">
+                      <div className="flex items-center gap-1.5 flex-wrap">
                         {loan.splits && loan.splits.length > 0 ? (
                           loan.splits.map((sp) => (
                             <CompanySplitBadge key={sp.id} split={sp} size="sm" />
@@ -951,19 +1067,19 @@ export const LoansListView: React.FC = () => {
                       </div>
 
                       {/* Next Due Date */}
-                      <div className="col-span-1 text-center font-mono text-xs">
+                      <div className="text-center font-mono text-xs">
                         <span className="text-slate-800 font-semibold block">
                           {loan.nextDueDate || '—'}
                         </span>
                       </div>
 
                       {/* Status */}
-                      <div className="col-span-1 text-center">
+                      <div className="text-center">
                         <StatusPill status={loan.status} size="sm" />
                       </div>
 
                       {/* Actions: Edit Excel, View Details, Delete */}
-                      <div className="col-span-1 flex items-center justify-end gap-1">
+                      <div className="flex items-center justify-end gap-1">
                         <button
                           type="button"
                           onClick={(e) => {
@@ -1084,13 +1200,18 @@ export const LoansListView: React.FC = () => {
                                           )}
                                         </div>
                                       </td>
-                                      <td className="p-2.5 text-right font-mono">
-                                        <MoneyDisplay
-                                          amount={inst.amountDue}
-                                          size="sm"
-                                          amountClassName="font-bold text-slate-950 block text-right"
-                                        />
-                                      </td>
+                                      {(() => {
+                                        const isPaid = ['PASS', 'NEFT', 'CASH', 'PAID', 'CLOSED', 'SETTLED', 'Paid'].includes(inst.status?.trim().toUpperCase());
+                                        return (
+                                          <td className={`p-2.5 text-right font-mono ${isPaid ? 'bg-emerald-50/70' : ''}`}>
+                                            <MoneyDisplay
+                                              amount={inst.amountDue}
+                                              size="sm"
+                                              amountClassName={`font-bold block text-right ${isPaid ? 'text-emerald-800' : 'text-slate-950'}`}
+                                            />
+                                          </td>
+                                        );
+                                      })()}
                                       <td className="p-2.5 text-center">
                                         <StatusPill status={inst.status} size="sm" />
                                       </td>
@@ -1212,6 +1333,26 @@ export const LoansListView: React.FC = () => {
                         />
                       </div>
                       <div className="flex items-center justify-between text-xs">
+                        <span className="text-slate-500 font-medium">Paid / Disbursed:</span>
+                        {loan.disbursedAmount != null && loan.disbursedAmount > 0 ? (
+                          <span className="font-mono font-bold text-slate-800 text-xs">
+                            ₹{loan.disbursedAmount.toLocaleString('en-IN')}
+                          </span>
+                        ) : (
+                          <span className="font-mono text-slate-400 text-xs">—</span>
+                        )}
+                      </div>
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-slate-500 font-medium">Interest (ASR Margin):</span>
+                        {loan.interestAmount != null && loan.interestAmount > 0 ? (
+                          <span className="font-mono font-bold text-amber-900 bg-amber-100 border border-amber-300 px-2 py-0.5 rounded text-xs">
+                            ₹{loan.interestAmount.toLocaleString('en-IN')}
+                          </span>
+                        ) : (
+                          <span className="font-mono text-slate-400 text-xs">—</span>
+                        )}
+                      </div>
+                      <div className="flex items-center justify-between text-xs">
                         <span className="text-slate-500 font-medium">Collected:</span>
                         <div className="flex items-center gap-1.5">
                           <MoneyDisplay
@@ -1321,16 +1462,16 @@ export const LoansListView: React.FC = () => {
                               </thead>
                               <tbody className="divide-y divide-[#EDE8DF]">
                                 {loan.installments.map((inst) => {
-                                  const isPaid = ['PASS', 'NEFT', 'CASH', 'CLS', 'CS', 'Paid'].includes(inst.status);
+                                  const isPaid = ['PASS', 'NEFT', 'CASH', 'PAID', 'CLOSED', 'SETTLED', 'Paid'].includes(inst.status?.trim().toUpperCase());
                                   return (
                                     <tr key={inst.id} className="font-mono text-xs">
                                       <td className="p-2 text-center font-bold text-slate-400">#{inst.seqNo}</td>
                                       <td className="p-2 font-semibold text-slate-800">{inst.dueDate}</td>
-                                      <td className="p-2 text-right">
+                                      <td className={`p-2 text-right ${isPaid ? 'bg-emerald-50/70' : ''}`}>
                                         <MoneyDisplay
                                           amount={inst.amountDue}
                                           size="xs"
-                                          amountClassName="font-bold text-slate-900 block text-right"
+                                          amountClassName={`font-bold block text-right ${isPaid ? 'text-emerald-800' : 'text-slate-900'}`}
                                         />
                                       </td>
                                       <td className="p-2 text-center">

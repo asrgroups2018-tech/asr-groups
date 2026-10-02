@@ -122,10 +122,20 @@ export const LoanDetailsView: React.FC = () => {
                   size="sm"
                   amountClassName="text-xs font-mono font-bold px-2.5 py-0.5 rounded-full bg-[#701A35]/10 text-[#701A35] border border-[#701A35]/20 inline-block"
                 />
+                {loan.disbursedAmount != null && loan.disbursedAmount > 0 && (
+                  <span className="text-xs font-mono font-bold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-300 inline-block">
+                    Disbursed: ₹{loan.disbursedAmount.toLocaleString('en-IN')}
+                  </span>
+                )}
+                {loan.interestAmount != null && loan.interestAmount > 0 && (
+                  <span className="text-xs font-mono font-bold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-950 border border-amber-300 inline-block">
+                    Interest: ₹{loan.interestAmount.toLocaleString('en-IN')}
+                  </span>
+                )}
               </div>
             </div>
             <p className="text-xs text-slate-600 font-medium mt-0.5 font-mono">
-              Code: {loan.codeNo || '—'} · Disbursed: {loan.startDate} · {loan.installmentCount} {loan.frequency} EMIs
+              Code: {loan.codeNo || '—'} · Start Date: {loan.startDate} · {loan.installmentCount} {loan.frequency} EMIs
             </p>
           </div>
         </div>
@@ -158,8 +168,8 @@ export const LoanDetailsView: React.FC = () => {
         </div>
       </div>
 
-      {/* ─── 3 Financial Summary Cards ─── */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+      {/* ─── Financial Summary Cards ─── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
         <div className="bg-white p-4.5 rounded-2xl border-2 border-slate-200/90 shadow-sm hover:border-slate-300 transition-all">
           <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 font-mono block">
             Total Loan Amount
@@ -172,7 +182,49 @@ export const LoanDetailsView: React.FC = () => {
             />
           </div>
           <span className="text-[11px] text-slate-500 font-medium mt-1 block">
-            Funded across {splits.length} partner companies
+            Gross repayable across {splits.length} partner companies
+          </span>
+        </div>
+
+        <div className="bg-gradient-to-br from-slate-50 via-white to-slate-100 p-4.5 rounded-2xl border-2 border-slate-300 shadow-sm hover:border-slate-400 transition-all">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600 font-mono block">
+            Paid / Disbursed
+          </span>
+          <div className="mt-1.5">
+            {loan.disbursedAmount != null && loan.disbursedAmount > 0 ? (
+              <MoneyDisplay
+                amount={loan.disbursedAmount}
+                size="xl"
+                amountClassName="text-slate-900 font-black text-2xl block tracking-tight"
+              />
+            ) : (
+              <span className="text-2xl font-black text-slate-400 font-mono block tracking-tight">—</span>
+            )}
+          </div>
+          <span className="text-[11px] text-slate-500 font-medium mt-1 block">
+            Net capital handed to borrower
+          </span>
+        </div>
+
+        <div className="bg-gradient-to-br from-amber-100/90 via-amber-50 to-white p-4.5 rounded-2xl border-2 border-amber-300 shadow-sm hover:border-amber-400 transition-all">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-amber-900 font-mono block">
+            Interest Amount (ASR Margin)
+          </span>
+          <div className="mt-1.5">
+            {loan.interestAmount != null && loan.interestAmount > 0 ? (
+              <MoneyDisplay
+                amount={loan.interestAmount}
+                size="xl"
+                amountClassName="text-[#701A35] font-black text-2xl block tracking-tight"
+              />
+            ) : (
+              <span className="text-2xl font-black text-slate-400 font-mono block tracking-tight">—</span>
+            )}
+          </div>
+          <span className="text-[11px] text-amber-800 font-bold mt-1 block">
+            {loan.interestAmount != null && loan.interestAmount > 0 && loan.totalAmount > 0
+              ? `${((loan.interestAmount / loan.totalAmount) * 100).toFixed(1)}% upfront margin`
+              : 'Upfront fee / margin'}
           </span>
         </div>
 
@@ -187,20 +239,6 @@ export const LoanDetailsView: React.FC = () => {
           </div>
           <span className="text-[11px] text-emerald-800 font-bold mt-1 block">
             {progressPercentage}% recovery rate (₹{(loan.totalCollected ?? 0).toLocaleString('en-IN')})
-          </span>
-        </div>
-
-        <div className="bg-gradient-to-br from-amber-100/90 via-amber-50 to-white p-4.5 rounded-2xl border-2 border-amber-300 shadow-sm hover:border-amber-400 transition-all">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-amber-900 font-mono block">
-            Borrower Profile
-          </span>
-          <div className="mt-1.5">
-            <span className="text-2xl font-black text-amber-900 block truncate tracking-tight font-serif">
-              {loan.customerName}
-            </span>
-          </div>
-          <span className="text-[11px] text-amber-800 font-bold mt-1 block font-mono">
-            Frequency: {loan.frequency} EMIs
           </span>
         </div>
       </div>
@@ -373,13 +411,18 @@ export const LoanDetailsView: React.FC = () => {
                       <td className="p-2.5 border-r border-slate-200 text-slate-800 font-bold">
                         {row.dueDate}
                       </td>
-                      <td className="p-2.5 border-r border-slate-200 text-right font-bold text-slate-900">
-                        <MoneyDisplay
-                          amount={row.amountDue}
-                          size="sm"
-                          amountClassName="block font-bold text-slate-900 text-right"
-                        />
-                      </td>
+                      {(() => {
+                        const isPaid = ['PASS', 'NEFT', 'CASH', 'PAID', 'CLOSED', 'SETTLED', 'Paid'].includes(row.status?.trim().toUpperCase());
+                        return (
+                          <td className={`p-2.5 border-r border-slate-200 text-right font-bold ${isPaid ? 'bg-emerald-50/70' : ''}`}>
+                            <MoneyDisplay
+                              amount={row.amountDue}
+                              size="sm"
+                              amountClassName={`block font-bold text-right ${isPaid ? 'text-emerald-800' : 'text-slate-900'}`}
+                            />
+                          </td>
+                        );
+                      })()}
                       <td className="p-2.5 border-r border-slate-200 text-center">
                         <StatusPill status={row.status} size="sm" />
                       </td>

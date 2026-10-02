@@ -403,13 +403,18 @@ export const ScheduleView: React.FC = () => {
                                     <td className="p-2.5 border-r border-slate-200 font-bold text-slate-800">
                                       {row.dueDate}
                                     </td>
-                                    <td className="p-2.5 border-r border-slate-200 text-right font-bold text-slate-900">
-                                      <MoneyDisplay
-                                        amount={row.amountDue}
-                                        size="sm"
-                                        amountClassName="block font-bold text-slate-900 text-right"
-                                      />
-                                    </td>
+                                    {(() => {
+                                      const isPaid = ['PASS', 'NEFT', 'CASH', 'PAID', 'CLOSED', 'SETTLED', 'Paid'].includes(row.status?.trim().toUpperCase());
+                                      return (
+                                        <td className={`p-2.5 border-r border-slate-200 text-right font-bold ${isPaid ? 'bg-emerald-50/70' : ''}`}>
+                                          <MoneyDisplay
+                                            amount={row.amountDue}
+                                            size="sm"
+                                            amountClassName={`block font-bold text-right ${isPaid ? 'text-emerald-800' : 'text-slate-900'}`}
+                                          />
+                                        </td>
+                                      );
+                                    })()}
                                     <td className="p-2.5 border-r border-slate-200 text-center">
                                       <StatusPill status={row.status} />
                                     </td>

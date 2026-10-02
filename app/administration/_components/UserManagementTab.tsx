@@ -108,131 +108,146 @@ export const UserManagementTab: React.FC = () => {
     setSelectedUserKeys(new Set());
   };
 
-  const columns: ColumnDef<User>[] = [
-    {
-      key: 'name',
-      header: 'Account',
-      sortable: true,
-      accessor: (u) => u.name,
-      render: (u) => (
-        <div className="min-w-[180px]">
-          <button
-            onClick={() => handleRowClick(u)}
-            className="font-semibold text-[#701A35] hover:text-[#4E1026] text-sm block text-left cursor-pointer transition-colors"
-          >
-            {u.name}
-          </button>
-          <span className="text-[11px] text-slate-400 font-mono block mt-1">{u.id}</span>
-        </div>
-      ),
-      exportValue: (u) => `${u.name} (${u.id})`,
-    },
-    {
-      key: 'login',
-      header: 'Login identity',
-      sortable: true,
-      accessor: (u) => u.loginMethod === 'email' ? u.email : (u.username || u.email),
-      render: (u) => (
-        <div className="min-w-[190px] text-xs">
-          <span className="block font-medium text-slate-900 font-mono truncate">{u.loginMethod === 'email' ? u.email : `@${u.username || u.email}`}</span>
-          <span className="mt-1 inline-flex rounded-md border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[10px] font-semibold text-slate-500">
-            {u.loginMethod === 'email' ? 'Email sign-in' : 'Username sign-in'}
-          </span>
-        </div>
-      ),
-      exportValue: (u) => u.loginMethod === 'email' ? u.email : (u.username || u.email),
-    },
-    {
-      key: 'access',
-      header: 'Access',
-      sortable: false,
-      accessor: (u) => u.assignedRoleIds.map((roleId) => roles.find((r) => r.id === roleId)?.name || `Role ${roleId}`).join(', '),
-      render: (u) => (
-        <div className="min-w-[150px] space-y-1">
-          <div className="flex flex-wrap gap-1">
-            {u.assignedRoleIds.slice(0, 2).map((roleId) => (
-              <RoleBadge key={roleId} roleId={roleId} size="xs" isPrimary={roleId === u.primaryRoleId} />
-            ))}
+  const columns: ColumnDef<User>[] = useMemo(
+    () => [
+      {
+        key: 'name',
+        header: 'Account',
+        sortable: true,
+        accessor: (u) => u.name,
+        render: (u) => (
+          <div className="min-w-[180px]">
+            <button
+              onClick={() => handleRowClick(u)}
+              className="font-semibold text-[#701A35] hover:text-[#4E1026] text-sm block text-left cursor-pointer transition-colors"
+            >
+              {u.name}
+            </button>
+            <span className="text-[11px] text-slate-400 font-mono block mt-1">{u.id}</span>
           </div>
-          {u.assignedRoleIds.length > 2 && <span className="text-[10px] text-slate-400">+{u.assignedRoleIds.length - 2} more roles</span>}
-          <p className="text-[11px] text-slate-500">{u.isCustomer ? 'Customer account' : `${u.designation || 'Staff'}${u.department ? ` · ${u.department}` : ''}`}</p>
-        </div>
-      ),
-      exportValue: (u) => u.assignedRoleIds.map((roleId) => roles.find((r) => r.id === roleId)?.name || `Role ${roleId}`).join(', '),
-    },
-    {
-      key: 'status',
-      header: 'Status',
-      align: 'left',
-      sortable: true,
-      accessor: (u) => u.status,
-      render: (u) => <StatusPill status={u.status} size="sm" />,
-    },
-    {
-      key: 'activity',
-      header: 'Activity',
-      sortable: true,
-      accessor: (u) => u.lastLogin,
-      render: (u) => (
-        <div className="min-w-[145px] text-[11px]">
-          <span className="block font-medium text-slate-700">Last sign-in</span>
-          <span className="mt-0.5 block font-mono text-slate-500">{u.lastLogin || 'Never'}</span>
-          <span className="mt-1 block text-slate-400">Joined {u.createdAt?.slice(0, 10) || '—'}</span>
-        </div>
-      ),
-      exportValue: (u) => `Last sign-in: ${u.lastLogin}; Joined: ${u.createdAt}`,
-    },
-    {
-      key: 'actions',
-      header: 'Actions',
-      align: 'right',
-      sortable: false,
-      filterable: false,
-      render: (u) => (
-        <div
-          className="flex items-center justify-end gap-1"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <button
-            onClick={() => handleRowClick(u)}
-            className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
-            title="Inspect User Details"
-          >
-            <Eye className="w-3.5 h-3.5" />
-          </button>
-          <button
-            onClick={() => resetUserPassword(u.id)}
-            className="p-1.5 rounded-lg text-slate-500 hover:text-amber-700 hover:bg-amber-50 transition-colors cursor-pointer"
-            title="Reset Password"
-          >
-            <KeyRound className="w-3.5 h-3.5" />
-          </button>
-          <button
-            onClick={() => setSuspendModalUser(u)}
-            className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
-              u.status === 'Suspended'
-                ? 'text-emerald-600 hover:bg-emerald-50'
-                : 'text-amber-600 hover:bg-amber-50'
-            }`}
-            title={u.status === 'Suspended' ? 'Reactivate User' : 'Suspend User'}
-          >
-            {u.status === 'Suspended' ? (
-              <CheckCircle2 className="w-3.5 h-3.5" />
-            ) : (
-              <Ban className="w-3.5 h-3.5" />
+        ),
+        exportValue: (u) => `${u.name} (${u.id})`,
+      },
+      {
+        key: 'login',
+        header: 'Login identity',
+        sortable: true,
+        accessor: (u) => (u.loginMethod === 'email' ? u.email : u.username || u.email),
+        render: (u) => (
+          <div className="min-w-[190px] text-xs">
+            <span className="block font-medium text-slate-900 font-mono truncate">
+              {u.loginMethod === 'email' ? u.email : `@${u.username || u.email}`}
+            </span>
+            <span className="mt-1 inline-flex rounded-md border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[10px] font-semibold text-slate-500">
+              {u.loginMethod === 'email' ? 'Email sign-in' : 'Username sign-in'}
+            </span>
+          </div>
+        ),
+        exportValue: (u) => (u.loginMethod === 'email' ? u.email : u.username || u.email),
+      },
+      {
+        key: 'access',
+        header: 'Access',
+        sortable: false,
+        accessor: (u) =>
+          u.assignedRoleIds
+            .map((roleId) => roles.find((r) => r.id === roleId)?.name || `Role ${roleId}`)
+            .join(', '),
+        render: (u) => (
+          <div className="min-w-[150px] space-y-1">
+            <div className="flex flex-wrap gap-1">
+              {u.assignedRoleIds.slice(0, 2).map((roleId) => (
+                <RoleBadge key={roleId} roleId={roleId} size="xs" isPrimary={roleId === u.primaryRoleId} />
+              ))}
+            </div>
+            {u.assignedRoleIds.length > 2 && (
+              <span className="text-[10px] text-slate-400">+{u.assignedRoleIds.length - 2} more roles</span>
             )}
-          </button>
-          <button
-            onClick={() => setDeleteModalUser(u)}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
-            title="Delete Account"
+            <p className="text-[11px] text-slate-500">
+              {u.isCustomer ? 'Customer account' : `${u.designation || 'Staff'}${u.department ? ` · ${u.department}` : ''}`}
+            </p>
+          </div>
+        ),
+        exportValue: (u) =>
+          u.assignedRoleIds
+            .map((roleId) => roles.find((r) => r.id === roleId)?.name || `Role ${roleId}`)
+            .join(', '),
+      },
+      {
+        key: 'status',
+        header: 'Status',
+        align: 'left',
+        sortable: true,
+        accessor: (u) => u.status,
+        render: (u) => <StatusPill status={u.status} size="sm" />,
+      },
+      {
+        key: 'activity',
+        header: 'Activity',
+        sortable: true,
+        accessor: (u) => u.lastLogin,
+        render: (u) => (
+          <div className="min-w-[145px] text-[11px]">
+            <span className="block font-medium text-slate-700">Last sign-in</span>
+            <span className="mt-0.5 block font-mono text-slate-500">{u.lastLogin || 'Never'}</span>
+            <span className="mt-1 block text-slate-400">Joined {u.createdAt?.slice(0, 10) || '—'}</span>
+          </div>
+        ),
+        exportValue: (u) => `Last sign-in: ${u.lastLogin}; Joined: ${u.createdAt}`,
+      },
+      {
+        key: 'actions',
+        header: 'Actions',
+        align: 'right',
+        sortable: false,
+        filterable: false,
+        render: (u) => (
+          <div
+            className="flex items-center justify-end gap-1"
+            onClick={(e) => e.stopPropagation()}
           >
-            <Trash2 className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      ),
-    },
-  ];
+            <button
+              onClick={() => handleRowClick(u)}
+              className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
+              title="Inspect User Details"
+            >
+              <Eye className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={() => resetUserPassword(u.id)}
+              className="p-1.5 rounded-lg text-slate-500 hover:text-amber-700 hover:bg-amber-50 transition-colors cursor-pointer"
+              title="Reset Password"
+            >
+              <KeyRound className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={() => setSuspendModalUser(u)}
+              className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                u.status === 'Suspended'
+                  ? 'text-emerald-600 hover:bg-emerald-50'
+                  : 'text-amber-600 hover:bg-amber-50'
+              }`}
+              title={u.status === 'Suspended' ? 'Reactivate User' : 'Suspend User'}
+            >
+              {u.status === 'Suspended' ? (
+                <CheckCircle2 className="w-3.5 h-3.5" />
+              ) : (
+                <Ban className="w-3.5 h-3.5" />
+              )}
+            </button>
+            <button
+              onClick={() => setDeleteModalUser(u)}
+              className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+              title="Delete Account"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        ),
+      },
+    ],
+    [roles]
+  );
 
   const chips: { id: FilterChip; label: string; count: number }[] = [
     { id: 'all', label: 'All Accounts', count: counts.all },

@@ -33,13 +33,13 @@ export const EditRoleModal: React.FC<EditRoleModalProps> = ({
   const [draftMatrix, setDraftMatrix] = useState<PermissionMatrixState>(permissionMatrix);
 
   useEffect(() => {
-    if (role) {
+    if (isOpen && role) {
       setRoleName(role.name);
       setRoleCode(role.code);
       setDescription(role.description || '');
-      setDraftMatrix(permissionMatrix);
+      setDraftMatrix(JSON.parse(JSON.stringify(permissionMatrix)));
     }
-  }, [role, permissionMatrix]);
+  }, [isOpen, role?.id]);
 
   if (!isOpen || !role) return null;
 

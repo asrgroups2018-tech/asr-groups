@@ -32,6 +32,8 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
   const [newCustomerPlace, setNewCustomerPlace] = useState<string>('');
   const [newCustomerCodeNo, setNewCustomerCodeNo] = useState<string>('');
   const [totalAmount, setTotalAmount] = useState<number>(0);
+  const [disbursedAmount, setDisbursedAmount] = useState<number>(0);
+  const [interestAmount, setInterestAmount] = useState<number>(0);
 
   // Step 2: Repayment Schedule
   const [frequency, setFrequency] = useState<'Weekly' | 'Monthly'>('Monthly');
@@ -60,6 +62,8 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
       setNewCustomerPlace('');
       setNewCustomerCodeNo('');
       setTotalAmount(0);
+      setDisbursedAmount(0);
+      setInterestAmount(0);
       setFrequency('Monthly');
       setInstallmentCount(5);
       setStartDate(new Date().toISOString().slice(0, 10));
@@ -343,6 +347,8 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
       totalAmount,
       startDate,
       frequency,
+      disbursedAmount: disbursedAmount > 0 ? disbursedAmount : null,
+      interestAmount: interestAmount > 0 ? interestAmount : null,
       splits: formattedSplits,
       installments: formattedInstallments,
     });
@@ -441,6 +447,10 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
             <TermsStep
               totalAmount={totalAmount}
               setTotalAmount={setTotalAmount}
+              disbursedAmount={disbursedAmount}
+              setDisbursedAmount={setDisbursedAmount}
+              interestAmount={interestAmount}
+              setInterestAmount={setInterestAmount}
               frequency={frequency}
               setFrequency={setFrequency}
               installmentCount={installmentCount}
