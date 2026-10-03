@@ -131,6 +131,7 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
 
   // Column View Filter
   const [categoryFilter, setCategoryFilter] = useState<'ALL' | 'ASR_ONLY' | 'OUTSIDE_ONLY'>('ALL');
+  const [isPropsExpanded, setIsPropsExpanded] = useState(false);
 
   // Initialize rows when loan changes
   useEffect(() => {
@@ -535,75 +536,88 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
   if (!isOpen || !loan) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/80 backdrop-blur-xs animate-in fade-in duration-150">
-      <div className="bg-[#FAF8F5] rounded-2xl border border-[#D0C8B8] shadow-2xl w-full max-w-[99vw] h-[96vh] flex flex-col overflow-hidden motion-modal">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-1 sm:p-4 bg-black/80 backdrop-blur-xs animate-in fade-in duration-150">
+      <div className="bg-[#FAF8F5] rounded-2xl border border-[#D0C8B8] shadow-2xl w-full max-w-[99vw] h-[98vh] sm:h-[96vh] flex flex-col overflow-hidden motion-modal">
         {/* ─── Excel Modal Top Toolbar ─── */}
-        <div className="p-4 bg-white border-b border-[#D0C8B8] flex flex-col md:flex-row md:items-center justify-between gap-3 shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#701A35]/10 border border-[#701A35]/20 flex items-center justify-center text-[#701A35] shrink-0">
-              <FileSpreadsheet className="w-5 h-5" />
+        <div className="p-3 sm:p-4 bg-white border-b border-[#D0C8B8] flex flex-col md:flex-row md:items-center justify-between gap-2.5 sm:gap-3 shrink-0">
+          <div className="flex items-start sm:items-center gap-2.5 min-w-0">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-[#701A35]/10 border border-[#701A35]/20 flex items-center justify-center text-[#701A35] shrink-0 mt-0.5 sm:mt-0">
+              <FileSpreadsheet className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
-            <div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <h2 className="text-base font-bold text-slate-900 font-serif">
-                  Spreadsheet Editor: {loan.customerName}
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                <h2 className="text-sm sm:text-base font-bold text-slate-900 font-serif truncate max-w-[220px] sm:max-w-none" title={loan.customerName}>
+                  Spreadsheet: {loan.customerName}
                 </h2>
-                <span className="font-mono text-xs font-bold px-2.5 py-0.5 rounded bg-[#701A35] text-white">
+                <span className="font-mono text-[10px] sm:text-xs font-bold px-2 py-0.5 rounded bg-[#701A35] text-white shrink-0">
                   {loan.id}
                 </span>
-                <span className="font-mono text-xs font-bold px-2.5 py-0.5 rounded-lg bg-amber-100 text-amber-950 border border-amber-300 flex items-center gap-1">
-                  <span>Total Loan:</span>
+                <span className="font-mono text-[10px] sm:text-xs font-bold px-2 py-0.5 rounded-lg bg-amber-100 text-amber-950 border border-amber-300 flex items-center gap-1 shrink-0">
+                  <span>Total:</span>
                   <MoneyDisplay amount={totalLoanAmount} size="xs" amountClassName="text-amber-950 font-bold" />
                 </span>
                 {disbursedAmount !== '' && Number(disbursedAmount) > 0 && (
-                  <span className="font-mono text-xs font-bold px-2.5 py-0.5 rounded-lg bg-emerald-100 text-emerald-950 border border-emerald-300 flex items-center gap-1">
+                  <span className="font-mono text-[10px] sm:text-xs font-bold px-2 py-0.5 rounded-lg bg-emerald-100 text-emerald-950 border border-emerald-300 flex items-center gap-1 shrink-0">
                     <span>Disbursed:</span>
                     <span>₹{Number(disbursedAmount).toLocaleString('en-IN')}</span>
                   </span>
                 )}
                 {interestAmount !== '' && Number(interestAmount) > 0 && (
-                  <span className="font-mono text-xs font-bold px-2.5 py-0.5 rounded-lg bg-amber-500/20 text-[#701A35] border border-amber-400 flex items-center gap-1">
-                    <span>Interest (Margin):</span>
+                  <span className="font-mono text-[10px] sm:text-xs font-bold px-2 py-0.5 rounded-lg bg-amber-500/20 text-[#701A35] border border-amber-400 flex items-center gap-1 shrink-0">
+                    <span>Interest:</span>
                     <span>₹{Number(interestAmount).toLocaleString('en-IN')}</span>
                   </span>
                 )}
               </div>
-              <p className="text-[11px] text-slate-500 font-mono mt-0.5">
+              <p className="text-[10px] sm:text-[11px] text-slate-500 font-mono mt-0.5 hidden sm:block">
                 Official Company Ledgers • Upfront Interest & Disbursed Tracking • Direct Cell Editing
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 self-end md:self-auto">
+          <div className="flex items-center gap-1.5 sm:gap-2 self-end md:self-auto shrink-0">
             <button
               onClick={handleAddRow}
-              className="px-3.5 py-2 bg-white border border-[#D0C8B8] hover:bg-[#FAF8F5] text-slate-800 text-xs font-bold rounded-lg shadow-2xs flex items-center gap-1.5 transition-all cursor-pointer btn-press"
+              className="px-2.5 sm:px-3.5 py-1.5 sm:py-2 bg-white border border-[#D0C8B8] hover:bg-[#FAF8F5] text-slate-800 text-xs font-bold rounded-lg shadow-2xs flex items-center gap-1 transition-all cursor-pointer btn-press"
             >
-              <Plus className="w-4 h-4 text-[#701A35]" />
+              <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#701A35]" />
               <span>Insert Row</span>
             </button>
 
             <button
               onClick={handleSave}
               disabled={isSaving}
-              className="px-5 py-2 bg-[#701A35] hover:bg-[#5C142B] text-white text-xs font-bold rounded-lg shadow-xs flex items-center gap-2 transition-all cursor-pointer disabled:opacity-50 btn-press"
+              className="px-3 sm:px-5 py-1.5 sm:py-2 bg-[#701A35] hover:bg-[#5C142B] text-white text-xs font-bold rounded-lg shadow-xs flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50 btn-press"
             >
-              <Save className="w-4 h-4 text-amber-200" />
+              <Save className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-200" />
               <span>{isSaving ? 'Saving...' : 'Save & Sync'}</span>
             </button>
 
             <button
               onClick={onClose}
-              className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer btn-press"
+              className="p-1.5 sm:p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer btn-press"
+              aria-label="Close modal"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
         </div>
 
+        {/* ─── Mobile Properties Bar Collapsible Toggle ─── */}
+        <div className="sm:hidden px-3.5 py-2 bg-[#FDFCFA] border-b border-[#D0C8B8] flex items-center justify-between">
+          <button
+            type="button"
+            onClick={() => setIsPropsExpanded(!isPropsExpanded)}
+            className="flex items-center gap-1 text-xs font-bold text-[#701A35]"
+          >
+            <span>{isPropsExpanded ? '▲ Hide Loan Info' : '▼ Edit Loan Info (Borrower, Dates, Status)'}</span>
+          </button>
+          <span className="text-[10px] font-mono text-slate-500 truncate max-w-[140px]">{customerName}</span>
+        </div>
+
         {/* ─── Excel Metadata Properties Bar ─── */}
-        <div className="px-5 py-3 bg-[#FDFCFA] border-b border-[#D0C8B8] grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3 text-xs shrink-0">
-          <div>
+        <div className={`${isPropsExpanded ? 'grid' : 'hidden sm:grid'} px-3.5 sm:px-5 py-3 bg-[#FDFCFA] border-b border-[#D0C8B8] grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2.5 sm:gap-3 text-xs shrink-0 max-h-[35vh] sm:max-h-none overflow-y-auto`}>
+          <div className="col-span-2 sm:col-span-2 lg:col-span-1">
             <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1 font-mono">
               Borrower Name <span className="text-rose-500">*</span>
             </label>
@@ -611,7 +625,7 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
               type="text"
               value={customerName}
               onChange={(e) => setCustomerName(e.target.value)}
-              className="w-full px-2.5 py-1.5 rounded border border-slate-300 bg-white font-bold text-slate-900 focus:outline-2 focus:outline-[#701A35]"
+              className="w-full px-2.5 py-1.5 rounded border border-slate-300 bg-white font-bold text-slate-900 focus:outline-2 focus:outline-[#701A35] text-xs"
             />
           </div>
 
@@ -623,7 +637,7 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
               type="text"
               value={codeNo}
               onChange={(e) => setCodeNo(e.target.value)}
-              className="w-full px-2.5 py-1.5 rounded border border-slate-300 bg-white font-mono text-slate-800 focus:outline-2 focus:outline-[#701A35]"
+              className="w-full px-2.5 py-1.5 rounded border border-slate-300 bg-white font-mono text-slate-800 focus:outline-2 focus:outline-[#701A35] text-xs"
             />
           </div>
 
@@ -635,7 +649,7 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
               type="text"
               value={place}
               onChange={(e) => setPlace(e.target.value)}
-              className="w-full px-2.5 py-1.5 rounded border border-slate-300 bg-white text-slate-800 focus:outline-2 focus:outline-[#701A35]"
+              className="w-full px-2.5 py-1.5 rounded border border-slate-300 bg-white text-slate-800 focus:outline-2 focus:outline-[#701A35] text-xs"
             />
           </div>
 
@@ -652,7 +666,7 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
                   (e.target as any).showPicker?.();
                 } catch {}
               }}
-              className="w-full px-2.5 py-1.5 rounded border border-slate-300 bg-white font-mono font-semibold text-slate-900 cursor-pointer focus:outline-2 focus:outline-[#701A35] [appearance:textfield] [&::-webkit-inner-spin-button]:hidden [&::-webkit-calendar-picker-indicator]:cursor-pointer"
+              className="w-full px-2.5 py-1.5 rounded border border-slate-300 bg-white font-mono font-semibold text-slate-900 cursor-pointer focus:outline-2 focus:outline-[#701A35] text-xs [appearance:textfield] [&::-webkit-inner-spin-button]:hidden [&::-webkit-calendar-picker-indicator]:cursor-pointer"
             />
           </div>
 
@@ -671,7 +685,7 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
                   setInterestAmount(totalLoanAmount - Number(val));
                 }
               }}
-              className="w-full px-2.5 py-1.5 rounded border border-slate-300 bg-white font-mono font-bold text-slate-900 focus:outline-2 focus:outline-[#701A35]"
+              className="w-full px-2.5 py-1.5 rounded border border-slate-300 bg-white font-mono font-bold text-slate-900 focus:outline-2 focus:outline-[#701A35] text-xs"
             />
           </div>
 
@@ -691,7 +705,7 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
                   setDisbursedAmount(totalLoanAmount - Number(val));
                 }
               }}
-              className="w-full px-2.5 py-1.5 rounded border border-amber-300 bg-amber-50/70 font-mono font-bold text-amber-950 focus:outline-2 focus:outline-[#701A35]"
+              className="w-full px-2.5 py-1.5 rounded border border-amber-300 bg-amber-50/70 font-mono font-bold text-amber-950 focus:outline-2 focus:outline-[#701A35] text-xs"
             />
           </div>
 
@@ -702,7 +716,7 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
             <select
               value={frequency}
               onChange={(e) => setFrequency(e.target.value as any)}
-              className="w-full px-2.5 py-1.5 rounded border border-slate-300 bg-white text-slate-800 font-semibold focus:outline-2 focus:outline-[#701A35] cursor-pointer"
+              className="w-full px-2.5 py-1.5 rounded border border-slate-300 bg-white text-slate-800 font-semibold focus:outline-2 focus:outline-[#701A35] text-xs cursor-pointer"
             >
               <option value="Weekly">Weekly</option>
               <option value="Monthly">Monthly</option>
@@ -716,7 +730,7 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
             <select
               value={status}
               onChange={(e) => setStatus(e.target.value as any)}
-              className="w-full px-2.5 py-1.5 rounded border border-slate-300 bg-white text-slate-800 font-semibold focus:outline-2 focus:outline-[#701A35] cursor-pointer"
+              className="w-full px-2.5 py-1.5 rounded border border-slate-300 bg-white text-slate-800 font-semibold focus:outline-2 focus:outline-[#701A35] text-xs cursor-pointer"
             >
               <option value="Active">Active</option>
               <option value="On Track">On Track</option>
@@ -728,10 +742,10 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
         </div>
 
         {/* ─── Filter & Balance Status Bar ─── */}
-        <div className="px-5 py-2 bg-[#F4F1EA] border-b border-[#D0C8B8] flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shrink-0">
-          <div className="flex items-center gap-2">
-            <span className="text-[11px] font-bold text-slate-600 font-mono uppercase">View Columns:</span>
-            <div className="flex items-center bg-white rounded border border-[#D0C8B8] p-0.5">
+        <div className="px-3 sm:px-5 py-2 bg-[#F4F1EA] border-b border-[#D0C8B8] flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs shrink-0 overflow-x-auto">
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="text-[10px] sm:text-[11px] font-bold text-slate-600 font-mono uppercase shrink-0">View Columns:</span>
+            <div className="flex items-center bg-white rounded border border-[#D0C8B8] p-0.5 shrink-0">
               {[
                 { id: 'ALL', label: 'All Companies (16)' },
                 { id: 'ASR_ONLY', label: 'ASR Companies (10)' },
@@ -740,7 +754,7 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
                 <button
                   key={f.id}
                   onClick={() => setCategoryFilter(f.id as any)}
-                  className={`px-3 py-1 rounded text-[11px] font-semibold transition-all cursor-pointer ${
+                  className={`px-2.5 sm:px-3 py-1 rounded text-[10px] sm:text-[11px] font-semibold transition-all cursor-pointer whitespace-nowrap ${
                     categoryFilter === f.id
                       ? 'bg-[#701A35] text-white font-bold'
                       : 'text-slate-600 hover:text-slate-900'
@@ -752,31 +766,31 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap shrink-0">
             {loan && loan.splits && loan.splits.length > 0 && (
               <button
                 type="button"
                 onClick={handleAutoBalanceAllRows}
-                className="text-[#701A35] bg-[#701A35]/10 hover:bg-[#701A35]/20 border border-[#701A35]/30 px-2.5 py-1 rounded text-[11px] font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
+                className="text-[#701A35] bg-[#701A35]/10 hover:bg-[#701A35]/20 border border-[#701A35]/30 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded text-[10px] sm:text-[11px] font-bold flex items-center gap-1 cursor-pointer transition-colors shrink-0"
                 title="Re-balance all company splits to match loan ratios"
               >
                 <RotateCcw className="w-3 h-3 text-[#701A35]" />
-                <span>Auto-balance All Splits</span>
+                <span>Auto-balance</span>
               </button>
             )}
             {hasAnyMismatches ? (
-              <span className="text-rose-700 font-mono font-bold flex items-center gap-1 text-[11px] bg-rose-50 px-2 py-0.5 rounded border border-rose-300">
+              <span className="text-rose-700 font-mono font-bold flex items-center gap-1 text-[10px] sm:text-[11px] bg-rose-50 px-2 py-0.5 rounded border border-rose-300 shrink-0">
                 <AlertTriangle className="w-3.5 h-3.5 text-rose-600" />
-                <span>Notice: Some rows have split differences</span>
+                <span>Differences found</span>
               </span>
             ) : (
-              <span className="text-emerald-700 font-mono font-bold flex items-center gap-1 text-[11px] bg-emerald-50 px-2 py-0.5 rounded border border-emerald-300">
+              <span className="text-emerald-700 font-mono font-bold flex items-center gap-1 text-[10px] sm:text-[11px] bg-emerald-50 px-2 py-0.5 rounded border border-emerald-300 shrink-0">
                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                <span>All company splits balance perfectly</span>
+                <span>Balanced</span>
               </span>
             )}
-            <span className="font-mono text-slate-600 font-bold text-[11px]">
-              {rows.length} Installment Rows
+            <span className="font-mono text-slate-600 font-bold text-[10px] sm:text-[11px] shrink-0">
+              {rows.length} Rows
             </span>
           </div>
         </div>

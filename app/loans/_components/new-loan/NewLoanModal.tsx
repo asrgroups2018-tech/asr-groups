@@ -363,15 +363,15 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
   const targetCustomer = customers.find((c) => c.id === selectedCustomerId);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs overflow-y-auto animate-in fade-in duration-150">
-      <div className="relative w-full max-w-4xl bg-[#1A0A13] border border-[#3D1A2C] rounded-2xl shadow-2xl text-slate-100 flex flex-col my-8 overflow-hidden motion-modal">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/70 backdrop-blur-xs overflow-y-auto animate-in fade-in duration-150">
+      <div className="relative w-full max-w-4xl bg-[#1A0A13] border border-[#3D1A2C] rounded-2xl shadow-2xl text-slate-100 flex flex-col my-auto sm:my-8 overflow-hidden motion-modal max-h-[96vh]">
         {/* Header */}
-        <div className="p-6 border-b border-[#2C1420] flex items-center justify-between bg-[#230D1B]">
-          <div>
-            <h2 className="font-serif text-lg font-bold text-[#EED8A1] tracking-wide">
+        <div className="p-4 sm:p-6 border-b border-[#2C1420] flex items-center justify-between bg-[#230D1B]">
+          <div className="min-w-0 flex-1 pr-2">
+            <h2 className="font-serif text-base sm:text-lg font-bold text-[#EED8A1] tracking-wide truncate">
               Create New Loan
             </h2>
-            <p className="text-xs text-slate-400">
+            <p className="text-[11px] sm:text-xs text-slate-400 truncate">
               Step {currentStep} of 5 —{' '}
               {currentStep === 1
                 ? 'Borrower Details'
@@ -387,14 +387,14 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
 
           <button
             onClick={onClose}
-            className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-white/10 transition-colors cursor-pointer"
+            className="p-1.5 sm:p-2 text-slate-400 hover:text-white rounded-lg hover:bg-white/10 transition-colors cursor-pointer shrink-0"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Progress Stepper */}
-        <div className="grid grid-cols-5 border-b border-[#2C1420] bg-[#160810] text-xs font-mono">
+        <div className="flex sm:grid sm:grid-cols-5 border-b border-[#2C1420] bg-[#160810] text-[11px] sm:text-xs font-mono overflow-x-auto">
           {[
             { num: 1, label: '1. Borrower' },
             { num: 2, label: '2. Terms' },
@@ -407,7 +407,7 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
             return (
               <div
                 key={s.num}
-                className={`py-2.5 text-center border-r border-[#2C1420] last:border-r-0 transition-colors ${
+                className={`py-2 px-3 sm:px-2 text-center whitespace-nowrap sm:whitespace-normal border-r border-[#2C1420] last:border-r-0 transition-colors shrink-0 sm:shrink ${
                   isActive
                     ? 'bg-[#C5A059]/20 text-[#EED8A1] font-bold border-b-2 border-b-[#C5A059]'
                     : isDone
@@ -422,7 +422,7 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
         </div>
 
         {/* Modal Body */}
-        <div className="p-6 overflow-y-auto max-h-[68vh] space-y-6">
+        <div className="p-4 sm:p-6 overflow-y-auto max-h-[68vh] space-y-5">
           {currentStep === 1 && (
             <BorrowerStep
               customers={customers}

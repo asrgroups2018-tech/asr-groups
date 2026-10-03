@@ -84,15 +84,17 @@ export const BorrowerStep: React.FC<BorrowerStepProps> = ({
                   setSelectedCustomerId('');
                   setIsDropdownOpen(true);
                 }}
-                className={`w-full bg-[#160810] border rounded-lg px-4 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-hidden transition-colors ${
+                className={`w-full bg-[#160810] border rounded-lg pl-3.5 ${
+                  selectedCustomerId ? 'pr-28 sm:pr-24' : customerSearch ? 'pr-9' : 'pr-3.5'
+                } py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-hidden transition-colors ${
                   selectedCustomerId
                     ? 'border-[#C5A059] bg-[#C5A059]/10 font-semibold text-[#EED8A1]'
                     : 'border-[#3D1A2C] focus:border-[#C5A059]'
                 }`}
               />
-              <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
+              <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1.5 shrink-0">
                 {selectedCustomerId && (
-                  <span className="text-[10px] text-emerald-400 font-mono font-bold bg-emerald-950/60 border border-emerald-500/40 px-2 py-0.5 rounded flex items-center gap-1">
+                  <span className="text-[10px] text-emerald-400 font-mono font-bold bg-[#160810] border border-emerald-500/50 px-2 py-0.5 rounded flex items-center gap-1 shadow-xs">
                     <Check className="w-3 h-3 text-emerald-400" /> Selected
                   </span>
                 )}
@@ -181,7 +183,7 @@ export const BorrowerStep: React.FC<BorrowerStepProps> = ({
 
       {/* Total Loan Capital Amount for the Loan — Only shown when choosing existing borrower */}
       {!isCreatingNewCustomer && (
-        <div className="bg-[#240F1D] p-5 rounded-xl border border-[#3D1A2C] space-y-3">
+        <div className="bg-[#240F1D] p-4 sm:p-5 rounded-xl border border-[#3D1A2C] space-y-3">
           <label className="text-sm font-semibold text-[#EED8A1] flex items-center gap-2">
             <IndianRupee className="w-4 h-4 text-[#C5A059]" /> Total Loan Capital Amount (₹)
           </label>
@@ -193,12 +195,12 @@ export const BorrowerStep: React.FC<BorrowerStepProps> = ({
               step="1000"
               value={totalAmount || ''}
               onChange={(e) => setTotalAmount(e.target.value === '' ? 0 : Number(e.target.value))}
-              className="w-full bg-[#160810] border border-[#3D1A2C] rounded-lg pl-8 pr-4 py-3 text-lg font-mono font-bold text-[#EED8A1] focus:outline-hidden focus:border-[#C5A059] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              className="w-full bg-[#160810] border border-[#3D1A2C] rounded-lg pl-8 pr-4 py-3 text-base sm:text-lg font-mono font-bold text-[#EED8A1] focus:outline-hidden focus:border-[#C5A059] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none placeholder:text-xs sm:placeholder:text-sm"
               placeholder="Enter loan amount (e.g. 1000000)"
             />
           </div>
-          <div className="flex items-center gap-2 text-xs text-slate-400 flex-wrap">
-            <span>Common presets:</span>
+          <div className="flex items-center gap-1.5 sm:gap-2 text-xs text-slate-400 flex-wrap">
+            <span className="text-[11px] sm:text-xs">Common presets:</span>
             {[500000, 1000000, 2000000, 5000000].map((val) => (
               <button
                 key={val}
