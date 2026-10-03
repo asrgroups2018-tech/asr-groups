@@ -314,97 +314,97 @@ export const ChequesListView: React.FC = () => {
       </div>
 
       {/* ─── 4 KPI Summary Cards (All Colored) ─── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         {/* Card 1: Total Logged Cheques (Maroon / ASR theme) */}
-        <div className="bg-gradient-to-br from-[#701A35]/12 via-[#FAF8F5] to-white p-4.5 rounded-2xl border-2 border-[#701A35]/30 shadow-sm hover:border-[#701A35]/50 transition-all flex flex-col justify-between">
+        <div className="bg-gradient-to-br from-[#701A35]/12 via-[#FAF8F5] to-white p-3 rounded-xl border-2 border-[#701A35]/30 shadow-sm hover:border-[#701A35]/50 transition-all flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-[#701A35] font-mono uppercase tracking-wider">
+            <span className="text-[10px] font-bold text-[#701A35] font-mono uppercase tracking-wider">
               Total Cheques Logged
             </span>
-            <div className="p-2 rounded-xl bg-[#701A35]/10 text-[#701A35]">
-              <Landmark className="w-4 h-4" />
+            <div className="p-1 rounded-lg bg-[#701A35]/10 text-[#701A35]">
+              <Landmark className="w-3.5 h-3.5" />
             </div>
           </div>
-          <div className="mt-3">
-            <div className="flex items-baseline gap-2">
-              <span className="text-2xl font-black font-mono text-[#701A35]">
+          <div className="mt-1.5">
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-xl font-black font-mono text-[#701A35]">
                 {stats.totalCount}
               </span>
-              <span className="text-xs text-slate-600 font-medium">Instruments</span>
+              <span className="text-[10px] text-slate-600 font-medium">Instruments</span>
             </div>
             <MoneyDisplay
               amount={stats.totalAmt}
               size="sm"
-              amountClassName="text-slate-700 font-bold block mt-1"
+              amountClassName="text-slate-700 font-bold block text-xs mt-0.5"
             />
           </div>
         </div>
 
         {/* Card 2: Pending Cheques (Amber styling) */}
-        <div className="bg-gradient-to-br from-amber-100/90 via-amber-50 to-white p-4.5 rounded-2xl border-2 border-amber-300 shadow-sm hover:border-amber-400 transition-all flex flex-col justify-between">
+        <div className="bg-gradient-to-br from-amber-100/90 via-amber-50 to-white p-3 rounded-xl border-2 border-amber-300 shadow-sm hover:border-amber-400 transition-all flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-amber-900 font-mono uppercase tracking-wider">
+            <span className="text-[10px] font-bold text-amber-900 font-mono uppercase tracking-wider">
               Cheque Deposits Pending
             </span>
-            <div className="p-2 rounded-xl bg-amber-100 text-amber-800">
-              <Clock className="w-4 h-4" />
+            <div className="p-1 rounded-lg bg-amber-100 text-amber-800">
+              <Clock className="w-3.5 h-3.5" />
             </div>
           </div>
-          <div className="mt-3">
-            <div className="flex items-baseline gap-2">
-              <span className="text-2xl font-black font-mono text-amber-800">
+          <div className="mt-1.5">
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-xl font-black font-mono text-amber-800">
                 {stats.pendingCount}
               </span>
-              <span className="text-xs text-amber-900 font-semibold">Pending Cheques</span>
+              <span className="text-[10px] text-amber-900 font-semibold">Pending Cheques</span>
             </div>
             <MoneyDisplay
               amount={stats.pendingAmt}
               size="sm"
-              amountClassName="text-amber-800 font-bold block mt-1"
+              amountClassName="text-amber-800 font-bold block text-xs mt-0.5"
             />
           </div>
         </div>
 
         {/* Card 3: Deposited Cheques (Emerald styling) */}
-        <div className="bg-gradient-to-br from-emerald-100/90 via-emerald-50 to-white p-4.5 rounded-2xl border-2 border-emerald-300 shadow-sm hover:border-emerald-400 transition-all flex flex-col justify-between">
+        <div className="bg-gradient-to-br from-emerald-100/90 via-emerald-50 to-white p-3 rounded-xl border-2 border-emerald-300 shadow-sm hover:border-emerald-400 transition-all flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-emerald-900 font-mono uppercase tracking-wider">
+            <span className="text-[10px] font-bold text-emerald-900 font-mono uppercase tracking-wider">
               Deposited In Bank
             </span>
-            <div className="p-2 rounded-xl bg-emerald-100 text-emerald-700">
-              <CheckCircle2 className="w-4 h-4" />
+            <div className="p-1 rounded-lg bg-emerald-100 text-emerald-700">
+              <CheckCircle2 className="w-3.5 h-3.5" />
             </div>
           </div>
-          <div className="mt-3">
-            <div className="flex items-baseline gap-2">
-              <span className="text-2xl font-black font-mono text-emerald-800">
+          <div className="mt-1.5">
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-xl font-black font-mono text-emerald-800">
                 {stats.depositedCount}
               </span>
-              <span className="text-xs text-emerald-900 font-semibold">Deposited</span>
+              <span className="text-[10px] text-emerald-900 font-semibold">Deposited</span>
             </div>
             <MoneyDisplay
               amount={stats.depositedAmt}
               size="sm"
-              amountClassName="text-emerald-700 font-bold block mt-1"
+              amountClassName="text-emerald-700 font-bold block text-xs mt-0.5"
             />
           </div>
         </div>
 
         {/* Card 4: Next Scheduled Deposit (Purple styling) */}
-        <div className="bg-gradient-to-br from-purple-100/90 via-purple-50 to-white p-4.5 rounded-2xl border-2 border-purple-300 shadow-sm hover:border-purple-400 transition-all flex flex-col justify-between">
+        <div className="bg-gradient-to-br from-purple-100/90 via-purple-50 to-white p-3 rounded-xl border-2 border-purple-300 shadow-sm hover:border-purple-400 transition-all flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-purple-900 font-mono uppercase tracking-wider">
+            <span className="text-[10px] font-bold text-purple-900 font-mono uppercase tracking-wider">
               Next Scheduled Deposit
             </span>
-            <div className="p-2 rounded-xl bg-purple-100 text-purple-700">
-              <Calendar className="w-4 h-4" />
+            <div className="p-1 rounded-lg bg-purple-100 text-purple-700">
+              <Calendar className="w-3.5 h-3.5" />
             </div>
           </div>
-          <div className="mt-3">
-            <span className="text-lg font-black font-mono text-purple-950 block truncate">
+          <div className="mt-1.5">
+            <span className="text-base font-black font-mono text-purple-950 block truncate">
               {stats.nextDepositDate}
             </span>
-            <span className="text-[11px] text-purple-800 font-semibold mt-1 block">
+            <span className="text-[10px] text-purple-800 font-semibold mt-0.5 block truncate">
               {stats.pendingCount > 0 ? `${stats.pendingCount} cheques awaiting presentation` : 'All cheques up to date'}
             </span>
           </div>

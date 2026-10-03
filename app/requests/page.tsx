@@ -72,45 +72,45 @@ export default function RequestsPage() {
         </div>
 
         {/* 3 High-Impact KPI Badges matching Loans page */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
-          <div className="bg-gradient-to-br from-[#701A35]/12 via-[#FAF8F5] to-white p-4.5 rounded-2xl border-2 border-[#701A35]/30 shadow-sm hover:border-[#701A35]/50 transition-all">
-            <span className="text-[11px] font-bold text-[#701A35] uppercase tracking-wider font-mono">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="bg-gradient-to-br from-[#701A35]/12 via-[#FAF8F5] to-white p-3 rounded-xl border-2 border-[#701A35]/30 shadow-sm hover:border-[#701A35]/50 transition-all">
+            <span className="text-[10px] font-bold text-[#701A35] uppercase tracking-wider font-mono">
               Total Requests Logged
             </span>
-            <div className="mt-1.5">
-              <h3 className="text-[#701A35] font-black text-2xl tracking-tight font-mono">
+            <div className="mt-1">
+              <h3 className="text-[#701A35] font-black text-xl tracking-tight font-mono">
                 {approvalRequests.length}
               </h3>
             </div>
-            <span className="text-[11px] text-slate-600 font-medium mt-1 block">
+            <span className="text-[10px] text-slate-600 font-medium mt-0.5 block">
               Across all operational workflows
             </span>
           </div>
 
-          <div className="bg-gradient-to-br from-emerald-100/90 via-emerald-50 to-white p-4.5 rounded-2xl border-2 border-emerald-300 shadow-sm hover:border-emerald-400 transition-all">
-            <span className="text-[11px] font-bold text-emerald-900 uppercase tracking-wider font-mono">
+          <div className="bg-gradient-to-br from-emerald-100/90 via-emerald-50 to-white p-3 rounded-xl border-2 border-emerald-300 shadow-sm hover:border-emerald-400 transition-all">
+            <span className="text-[10px] font-bold text-emerald-900 uppercase tracking-wider font-mono">
               Approved & Authorized
             </span>
-            <div className="mt-1.5">
-              <h3 className="text-emerald-700 font-black text-2xl tracking-tight font-mono">
+            <div className="mt-1">
+              <h3 className="text-emerald-700 font-black text-xl tracking-tight font-mono">
                 {approvedCount + autoApprovedCount}
               </h3>
             </div>
-            <span className="text-[11px] text-emerald-800 font-bold mt-1 block">
+            <span className="text-[10px] text-emerald-800 font-bold mt-0.5 block">
               {approvedCount} manual · {autoApprovedCount} auto-passed
             </span>
           </div>
 
-          <div className="bg-gradient-to-br from-rose-100/90 via-rose-50 to-white p-4.5 rounded-2xl border-2 border-rose-300 shadow-sm hover:border-rose-400 transition-all">
-            <span className="text-[11px] font-bold text-rose-900 uppercase tracking-wider font-mono">
+          <div className="bg-gradient-to-br from-rose-100/90 via-rose-50 to-white p-3 rounded-xl border-2 border-rose-300 shadow-sm hover:border-rose-400 transition-all">
+            <span className="text-[10px] font-bold text-rose-900 uppercase tracking-wider font-mono">
               Pending Review
             </span>
-            <div className="mt-1.5">
-              <h3 className="text-[#701A35] font-black text-2xl tracking-tight font-mono">
+            <div className="mt-1">
+              <h3 className="text-[#701A35] font-black text-xl tracking-tight font-mono">
                 {pendingCount}
               </h3>
             </div>
-            <span className="text-[11px] text-rose-700 font-bold mt-1 block">
+            <span className="text-[10px] text-rose-700 font-bold mt-0.5 block">
               {pendingCount > 0 ? `${pendingCount} action required` : 'All requests up to date'}
             </span>
           </div>

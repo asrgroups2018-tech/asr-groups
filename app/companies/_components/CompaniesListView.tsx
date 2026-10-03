@@ -341,47 +341,47 @@ export const CompaniesListView: React.FC = () => {
       </div>
 
       {/* ─── Metric Cards ─── */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
-        <div className="bg-gradient-to-br from-[#701A35]/10 via-[#FAF8F5] to-white p-4.5 rounded-2xl border-2 border-[#701A35]/30 shadow-sm hover:border-[#701A35]/50 transition-all">
-          <span className="text-[11px] font-bold text-[#701A35] uppercase tracking-wider font-mono">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="bg-gradient-to-br from-[#701A35]/10 via-[#FAF8F5] to-white p-3 rounded-xl border-2 border-[#701A35]/30 shadow-sm hover:border-[#701A35]/50 transition-all">
+          <span className="text-[10px] font-bold text-[#701A35] uppercase tracking-wider font-mono">
             Total Capital Funded
           </span>
-          <div className="mt-1.5">
+          <div className="mt-1">
             <MoneyDisplay
               amount={totalFundedSum}
-              size="xl"
-              amountClassName="text-[#701A35] font-black text-2xl block tracking-tight"
+              size="lg"
+              amountClassName="text-[#701A35] font-black text-xl block tracking-tight"
             />
           </div>
-          <span className="text-[11px] text-slate-600 font-medium mt-1 block">
+          <span className="text-[10px] text-slate-600 font-medium mt-0.5 block">
             Sum across all partner company split allocations
           </span>
         </div>
 
-        <div className="bg-gradient-to-br from-emerald-100/90 via-emerald-50 to-white p-4.5 rounded-2xl border-2 border-emerald-300 shadow-sm hover:border-emerald-400 transition-all">
-          <span className="text-[11px] font-bold text-emerald-900 uppercase tracking-wider font-mono">
+        <div className="bg-gradient-to-br from-emerald-100/90 via-emerald-50 to-white p-3 rounded-xl border-2 border-emerald-300 shadow-sm hover:border-emerald-400 transition-all">
+          <span className="text-[10px] font-bold text-emerald-900 uppercase tracking-wider font-mono">
             ASR Group Internal
           </span>
-          <div className="mt-1.5">
-            <span className="text-2xl font-black font-mono text-emerald-700 block tracking-tight">
+          <div className="mt-1">
+            <span className="text-xl font-black font-mono text-emerald-700 block tracking-tight">
               {asrCount} Companies
             </span>
           </div>
-          <span className="text-[11px] text-emerald-800 font-bold mt-1 block truncate">
+          <span className="text-[10px] text-emerald-800 font-bold mt-0.5 block truncate">
             PASS, KARS, INFIN, INFINITY, INNOVATIVE, MARS, TRIVENI, GLOB...
           </span>
         </div>
 
-        <div className="bg-gradient-to-br from-purple-100/90 via-purple-50 to-white p-4.5 rounded-2xl border-2 border-purple-300 shadow-sm hover:border-purple-400 transition-all">
-          <span className="text-[11px] font-bold text-purple-900 uppercase tracking-wider font-mono">
+        <div className="bg-gradient-to-br from-purple-100/90 via-purple-50 to-white p-3 rounded-xl border-2 border-purple-300 shadow-sm hover:border-purple-400 transition-all">
+          <span className="text-[10px] font-bold text-purple-900 uppercase tracking-wider font-mono">
             Outside Parties
           </span>
-          <div className="mt-1.5">
-            <span className="text-2xl font-black font-mono text-purple-800 block tracking-tight">
+          <div className="mt-1">
+            <span className="text-xl font-black font-mono text-purple-800 block tracking-tight">
               {outsideCount} Entities
             </span>
           </div>
-          <span className="text-[11px] text-purple-800 font-bold mt-1 block truncate">
+          <span className="text-[10px] text-purple-800 font-bold mt-0.5 block truncate">
             FINCUBE, CS ASSOCIATES, M CHINNIAH, TATVA, BHAVANA, THIR...
           </span>
         </div>

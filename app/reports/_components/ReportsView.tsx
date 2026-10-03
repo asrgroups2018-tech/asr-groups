@@ -330,7 +330,7 @@ function MetricCard({
   const config = toneConfigs[tone] || toneConfigs.maroon;
 
   return (
-    <div className={`p-4 rounded-2xl transition-all flex flex-col justify-between ${config.card}`}>
+    <div className={`p-3 rounded-xl transition-all flex flex-col justify-between ${config.card}`}>
       <span className={`text-[10px] font-bold uppercase tracking-wider font-mono block ${config.label}`}>
         {label}
       </span>

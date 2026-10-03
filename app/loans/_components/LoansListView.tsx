@@ -493,7 +493,7 @@ export const LoansListView: React.FC = () => {
 
       {/* 5 High-Impact KPI Badges */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-        <div className="bg-gradient-to-br from-[#701A35]/12 via-[#FAF8F5] to-white p-4 rounded-2xl border-2 border-[#701A35]/30 shadow-sm hover:border-[#701A35]/50 transition-all">
+        <div className="bg-gradient-to-br from-[#701A35]/12 via-[#FAF8F5] to-white p-3 rounded-xl border-2 border-[#701A35]/30 shadow-sm hover:border-[#701A35]/50 transition-all">
           <span className="text-[10px] font-bold text-[#701A35] uppercase tracking-wider font-mono">
             {dateRange.startDate ? 'Filtered Loans' : 'Total Loan Amount'}
           </span>
@@ -509,7 +509,7 @@ export const LoansListView: React.FC = () => {
           </span>
         </div>
 
-        <div className="bg-gradient-to-br from-indigo-100/80 via-indigo-50/40 to-white p-4 rounded-2xl border-2 border-indigo-200/90 shadow-sm hover:border-indigo-300 transition-all">
+        <div className="bg-gradient-to-br from-indigo-100/80 via-indigo-50/40 to-white p-3 rounded-xl border-2 border-indigo-200/90 shadow-sm hover:border-indigo-300 transition-all">
           <span className="text-[10px] font-bold text-indigo-950 uppercase tracking-wider font-mono">
             Paid / Disbursed
           </span>
@@ -525,7 +525,7 @@ export const LoansListView: React.FC = () => {
           </span>
         </div>
 
-        <div className="bg-gradient-to-br from-amber-100/90 via-amber-50 to-white p-4 rounded-2xl border-2 border-amber-300 shadow-sm hover:border-amber-400 transition-all">
+        <div className="bg-gradient-to-br from-amber-100/90 via-amber-50 to-white p-3 rounded-xl border-2 border-amber-300 shadow-sm hover:border-amber-400 transition-all">
           <span className="text-[10px] font-bold text-amber-900 uppercase tracking-wider font-mono flex items-center justify-between">
             <span>Interest Earnings</span>
             <span className="text-[9px] bg-amber-200/80 px-1 rounded font-bold">ASR Margin</span>
@@ -542,7 +542,7 @@ export const LoansListView: React.FC = () => {
           </span>
         </div>
 
-        <div className="bg-gradient-to-br from-emerald-100/90 via-emerald-50 to-white p-4 rounded-2xl border-2 border-emerald-300 shadow-sm hover:border-emerald-400 transition-all">
+        <div className="bg-gradient-to-br from-emerald-100/90 via-emerald-50 to-white p-3 rounded-xl border-2 border-emerald-300 shadow-sm hover:border-emerald-400 transition-all">
           <span className="text-[10px] font-bold text-emerald-900 uppercase tracking-wider font-mono">
             Total Collected
           </span>
@@ -558,7 +558,7 @@ export const LoansListView: React.FC = () => {
           </span>
         </div>
 
-        <div className="bg-gradient-to-br from-rose-100/90 via-rose-50 to-white p-4 rounded-2xl border-2 border-rose-300 shadow-sm hover:border-rose-400 transition-all sm:col-span-2 lg:col-span-1">
+        <div className="bg-gradient-to-br from-rose-100/90 via-rose-50 to-white p-3 rounded-xl border-2 border-rose-300 shadow-sm hover:border-rose-400 transition-all sm:col-span-2 lg:col-span-1">
           <span className="text-[10px] font-bold text-rose-900 uppercase tracking-wider font-mono">
             Total Balance Due
           </span>

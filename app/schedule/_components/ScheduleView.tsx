@@ -285,78 +285,86 @@ export const ScheduleView: React.FC = () => {
       </div>
 
       {/* Top High-Impact KPI Badges */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
-        <div className="p-4.5 bg-gradient-to-br from-[#701A35]/12 via-[#FAF8F5] to-white rounded-2xl border-2 border-[#701A35]/30 shadow-sm hover:border-[#701A35]/50 transition-all flex flex-col justify-between">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="p-3 bg-gradient-to-br from-[#701A35]/12 via-[#FAF8F5] to-white rounded-xl border-2 border-[#701A35]/30 shadow-sm hover:border-[#701A35]/50 transition-all flex flex-col justify-between">
           <div className="flex items-center justify-between text-[#701A35]">
-            <span className="text-[11px] font-bold uppercase tracking-wider font-mono">
+            <span className="text-[10px] font-bold uppercase tracking-wider font-mono">
               Total Portfolio
             </span>
-            <CreditCard className="w-4 h-4 text-[#701A35]" />
+            <div className="p-1 rounded-lg bg-[#701A35]/10 text-[#701A35]">
+              <CreditCard className="w-3.5 h-3.5" />
+            </div>
           </div>
-          <div className="mt-2">
+          <div className="mt-1.5">
             <MoneyDisplay
               amount={kpiStats.totalCapital}
-              size="xl"
-              amountClassName="font-black text-2xl text-slate-950 block tracking-tight"
+              size="lg"
+              amountClassName="font-black text-xl text-slate-950 block tracking-tight"
             />
           </div>
-          <span className="text-[11px] text-slate-600 font-medium mt-1 block">
+          <span className="text-[10px] text-slate-600 font-medium mt-0.5 block">
             Across {filteredLoans.length} borrower facilities
           </span>
         </div>
 
-        <div className="p-4.5 bg-gradient-to-br from-amber-100/90 via-amber-50 to-white rounded-2xl border-2 border-amber-300 shadow-sm hover:border-amber-400 transition-all flex flex-col justify-between">
+        <div className="p-3 bg-gradient-to-br from-amber-100/90 via-amber-50 to-white rounded-xl border-2 border-amber-300 shadow-sm hover:border-amber-400 transition-all flex flex-col justify-between">
           <div className="flex items-center justify-between text-amber-900">
-            <span className="text-[11px] font-bold uppercase tracking-wider font-mono">
+            <span className="text-[10px] font-bold uppercase tracking-wider font-mono">
               Total EMIs
             </span>
-            <Calendar className="w-4 h-4 text-amber-700" />
+            <div className="p-1 rounded-lg bg-amber-100 text-amber-800">
+              <Calendar className="w-3.5 h-3.5" />
+            </div>
           </div>
-          <div className="mt-2">
-            <span className="text-2xl font-black text-amber-800 font-mono block tracking-tight">
+          <div className="mt-1.5">
+            <span className="text-xl font-black text-amber-800 font-mono block tracking-tight">
               {kpiStats.totalCycles}
             </span>
           </div>
-          <span className="text-[11px] text-amber-800 font-bold mt-1 block">
+          <span className="text-[10px] text-amber-800 font-bold mt-0.5 block">
             Scheduled installments
           </span>
         </div>
 
-        <div className="p-4.5 bg-gradient-to-br from-emerald-100/90 via-emerald-50 to-white rounded-2xl border-2 border-emerald-300 shadow-sm hover:border-emerald-400 transition-all flex flex-col justify-between">
+        <div className="p-3 bg-gradient-to-br from-emerald-100/90 via-emerald-50 to-white rounded-xl border-2 border-emerald-300 shadow-sm hover:border-emerald-400 transition-all flex flex-col justify-between">
           <div className="flex items-center justify-between text-emerald-900">
-            <span className="text-[11px] font-bold uppercase tracking-wider font-mono">
+            <span className="text-[10px] font-bold uppercase tracking-wider font-mono">
               Settled Collections
             </span>
-            <CheckCircle2 className="w-4 h-4 text-emerald-700" />
+            <div className="p-1 rounded-lg bg-emerald-100 text-emerald-700">
+              <CheckCircle2 className="w-3.5 h-3.5" />
+            </div>
           </div>
-          <div className="mt-2">
-            <span className="text-2xl font-black text-emerald-700 font-mono block tracking-tight">
+          <div className="mt-1.5">
+            <span className="text-xl font-black text-emerald-700 font-mono block tracking-tight">
               {kpiStats.paidCycles}
               <span className="text-xs text-slate-500 font-normal ml-1.5">
                 / {kpiStats.totalCycles}
               </span>
             </span>
           </div>
-          <span className="text-[11px] text-emerald-800 font-bold mt-1 block">
+          <span className="text-[10px] text-emerald-800 font-bold mt-0.5 block">
             {kpiStats.totalCycles > 0
               ? `${Math.round((kpiStats.paidCycles / kpiStats.totalCycles) * 100)}% recovery rate`
               : '0%'}
           </span>
         </div>
 
-        <div className="p-4.5 bg-gradient-to-br from-rose-100/90 via-rose-50 to-white rounded-2xl border-2 border-rose-300 shadow-sm hover:border-rose-400 transition-all flex flex-col justify-between">
+        <div className="p-3 bg-gradient-to-br from-rose-100/90 via-rose-50 to-white rounded-xl border-2 border-rose-300 shadow-sm hover:border-rose-400 transition-all flex flex-col justify-between">
           <div className="flex items-center justify-between text-rose-900">
-            <span className="text-[11px] font-bold uppercase tracking-wider font-mono">
+            <span className="text-[10px] font-bold uppercase tracking-wider font-mono">
               Pending Collections
             </span>
-            <Clock className="w-4 h-4 text-rose-700" />
+            <div className="p-1 rounded-lg bg-rose-100 text-rose-700">
+              <Clock className="w-3.5 h-3.5" />
+            </div>
           </div>
-          <div className="mt-2">
-            <span className="text-2xl font-black text-rose-700 font-mono block tracking-tight">
+          <div className="mt-1.5">
+            <span className="text-xl font-black text-rose-700 font-mono block tracking-tight">
               {kpiStats.pendingCycles}
             </span>
           </div>
-          <span className="text-[11px] text-rose-700 font-bold mt-1 block">
+          <span className="text-[10px] text-rose-700 font-bold mt-0.5 block">
             {kpiStats.pendingCycles} Pending Due EMIs
           </span>
         </div>

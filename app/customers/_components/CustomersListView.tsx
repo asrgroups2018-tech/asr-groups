@@ -266,47 +266,47 @@ export const CustomersListView: React.FC = () => {
       </div>
 
       {/* ─── Metric Cards ─── */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
-        <div className="bg-gradient-to-br from-[#701A35]/10 via-[#FAF8F5] to-white p-4.5 rounded-2xl border-2 border-[#701A35]/30 shadow-sm hover:border-[#701A35]/50 transition-all">
-          <span className="text-[11px] font-bold text-[#701A35] uppercase tracking-wider font-mono">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="bg-gradient-to-br from-[#701A35]/10 via-[#FAF8F5] to-white p-3 rounded-xl border-2 border-[#701A35]/30 shadow-sm hover:border-[#701A35]/50 transition-all">
+          <span className="text-[10px] font-bold text-[#701A35] uppercase tracking-wider font-mono">
             Total Borrowed Portfolio
           </span>
-          <div className="mt-1.5">
+          <div className="mt-1">
             <MoneyDisplay
               amount={totalBorrowedSum}
-              size="xl"
-              amountClassName="text-[#701A35] font-black text-2xl block tracking-tight"
+              size="lg"
+              amountClassName="text-[#701A35] font-black text-xl block tracking-tight"
             />
           </div>
-          <span className="text-[11px] text-slate-600 font-medium mt-1 block">
+          <span className="text-[10px] text-slate-600 font-medium mt-0.5 block">
             Sum across all borrower loan facilities
           </span>
         </div>
 
-        <div className="bg-gradient-to-br from-emerald-100/90 via-emerald-50 to-white p-4.5 rounded-2xl border-2 border-emerald-300 shadow-sm hover:border-emerald-400 transition-all">
-          <span className="text-[11px] font-bold text-emerald-900 uppercase tracking-wider font-mono">
+        <div className="bg-gradient-to-br from-emerald-100/90 via-emerald-50 to-white p-3 rounded-xl border-2 border-emerald-300 shadow-sm hover:border-emerald-400 transition-all">
+          <span className="text-[10px] font-bold text-emerald-900 uppercase tracking-wider font-mono">
             Active Contracts
           </span>
-          <div className="mt-1.5">
-            <span className="text-2xl font-black font-mono text-emerald-700 block tracking-tight">
+          <div className="mt-1">
+            <span className="text-xl font-black font-mono text-emerald-700 block tracking-tight">
               {loans.length} Loans
             </span>
           </div>
-          <span className="text-[11px] text-emerald-800 font-bold mt-1 block">
+          <span className="text-[10px] text-emerald-800 font-bold mt-0.5 block">
             Disbursed active loan contracts
           </span>
         </div>
 
-        <div className="bg-gradient-to-br from-amber-100/90 via-amber-50 to-white p-4.5 rounded-2xl border-2 border-amber-300 shadow-sm hover:border-amber-400 transition-all">
-          <span className="text-[11px] font-bold text-amber-900 uppercase tracking-wider font-mono">
+        <div className="bg-gradient-to-br from-amber-100/90 via-amber-50 to-white p-3 rounded-xl border-2 border-amber-300 shadow-sm hover:border-amber-400 transition-all">
+          <span className="text-[10px] font-bold text-amber-900 uppercase tracking-wider font-mono">
             Total Customers
           </span>
-          <div className="mt-1.5">
-            <span className="text-2xl font-black font-mono text-amber-800 block tracking-tight">
+          <div className="mt-1">
+            <span className="text-xl font-black font-mono text-amber-800 block tracking-tight">
               {customers.length} Clients
             </span>
           </div>
-          <span className="text-[11px] text-amber-800 font-bold mt-1 block">
+          <span className="text-[10px] text-amber-800 font-bold mt-0.5 block">
             Registered borrower profiles
           </span>
         </div>

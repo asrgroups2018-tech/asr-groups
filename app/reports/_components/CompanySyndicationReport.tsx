@@ -183,51 +183,51 @@ export const CompanySyndicationReport: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* 3 High-Impact KPI Badges matching Loans page */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
-        <div className="bg-gradient-to-br from-[#701A35]/12 via-[#FAF8F5] to-white p-4.5 rounded-2xl border-2 border-[#701A35]/30 shadow-sm hover:border-[#701A35]/50 transition-all">
-          <span className="text-[11px] font-bold text-[#701A35] uppercase tracking-wider font-mono">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="bg-gradient-to-br from-[#701A35]/12 via-[#FAF8F5] to-white p-3 rounded-xl border-2 border-[#701A35]/30 shadow-sm hover:border-[#701A35]/50 transition-all">
+          <span className="text-[10px] font-bold text-[#701A35] uppercase tracking-wider font-mono">
             Total Capital Funded
           </span>
-          <div className="mt-1.5">
+          <div className="mt-1">
             <MoneyDisplay
               amount={stats.totalFunded}
-              size="xl"
-              amountClassName="text-[#701A35] font-black text-2xl block tracking-tight"
+              size="lg"
+              amountClassName="text-[#701A35] font-black text-xl block tracking-tight"
             />
           </div>
-          <span className="text-[11px] text-slate-600 font-medium mt-1 block">
+          <span className="text-[10px] text-slate-600 font-medium mt-0.5 block">
             Across <strong className="text-slate-800">{stats.asrCount + stats.outsideCount}</strong> entities ({stats.asrCount} ASR · {stats.outsideCount} Outside)
           </span>
         </div>
 
-        <div className="bg-gradient-to-br from-emerald-100/90 via-emerald-50 to-white p-4.5 rounded-2xl border-2 border-emerald-300 shadow-sm hover:border-emerald-400 transition-all">
-          <span className="text-[11px] font-bold text-emerald-900 uppercase tracking-wider font-mono">
+        <div className="bg-gradient-to-br from-emerald-100/90 via-emerald-50 to-white p-3 rounded-xl border-2 border-emerald-300 shadow-sm hover:border-emerald-400 transition-all">
+          <span className="text-[10px] font-bold text-emerald-900 uppercase tracking-wider font-mono">
             Total Capital Recovered
           </span>
-          <div className="mt-1.5">
+          <div className="mt-1">
             <MoneyDisplay
               amount={stats.totalCollected}
-              size="xl"
-              amountClassName="text-emerald-700 font-black text-2xl block tracking-tight"
+              size="lg"
+              amountClassName="text-emerald-700 font-black text-xl block tracking-tight"
             />
           </div>
-          <span className="text-[11px] text-emerald-800 font-bold mt-1 block">
+          <span className="text-[10px] text-emerald-800 font-bold mt-0.5 block">
             {stats.overallRecovery}% recovery rate
           </span>
         </div>
 
-        <div className="bg-gradient-to-br from-rose-100/90 via-rose-50 to-white p-4.5 rounded-2xl border-2 border-rose-300 shadow-sm hover:border-rose-400 transition-all">
-          <span className="text-[11px] font-bold text-rose-900 uppercase tracking-wider font-mono">
+        <div className="bg-gradient-to-br from-rose-100/90 via-rose-50 to-white p-3 rounded-xl border-2 border-rose-300 shadow-sm hover:border-rose-400 transition-all">
+          <span className="text-[10px] font-bold text-rose-900 uppercase tracking-wider font-mono">
             Total Outstanding Exposure
           </span>
-          <div className="mt-1.5">
+          <div className="mt-1">
             <MoneyDisplay
               amount={stats.totalOutstanding}
-              size="xl"
-              amountClassName="text-[#701A35] font-black text-2xl block tracking-tight"
+              size="lg"
+              amountClassName="text-[#701A35] font-black text-xl block tracking-tight"
             />
           </div>
-          <span className="text-[11px] text-rose-700 font-bold mt-1 block">
+          <span className="text-[10px] text-rose-700 font-bold mt-0.5 block">
             Active capital in circulation
           </span>
         </div>
