@@ -9,10 +9,12 @@ import {
   Plus,
   Eye,
   MapPin,
+  Trash2,
 } from 'lucide-react';
 import { DataTable, ColumnDef } from '@/components/ui/DataTable';
 import { AddCustomerModal } from './AddCustomerModal';
 import { MoneyDisplay } from '@/components/ui/MoneyDisplay';
+import { ConfirmModal } from '@/components/ui/ConfirmModal';
 
 export const CustomersListView: React.FC = () => {
   const router = useRouter();
@@ -20,11 +22,14 @@ export const CustomersListView: React.FC = () => {
     customers,
     selectedCustomerId,
     setSelectedCustomerId,
+    deleteCustomer,
     loans,
     isLoading,
   } = useApp();
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [customerToDelete, setCustomerToDelete] = useState<Customer | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Compute live loan sums per customer
   const enrichedCustomers = useMemo(() => {
@@ -50,6 +55,17 @@ export const CustomersListView: React.FC = () => {
     () => enrichedCustomers.reduce((acc, c) => acc + (c.activeLoansCount || 0), 0),
     [enrichedCustomers]
   );
+
+  const handleDeleteConfirm = async () => {
+    if (!customerToDelete) return;
+    setIsDeleting(true);
+    try {
+      await deleteCustomer(customerToDelete.id);
+      setCustomerToDelete(null);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   const columns: ColumnDef<Customer>[] = [
     {
@@ -133,6 +149,13 @@ export const CustomersListView: React.FC = () => {
           >
             <Eye className="w-3.5 h-3.5" />
           </button>
+          <button
+            onClick={() => setCustomerToDelete(c)}
+            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+            title="Delete Customer"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
         </div>
       ),
     },
@@ -177,16 +200,23 @@ export const CustomersListView: React.FC = () => {
         />
       </div>
 
-      <div className="flex items-center justify-end pt-1">
+      <div className="flex items-center justify-end gap-2 pt-1">
         <button
           onClick={() => {
             setSelectedCustomerId(c.id);
             router.push(`/customers/${c.id}`);
           }}
-          className="w-full py-1.5 px-3 text-xs font-semibold text-[#701A35] bg-[#FAF5ED] hover:bg-[#F3ECE0] border border-[#E2D2B0] rounded-xl flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
+          className="flex-1 py-1.5 px-3 text-xs font-semibold text-[#701A35] bg-[#FAF5ED] hover:bg-[#F3ECE0] border border-[#E2D2B0] rounded-xl flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
         >
           <Eye className="w-3.5 h-3.5" />
-          <span>View Customer Profile</span>
+          <span>View Profile</span>
+        </button>
+        <button
+          onClick={() => setCustomerToDelete(c)}
+          className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl border border-slate-200 transition-colors cursor-pointer"
+          title="Delete Customer"
+        >
+          <Trash2 className="w-3.5 h-3.5" />
         </button>
       </div>
     </div>
@@ -219,39 +249,36 @@ export const CustomersListView: React.FC = () => {
               <h1 className="text-xl font-bold text-slate-950 font-serif">
                 Customers Directory
               </h1>
-              <p className="text-xs text-slate-600 font-medium mt-0.5">
+              <p className="text-xs text-slate-500 mt-0.5">
                 Borrower directory, active facilities, and loan history tracking
               </p>
             </div>
           </div>
         </div>
 
-        {/* Action Buttons */}
-        <div className="flex items-center gap-2 flex-wrap">
-          <button
-            onClick={() => setIsAddModalOpen(true)}
-            className="px-4 py-2 text-xs font-bold text-slate-950 bg-gradient-to-r from-amber-400 via-amber-300 to-[#C5A059] hover:from-amber-300 hover:to-amber-400 active:scale-98 rounded-xl transition-all shadow-sm flex items-center gap-1.5 cursor-pointer shrink-0"
-          >
-            <Plus className="w-4 h-4 font-bold" />
-            <span>New Customer</span>
-          </button>
-        </div>
+        <button
+          onClick={() => setIsAddModalOpen(true)}
+          className="btn-gold px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 shadow-sm shrink-0 cursor-pointer"
+        >
+          <Plus className="w-4 h-4" />
+          <span>New Customer</span>
+        </button>
       </div>
 
-      {/* ─── 3 High-Impact KPI Badges ─── */}
+      {/* ─── Metric Cards ─── */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
-        <div className="bg-white p-4.5 rounded-2xl border-2 border-slate-200/90 shadow-sm hover:border-slate-300 transition-all">
-          <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider font-mono">
+        <div className="bg-gradient-to-br from-[#701A35]/10 via-[#FAF8F5] to-white p-4.5 rounded-2xl border-2 border-[#701A35]/30 shadow-sm hover:border-[#701A35]/50 transition-all">
+          <span className="text-[11px] font-bold text-[#701A35] uppercase tracking-wider font-mono">
             Total Borrowed Portfolio
           </span>
           <div className="mt-1.5">
             <MoneyDisplay
               amount={totalBorrowedSum}
               size="xl"
-              amountClassName="text-slate-950 font-black text-2xl block tracking-tight"
+              amountClassName="text-[#701A35] font-black text-2xl block tracking-tight"
             />
           </div>
-          <span className="text-[11px] text-slate-500 font-medium mt-1 block">
+          <span className="text-[11px] text-slate-600 font-medium mt-1 block">
             Sum across all borrower loan facilities
           </span>
         </div>
@@ -321,6 +348,20 @@ export const CustomersListView: React.FC = () => {
       <AddCustomerModal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
+      />
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={!!customerToDelete}
+        onClose={() => setCustomerToDelete(null)}
+        onConfirm={handleDeleteConfirm}
+        title="Delete Customer Profile"
+        itemName={customerToDelete?.name}
+        itemCode={customerToDelete?.id}
+        message="Are you sure you want to delete this customer? This action will remove the customer profile from the directory."
+        confirmText="Delete Customer"
+        variant="danger"
+        isLoading={isDeleting}
       />
     </div>
   );

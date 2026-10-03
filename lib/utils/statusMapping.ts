@@ -1,14 +1,19 @@
 /**
  * Standardized status mapping and styling taxonomy for ASR Finance ERP.
  *
- * Taxonomies:
- * - Settled / Paid: PASS, NEFT, CASH, PAID (emerald)
- * - Returned / Bounced: RET, RET NEFT, RET PASS (rose)
- * - Pending Settlement: PENDING, Active (amber)
- * - Unclassified: CLS, CS (neutral gray, unconfirmed business definition)
+ * Allowed statuses only:
+ * 1. Pending (amber)
+ * 2. Cleared (emerald)
+ * 3. NEFT (sky/emerald)
+ * 4. RTGS (indigo/emerald)
+ * 5. Cash (emerald)
  */
 
-export type StatusCategory = 'settled' | 'bounced' | 'pending' | 'unclassified' | 'closed' | 'other';
+import { AppStatus } from '@/lib/types';
+
+export const ALLOWED_STATUSES: AppStatus[] = ['Pending', 'Cleared', 'NEFT', 'RTGS', 'Cash'];
+
+export type StatusCategory = 'cleared' | 'neft' | 'rtgs' | 'cash' | 'pending' | 'other';
 
 export interface StatusMeta {
   label: string;
@@ -22,26 +27,27 @@ export function getStatusCategory(status: string | null | undefined): StatusCate
   if (!status) return 'pending';
   const norm = status.trim().toUpperCase();
 
-  if (['PASS', 'NEFT', 'CASH', 'PAID'].includes(norm)) {
-    return 'settled';
+  if (norm === 'CLEARED' || norm === 'PASS' || norm === 'PAID' || norm === 'CLS' || norm === 'CS' || norm === 'CLOSED' || norm === 'SETTLED') {
+    return 'cleared';
   }
-  if (['RET', 'RET NEFT', 'RET PASS', 'BOUNCED', 'RETURNED'].includes(norm)) {
-    return 'bounced';
+  if (norm === 'NEFT' || norm === 'RET NEFT') {
+    return 'neft';
   }
-  if (['CLS', 'CS'].includes(norm)) {
-    return 'unclassified';
+  if (norm === 'RTGS') {
+    return 'rtgs';
   }
-  if (['PENDING', 'ACTIVE', 'ON TRACK'].includes(norm)) {
+  if (norm === 'CASH' || norm === 'CSH') {
+    return 'cash';
+  }
+  if (norm === 'PENDING' || norm === 'ACTIVE' || norm === 'ON TRACK' || norm === 'RET' || norm === 'RET PASS' || norm === 'OVERDUE' || norm === 'DRAFT') {
     return 'pending';
-  }
-  if (['CLOSED', 'SETTLED'].includes(norm)) {
-    return 'closed';
   }
   return 'other';
 }
 
 export function isPaidStatus(status: string | null | undefined): boolean {
-  return getStatusCategory(status) === 'settled';
+  const cat = getStatusCategory(status);
+  return cat === 'cleared' || cat === 'neft' || cat === 'rtgs' || cat === 'cash';
 }
 
 export function getStatusMeta(status: string | null | undefined): StatusMeta {
@@ -49,42 +55,42 @@ export function getStatusMeta(status: string | null | undefined): StatusMeta {
   const category = getStatusCategory(status);
 
   switch (category) {
-    case 'settled':
+    case 'cleared':
       return {
-        label: norm === 'PASS' ? 'Settled (PASS)' : norm === 'NEFT' ? 'Settled (NEFT)' : norm === 'CASH' ? 'Settled (CASH)' : 'Paid',
-        category: 'settled',
+        label: 'Cleared',
+        category: 'cleared',
         isPaid: true,
         colorClass: 'bg-emerald-50 text-emerald-800 border-emerald-300',
         dotClass: 'bg-emerald-600',
       };
-    case 'bounced':
+    case 'neft':
       return {
-        label: norm.startsWith('RET') ? `Returned (${norm})` : 'Bounced / Returned',
-        category: 'bounced',
-        isPaid: false,
-        colorClass: 'bg-rose-50 text-rose-800 border-rose-300',
-        dotClass: 'bg-rose-600',
-      };
-    case 'unclassified':
-      return {
-        label: `Unclassified (${norm})`,
-        category: 'unclassified',
-        isPaid: false,
-        colorClass: 'bg-slate-100 text-slate-700 border-slate-300',
-        dotClass: 'bg-slate-500',
-      };
-    case 'closed':
-      return {
-        label: 'Closed',
-        category: 'closed',
+        label: 'NEFT',
+        category: 'neft',
         isPaid: true,
-        colorClass: 'bg-slate-100 text-slate-800 border-slate-300',
-        dotClass: 'bg-slate-600',
+        colorClass: 'bg-teal-50 text-teal-800 border-teal-300',
+        dotClass: 'bg-teal-600',
+      };
+    case 'rtgs':
+      return {
+        label: 'RTGS',
+        category: 'rtgs',
+        isPaid: true,
+        colorClass: 'bg-indigo-50 text-indigo-800 border-indigo-300',
+        dotClass: 'bg-indigo-600',
+      };
+    case 'cash':
+      return {
+        label: 'Cash',
+        category: 'cash',
+        isPaid: true,
+        colorClass: 'bg-emerald-50 text-emerald-800 border-emerald-300',
+        dotClass: 'bg-emerald-600',
       };
     case 'pending':
     default:
       return {
-        label: norm === 'PENDING' ? 'Pending Settlement' : status || 'Pending',
+        label: 'Pending',
         category: 'pending',
         isPaid: false,
         colorClass: 'bg-amber-50 text-amber-800 border-amber-300',

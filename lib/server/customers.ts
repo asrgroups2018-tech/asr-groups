@@ -10,6 +10,11 @@ export async function ensureDbInitialized() {
   const client = getTursoClient();
   try {
     await initializeSchema(client);
+    try {
+      await client.execute('ALTER TABLE customers ADD COLUMN is_active INTEGER NOT NULL DEFAULT 1');
+    } catch {
+      // Column may already exist
+    }
     schemaInitialized = true;
   } catch (err) {
     console.error('Turso Schema initialization warning:', err);
@@ -20,7 +25,7 @@ export async function getCustomers(query?: string): Promise<Customer[]> {
   await ensureDbInitialized();
   const client = getTursoClient();
 
-  let sql = 'SELECT * FROM customers WHERE 1=1';
+  let sql = 'SELECT * FROM customers WHERE (is_active IS NULL OR is_active != 0)';
   const args: any[] = [];
   if (query) {
     sql += ' AND (LOWER(name) LIKE ? OR LOWER(place) LIKE ? OR phone LIKE ? OR LOWER(id) LIKE ?)';
@@ -123,7 +128,7 @@ export async function createCustomer(data: { name: string; place?: string; codeN
   };
 
   await client.execute({
-    sql: 'INSERT INTO customers (id, name, place, phone, created_at) VALUES (?, ?, ?, ?, ?)',
+    sql: 'INSERT INTO customers (id, name, place, phone, is_active, created_at) VALUES (?, ?, ?, ?, 1, ?)',
     args: [newCustomer.id, newCustomer.name, newCustomer.place, newCustomer.phone || null, newCustomer.createdAt],
   });
 
@@ -162,9 +167,21 @@ export async function deleteCustomer(id: string): Promise<boolean> {
   await ensureDbInitialized();
   const client = getTursoClient();
 
+  // Soft delete customer from active directory so historical loans remain 100% intact
   const res = await client.execute({
-    sql: 'DELETE FROM customers WHERE id = ?',
+    sql: 'UPDATE customers SET is_active = 0 WHERE id = ?',
     args: [id],
+  });
+
+  await logAudit({
+    actorId: 'ADM-1001',
+    actorName: 'System Administrator',
+    actorRoleId: 0,
+    action: 'Deleted User',
+    target: `Customer ID: ${id}`,
+    beforeVal: 'Active',
+    afterVal: 'Deactivated / Removed from Directory',
+    isSensitive: false,
   });
 
   return res.rowsAffected > 0;

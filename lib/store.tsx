@@ -20,8 +20,10 @@ import {
   Company,
   Loan,
   Installment,
+  RepaymentFrequency,
   HistoricalReceiptRow,
   ApprovalRequest,
+  Cheque,
 } from './types';
 import {
   ROLES_DATA,
@@ -115,6 +117,7 @@ interface AppContextType {
   customers: Customer[];
   companies: Company[];
   loans: Loan[];
+  cheques: Cheque[];
   receipts: HistoricalReceiptRow[];
   approvalRequests: ApprovalRequest[];
   dashboardData: DashboardData | null;
@@ -160,8 +163,20 @@ interface AppContextType {
   updateCustomer: (id: string, updates: Partial<Customer>) => Promise<Customer | null>;
   deleteCustomer: (id: string) => Promise<boolean>;
 
+  // Cheque Operations
+  createCheque: (data: {
+    chequeNumber: string;
+    customerId?: string | null;
+    customerName: string;
+    amount: number;
+    depositDate: string;
+  }) => Promise<Cheque | null>;
+  markChequeDeposited: (id: string, depositedAt?: string) => Promise<boolean>;
+  deleteCheque: (id: string) => Promise<boolean>;
+
   // Company Operations
   createCompany: (data: { name: string; shortCode: string; isOutsideParty?: boolean }) => Promise<Company | null>;
+  deleteCompany: (id: string) => Promise<boolean>;
 
   // Loan Engine v2 Operations
   createLoan: (loanData: {
@@ -171,7 +186,7 @@ interface AppContextType {
     disbursedAmount?: number | null;
     interestAmount?: number | null;
     startDate: string;
-    frequency: 'Weekly' | 'Monthly';
+    frequency: RepaymentFrequency;
     splits: { companyId: string; splitPercent: number; splitAmount: number }[];
     installments: {
       dueDate: string;
@@ -276,6 +291,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loans, setLoans] = useState<Loan[]>([]);
+  const [cheques, setCheques] = useState<Cheque[]>([]);
   const [receipts, setReceipts] = useState<HistoricalReceiptRow[]>([]);
   const [approvalRequests, setApprovalRequests] = useState<ApprovalRequest[]>([]);
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
@@ -370,6 +386,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         custRes,
         compRes,
         loansRes,
+        chequesRes,
         dashRes,
         reqsRes,
       ] = await Promise.all([
@@ -382,6 +399,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         fetch('/api/customers').then((r) => r.json()).catch(() => ({ success: false })),
         fetch('/api/companies').then((r) => r.json()).catch(() => ({ success: false })),
         fetch('/api/loans').then((r) => r.json()).catch(() => ({ success: false })),
+        fetch('/api/cheques').then((r) => r.json()).catch(() => ({ success: false })),
         fetch('/api/dashboard').then((r) => r.json()).catch(() => ({ success: false })),
         fetch('/api/requests').then((r) => r.json()).catch(() => ({ success: false })),
       ]);
@@ -395,6 +413,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (custRes.success && custRes.data) setCustomers(custRes.data);
       if (compRes.success && compRes.data) setCompanies(compRes.data);
       if (loansRes.success && loansRes.data) setLoans(loansRes.data);
+      if (chequesRes && chequesRes.success && chequesRes.data) setCheques(chequesRes.data);
       if (dashRes.success && dashRes.data) setDashboardData(dashRes.data);
       if (reqsRes && reqsRes.success && reqsRes.data) setApprovalRequests(reqsRes.data);
 
@@ -528,8 +547,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     customerId: string;
     codeNo?: string;
     totalAmount: number;
+    disbursedAmount?: number | null;
+    interestAmount?: number | null;
     startDate: string;
-    frequency: 'Weekly' | 'Monthly';
+    frequency: RepaymentFrequency;
     splits: { companyId: string; splitPercent: number; splitAmount: number }[];
     installments: {
       dueDate: string;
@@ -767,6 +788,83 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // ==========================================
+  // Cheque Operations
+  // ==========================================
+  const createCheque = async (data: {
+    chequeNumber: string;
+    customerId?: string | null;
+    customerName: string;
+    amount: number;
+    depositDate: string;
+  }): Promise<Cheque | null> => {
+    try {
+      const res = await fetch('/api/cheques', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      const json = await res.json();
+      if (json.success) {
+        showToast('Cheque Logged', `Cheque #${data.chequeNumber} for ₹${data.amount.toLocaleString('en-IN')} added.`, 'success');
+        if (json.data) {
+          setCheques((prev) => [json.data, ...prev]);
+        }
+        refreshAll(false);
+        return json.data;
+      } else {
+        showToast('Failed to Add Cheque', json.error || 'Server error', 'error');
+        return null;
+      }
+    } catch (err: any) {
+      showToast('Error', err.message || 'Network error', 'error');
+      return null;
+    }
+  };
+
+  const markChequeDeposited = async (id: string, depositedAt?: string): Promise<boolean> => {
+    try {
+      const res = await fetch(`/api/cheques/${encodeURIComponent(id)}/deposit`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ depositedAt }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        showToast('Cheque Deposited', `Cheque marked as Deposited.`, 'success');
+        setCheques((prev) =>
+          prev.map((c) => (c.id === id ? { ...c, status: 'Deposited', depositedAt: depositedAt || new Date().toISOString() } : c))
+        );
+        refreshAll(false);
+        return true;
+      } else {
+        showToast('Action Failed', json.error || 'Could not update cheque', 'error');
+        return false;
+      }
+    } catch (err: any) {
+      showToast('Error', err.message || 'Network error', 'error');
+      return false;
+    }
+  };
+
+  const deleteCheque = async (id: string): Promise<boolean> => {
+    setCheques((prev) => prev.filter((c) => c.id !== id));
+    try {
+      const res = await fetch(`/api/cheques/${encodeURIComponent(id)}`, { method: 'DELETE' });
+      const json = await res.json();
+      if (json.success) {
+        showToast('Cheque Removed', 'Cheque record deleted.', 'info');
+        refreshAll(false);
+        return true;
+      }
+      refreshAll(false);
+      return false;
+    } catch {
+      refreshAll(false);
+      return false;
+    }
+  };
+
+  // ==========================================
   // Company Operations
   // ==========================================
   const createCompany = async (data: { name: string; shortCode: string; isOutsideParty?: boolean }) => {
@@ -788,6 +886,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return null;
     } catch {
       return null;
+    }
+  };
+
+  const deleteCompany = async (id: string) => {
+    setCompanies((prev) => prev.filter((c) => c.id !== id));
+    try {
+      const res = await fetch(`/api/companies?id=${id}`, { method: 'DELETE' });
+      const json = await res.json();
+      if (json.success) {
+        showToast('Company Removed', 'Funding entity deleted.', 'info');
+        refreshAll(false);
+        return true;
+      }
+      refreshAll(false);
+      return false;
+    } catch {
+      refreshAll(false);
+      return false;
     }
   };
 
@@ -1145,6 +1261,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       customers,
       companies,
       loans,
+      cheques,
       receipts,
       approvalRequests,
       dashboardData,
@@ -1186,7 +1303,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       updateCustomer,
       deleteCustomer,
 
+      createCheque,
+      markChequeDeposited,
+      deleteCheque,
+
       createCompany,
+      deleteCompany,
 
       createLoan,
       updateLoanInstallment,
@@ -1213,6 +1335,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       customers,
       companies,
       loans,
+      cheques,
       receipts,
       approvalRequests,
       dashboardData,

@@ -35,6 +35,7 @@ import { ImportReviewModal } from './ImportReviewModal';
 import { exportLoansToExcel, exportLoansToPDF } from '@/lib/utils/exportLoansLedger';
 import { DateRangePicker, DateRangeValue, getCurrentMonthRange } from '@/components/ui/DateRangePicker';
 import { MoneyDisplay } from '@/components/ui/MoneyDisplay';
+import { ConfirmModal } from '@/components/ui/ConfirmModal';
 
 function parseToDate(dStr: string | null | undefined): Date | null {
   if (!dStr) return null;
@@ -61,6 +62,44 @@ function parseToDate(dStr: string | null | undefined): Date | null {
 type SortField = 'customerName' | 'id' | 'startDate' | 'totalCollected' | 'interestAmount' | 'totalAmount' | 'installmentCount' | 'fundedBy' | 'nextDueDate' | 'status';
 type SortDirection = 'asc' | 'desc';
 
+export function getDerivedLoanStatus(loan: Loan): 'Active' | 'Closed' | 'Overdue' | 'Pending' {
+  const normSaved = String(loan.status || '').trim().toUpperCase();
+  const insts = loan.installments || [];
+
+  // 1. If all installments are paid or collected >= totalAmount, or status is Closed
+  const isAllPaid =
+    insts.length > 0 &&
+    insts.every((i) =>
+      ['CLEARED', 'NEFT', 'RTGS', 'CASH', 'PASS', 'CLS', 'CS', 'PAID', 'CLOSED', 'SETTLED'].includes(
+        String(i.status || '').trim().toUpperCase()
+      )
+    );
+  const isFullyCollected = (loan.totalCollected || 0) >= (loan.totalAmount || 0) && (loan.totalAmount || 0) > 0;
+
+  if (isAllPaid || isFullyCollected || ['CLOSED', 'SETTLED'].includes(normSaved)) {
+    return 'Closed';
+  }
+
+  // 2. If explicitly marked Overdue or has past-due unpaid installments
+  const nowStr = new Date().toISOString().slice(0, 10);
+  const hasOverdueInst = insts.some((i) => {
+    const isPaid = ['CLEARED', 'NEFT', 'RTGS', 'CASH', 'PASS', 'CLS', 'CS', 'PAID', 'CLOSED', 'SETTLED'].includes(
+      String(i.status || '').trim().toUpperCase()
+    );
+    return !isPaid && i.dueDate && i.dueDate < nowStr;
+  });
+
+  if (normSaved === 'OVERDUE' || hasOverdueInst) {
+    return 'Overdue';
+  }
+
+  if (normSaved === 'PENDING' && (loan.totalCollected || 0) === 0) {
+    return 'Pending';
+  }
+
+  return 'Active';
+}
+
 export const LoansListView: React.FC = () => {
   const router = useRouter();
   const {
@@ -76,6 +115,7 @@ export const LoansListView: React.FC = () => {
   const [isWizardOpen, setIsWizardOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [selectedEditLoan, setSelectedEditLoan] = useState<Loan | null>(null);
+  const [loanToDelete, setLoanToDelete] = useState<Loan | null>(null);
   const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
   const exportMenuRef = useRef<HTMLDivElement>(null);
 
@@ -189,8 +229,15 @@ export const LoansListView: React.FC = () => {
     const { startTimestamp, endTimestamp } = dateTimestamps;
 
     const filtered = loans.filter((loan) => {
-      // 1. Status Filter
-      if (statusFilter !== 'ALL' && loan.status !== statusFilter) return false;
+      // 1. Status Filter (ALL, Active, Overdue, Closed)
+      if (statusFilter !== 'ALL') {
+        const effectiveStatus = getDerivedLoanStatus(loan);
+        if (statusFilter === 'Active') {
+          if (effectiveStatus !== 'Active' && effectiveStatus !== 'Pending') return false;
+        } else if (effectiveStatus !== statusFilter) {
+          return false;
+        }
+      }
 
       // 2. Multi-Select Client Filter
       if (selectedClients.size > 0 && !selectedClients.has(loan.customerName)) {
@@ -446,34 +493,34 @@ export const LoansListView: React.FC = () => {
 
       {/* 5 High-Impact KPI Badges */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-        <div className="bg-white p-4 rounded-2xl border-2 border-slate-200/90 shadow-sm hover:border-slate-300 transition-all">
-          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider font-mono">
+        <div className="bg-gradient-to-br from-[#701A35]/12 via-[#FAF8F5] to-white p-4 rounded-2xl border-2 border-[#701A35]/30 shadow-sm hover:border-[#701A35]/50 transition-all">
+          <span className="text-[10px] font-bold text-[#701A35] uppercase tracking-wider font-mono">
             {dateRange.startDate ? 'Filtered Loans' : 'Total Loan Amount'}
           </span>
           <div className="mt-1">
             <MoneyDisplay
               amount={totalPortfolioAmount}
               size="lg"
-              amountClassName="text-slate-950 font-black text-xl block tracking-tight"
+              amountClassName="text-[#701A35] font-black text-xl block tracking-tight"
             />
           </div>
-          <span className="text-[10px] text-slate-500 font-medium mt-0.5 block">
+          <span className="text-[10px] text-slate-600 font-medium mt-0.5 block">
             Across <strong className="text-slate-800">{filteredAndSortedLoans.length}</strong> loan accounts
           </span>
         </div>
 
-        <div className="bg-white p-4 rounded-2xl border-2 border-slate-200/90 shadow-sm hover:border-slate-300 transition-all">
-          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider font-mono">
+        <div className="bg-gradient-to-br from-indigo-100/80 via-indigo-50/40 to-white p-4 rounded-2xl border-2 border-indigo-200/90 shadow-sm hover:border-indigo-300 transition-all">
+          <span className="text-[10px] font-bold text-indigo-950 uppercase tracking-wider font-mono">
             Paid / Disbursed
           </span>
           <div className="mt-1">
             <MoneyDisplay
               amount={totalDisbursedAmount}
               size="lg"
-              amountClassName="text-slate-900 font-black text-xl block tracking-tight"
+              amountClassName="text-indigo-950 font-black text-xl block tracking-tight"
             />
           </div>
-          <span className="text-[10px] text-slate-500 font-medium mt-0.5 block">
+          <span className="text-[10px] text-indigo-800 font-medium mt-0.5 block">
             Net capital deployed
           </span>
         </div>
@@ -664,7 +711,7 @@ export const LoansListView: React.FC = () => {
                     : 'text-slate-700 hover:text-slate-950 hover:bg-slate-200/60'
                 }`}
               >
-                {st}
+                {st === 'ALL' ? 'ALL' : st}
               </button>
             ))}
           </div>
@@ -944,8 +991,19 @@ export const LoansListView: React.FC = () => {
                     }).length
                   : 0;
 
+                const isLoanPaid =
+                  ['CLEARED', 'NEFT', 'RTGS', 'CASH', 'PASS', 'PAID', 'CLOSED', 'SETTLED'].includes(String(loan.status || '').trim().toUpperCase()) ||
+                  (loan.totalCollected || 0) >= loan.totalAmount;
+
                 return (
-                  <div key={loan.id} className="transition-colors hover:bg-[#FCFBF9]">
+                  <div
+                    key={loan.id}
+                    className={`transition-colors border-l-4 ${
+                      isLoanPaid
+                        ? 'bg-emerald-50/90 border-l-emerald-600 hover:bg-emerald-100/90 shadow-2xs'
+                        : 'hover:bg-[#FCFBF9] border-l-transparent'
+                    }`}
+                  >
                     {/* Summary Row */}
                     <div
                       onClick={() => toggleExpand(loan.id)}
@@ -998,7 +1056,7 @@ export const LoansListView: React.FC = () => {
                               size="xs"
                               amountClassName={`font-bold text-xs block text-right ${
                                 (loan.totalCollected || 0) >= loan.totalAmount
-                                  ? 'text-emerald-700 font-extrabold'
+                                    ? 'text-emerald-700 font-extrabold'
                                   : 'text-slate-900'
                               }`}
                             />
@@ -1076,7 +1134,7 @@ export const LoansListView: React.FC = () => {
 
                       {/* Status */}
                       <div className="text-center">
-                        <StatusPill status={loan.status} size="sm" />
+                        <StatusPill status={getDerivedLoanStatus(loan)} size="sm" />
                       </div>
 
                       {/* Actions: Edit Excel, View Details, Delete */}
@@ -1108,9 +1166,7 @@ export const LoansListView: React.FC = () => {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            if (confirm(`Delete loan ${loan.id} for ${loan.customerName}?`)) {
-                              deleteLoan(loan.id);
-                            }
+                            setLoanToDelete(loan);
                           }}
                           className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer btn-press"
                           title="Delete Loan"
@@ -1158,7 +1214,7 @@ export const LoansListView: React.FC = () => {
                               </thead>
                               <tbody className="divide-y divide-slate-100">
                                 {loan.installments.map((inst) => {
-                                  const isPaid = ['PASS', 'NEFT', 'CASH', 'CLS', 'CS', 'Paid'].includes(inst.status);
+                                  const isPaid = ['PASS', 'NEFT', 'RTGS', 'CASH', 'CLEARED', 'PAID', 'CLOSED', 'SETTLED', 'Paid'].includes(inst.status?.trim().toUpperCase());
                                   const dueD = parseToDate(inst.dueDate);
                                   const recdD = parseToDate(inst.recdDate);
                                   const dueMs = dueD ? dueD.getTime() : null;
@@ -1185,6 +1241,8 @@ export const LoansListView: React.FC = () => {
                                           ? 'bg-amber-100/70 border-l-4 border-amber-500 font-bold text-amber-950'
                                           : inst.isMismatch
                                           ? 'bg-rose-50/70'
+                                          : isPaid
+                                          ? 'bg-emerald-50/60 hover:bg-emerald-100/60'
                                           : 'hover:bg-slate-50'
                                       }`}
                                     >
@@ -1201,18 +1259,13 @@ export const LoansListView: React.FC = () => {
                                           )}
                                         </div>
                                       </td>
-                                      {(() => {
-                                        const isPaid = ['PASS', 'NEFT', 'CASH', 'PAID', 'CLOSED', 'SETTLED', 'Paid'].includes(inst.status?.trim().toUpperCase());
-                                        return (
-                                          <td className={`p-2.5 text-right font-mono ${isPaid ? 'bg-emerald-50/70' : ''}`}>
-                                            <MoneyDisplay
-                                              amount={inst.amountDue}
-                                              size="sm"
-                                              amountClassName={`font-bold block text-right ${isPaid ? 'text-emerald-800' : 'text-slate-950'}`}
-                                            />
-                                          </td>
-                                        );
-                                      })()}
+                                      <td className={`p-2.5 text-right font-mono ${isPaid ? 'bg-emerald-50/70' : ''}`}>
+                                        <MoneyDisplay
+                                          amount={inst.amountDue}
+                                          size="sm"
+                                          amountClassName={`font-bold block text-right ${isPaid ? 'text-emerald-800' : 'text-slate-950'}`}
+                                        />
+                                      </td>
                                       <td className="p-2.5 text-center">
                                         <StatusPill status={inst.status} size="sm" />
                                       </td>
@@ -1242,7 +1295,7 @@ export const LoansListView: React.FC = () => {
                                           <button
                                             onClick={() =>
                                               updateLoanInstallment(inst.id, {
-                                                status: 'PASS',
+                                                status: 'Cleared',
                                                 recdDate: new Date().toISOString().slice(0, 10),
                                               })
                                             }
@@ -1278,11 +1331,18 @@ export const LoansListView: React.FC = () => {
               const progress = total > 0 ? Math.min(100, Math.round((collected / total) * 100)) : 0;
               const { startTimestamp, endTimestamp } = dateTimestamps;
               const hasDateFilter = startTimestamp !== null && endTimestamp !== null;
+              const isLoanPaid =
+                ['CLEARED', 'NEFT', 'RTGS', 'CASH', 'PASS', 'PAID', 'CLOSED', 'SETTLED'].includes(String(loan.status || '').trim().toUpperCase()) ||
+                (loan.totalCollected || 0) >= loan.totalAmount;
 
               return (
                 <div
                   key={`mob-card-${loan.id}`}
-                  className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-sm space-y-3.5 transition-all hover:border-slate-300"
+                  className={`rounded-2xl border p-4 sm:p-5 shadow-sm space-y-3.5 transition-all ${
+                    isLoanPaid
+                      ? 'bg-emerald-50/90 border-emerald-300 ring-1 ring-emerald-500/20 shadow-emerald-50 hover:border-emerald-400'
+                      : 'bg-white border-slate-200 hover:border-slate-300'
+                  }`}
                 >
                   {/* Top Row: Borrower Name, Code, Status & Expand */}
                   <div className="flex items-start justify-between gap-3">
@@ -1311,12 +1371,14 @@ export const LoansListView: React.FC = () => {
                       </div>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                      <StatusPill status={loan.status} size="sm" />
+                      <StatusPill status={getDerivedLoanStatus(loan)} size="sm" />
                     </div>
                   </div>
 
                   {/* 2x2 Financial Metric Matrix */}
-                  <div className="p-3 bg-gradient-to-br from-[#FAF8F5] to-slate-50 border border-[#E6E1D6] rounded-xl space-y-2.5">
+                  <div className={`p-3 border rounded-xl space-y-2.5 ${
+                    isLoanPaid ? 'bg-emerald-100/60 border-emerald-200' : 'bg-gradient-to-br from-[#FAF8F5] to-slate-50 border-[#E6E1D6]'
+                  }`}>
                     <div className="grid grid-cols-2 gap-2 text-xs">
                       {/* Paid Amount */}
                       <div className="bg-white p-2.5 rounded-lg border border-slate-200/80 shadow-2xs">
@@ -1485,10 +1547,9 @@ export const LoansListView: React.FC = () => {
 
                     <button
                       type="button"
-                      onClick={() => {
-                        if (confirm(`Delete loan ${loan.id} for ${loan.customerName}?`)) {
-                          deleteLoan(loan.id);
-                        }
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setLoanToDelete(loan);
                       }}
                       className="p-2 text-slate-400 hover:text-rose-600 bg-white hover:bg-rose-50 border border-slate-300 hover:border-rose-300 rounded-xl cursor-pointer transition-colors shadow-2xs btn-press"
                       title="Delete Loan"
@@ -1519,9 +1580,14 @@ export const LoansListView: React.FC = () => {
                             </thead>
                             <tbody className="divide-y divide-[#EDE8DF]">
                               {loan.installments.map((inst) => {
-                                const isPaid = ['PASS', 'NEFT', 'CASH', 'PAID', 'CLS', 'CS', 'SETTLED', 'CLOSED', 'RET NEFT', 'RET PASS', 'Paid'].includes(inst.status?.trim().toUpperCase());
+                                const isPaid = ['PASS', 'NEFT', 'RTGS', 'CASH', 'CLEARED', 'PAID', 'CLS', 'CS', 'SETTLED', 'CLOSED', 'RET NEFT', 'RET PASS', 'Paid'].includes(inst.status?.trim().toUpperCase());
                                 return (
-                                  <tr key={inst.id} className="font-mono text-xs hover:bg-slate-50 transition-colors">
+                                  <tr
+                                    key={inst.id}
+                                    className={`font-mono text-xs transition-colors ${
+                                      isPaid ? 'bg-emerald-50/70 hover:bg-emerald-100/70' : 'hover:bg-slate-50'
+                                    }`}
+                                  >
                                     <td className="p-2 text-center font-bold text-slate-400">#{inst.seqNo}</td>
                                     <td className="p-2 font-semibold text-slate-800 whitespace-nowrap">{inst.dueDate}</td>
                                     <td className={`p-2 text-right whitespace-nowrap ${isPaid ? 'bg-emerald-50/70' : ''}`}>
@@ -1552,7 +1618,7 @@ export const LoansListView: React.FC = () => {
                                           type="button"
                                           onClick={() =>
                                             updateLoanInstallment(inst.id, {
-                                              status: 'PASS',
+                                              status: 'Cleared',
                                               recdDate: new Date().toISOString().slice(0, 10),
                                             })
                                           }
@@ -1597,6 +1663,25 @@ export const LoansListView: React.FC = () => {
       <ImportReviewModal
         isOpen={isImportModalOpen}
         onClose={() => setIsImportModalOpen(false)}
+      />
+
+      {/* Custom Application Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={!!loanToDelete}
+        onClose={() => setLoanToDelete(null)}
+        onConfirm={async () => {
+          if (loanToDelete) {
+            await deleteLoan(loanToDelete.id);
+            setLoanToDelete(null);
+          }
+        }}
+        title="Delete Loan"
+        message={`Are you sure you want to delete loan ${loanToDelete?.id} for ${loanToDelete?.customerName}? This will permanently remove all associated payment schedules, installments, and ledger records from the database.`}
+        itemName={loanToDelete?.customerName}
+        itemCode={loanToDelete?.id}
+        itemAmount={loanToDelete?.totalAmount}
+        confirmText="Delete Loan"
+        variant="danger"
       />
     </div>
   );

@@ -5,11 +5,13 @@ import * as customerOps from './customers';
 import * as companyOps from './companies';
 import * as loanOps from './loans';
 import * as adminOps from './administration';
+import * as chequeOps from './cheques';
 
 export * from './customers';
 export * from './companies';
 export * from './loans';
 export * from './administration';
+export * from './cheques';
 
 /**
  * Unified `db` facade object preserving full backward compatibility.
@@ -26,6 +28,7 @@ export const db = {
   getCompanies: companyOps.getCompanies,
   getCompanyById: companyOps.getCompanyById,
   createCompany: companyOps.createCompany,
+  deleteCompany: companyOps.deleteCompany,
 
   // Loans & Installments
   getLoans: loanOps.getLoans,
@@ -72,4 +75,12 @@ export const db = {
   getSystemSettings: adminOps.getSystemSettings,
   updateSystemSettings: adminOps.updateSystemSettings,
   triggerBackup: adminOps.triggerBackup,
+
+  // Cheques
+  getCheques: chequeOps.getCheques,
+  getChequeById: chequeOps.getChequeById,
+  createCheque: chequeOps.createCheque,
+  markChequeDeposited: chequeOps.markChequeDeposited,
+  deleteCheque: chequeOps.deleteCheque,
+  getChequeStats: chequeOps.getChequeStats,
 };

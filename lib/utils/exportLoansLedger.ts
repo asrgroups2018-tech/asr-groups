@@ -159,18 +159,18 @@ export async function exportLoansToExcel(loans: Loan[], dateRangeLabel?: string)
     { header: 'RECD DATE', key: 'recdDate', width: 14, align: 'center', type: 'base' },
     { header: 'DEP NAME', key: 'depName', width: 15, align: 'center', type: 'base' },
     { header: 'CHQ NO', key: 'chqNo', width: 14, align: 'center', type: 'base' },
-    // 10 ASR Group Own Companies
+    // 8 ASR Group Own Companies (Active + Historical)
     { header: 'PASS ENTERPRISES', key: 'pass', width: 18, align: 'right', type: 'asr' },
     { header: 'KARS ENTERPRISES', key: 'kars', width: 18, align: 'right', type: 'asr' },
     { header: 'INFIN GROUP', key: 'ig', width: 16, align: 'right', type: 'asr' },
     { header: 'INFINITY ENTERPRISES', key: 'ine', width: 18, align: 'right', type: 'asr' },
     { header: 'INNOVATIVE SOLUTIONS', key: 'ins', width: 20, align: 'right', type: 'asr' },
     { header: 'MARS SOLUTION', key: 'mars', width: 16, align: 'right', type: 'asr' },
-    { header: 'MM ASSOCIATES', key: 'mm', width: 16, align: 'right', type: 'asr' },
     { header: 'TRIVENI GROUP', key: 'tg', width: 16, align: 'right', type: 'asr' },
     { header: 'GLOBAL SOLITAIRE', key: 'gs', width: 18, align: 'right', type: 'asr' },
     { header: 'ALAGESH', key: 'ala', width: 15, align: 'right', type: 'asr' },
-    // 6 Outside Party Companies
+    // 7 Outside Party Companies
+    { header: 'MM ASSOCIATES', key: 'mm', width: 16, align: 'right', type: 'outside' },
     { header: 'FINCUBE VENTURES', key: 'fin', width: 18, align: 'right', type: 'outside' },
     { header: 'CS ASSOCIATES', key: 'cs', width: 16, align: 'right', type: 'outside' },
     { header: 'M CHINNIAH', key: 'mc', width: 15, align: 'right', type: 'outside' },

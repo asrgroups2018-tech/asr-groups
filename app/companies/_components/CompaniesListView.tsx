@@ -8,10 +8,12 @@ import {
   Building2,
   Plus,
   Eye,
+  Trash2,
 } from 'lucide-react';
 import { DataTable, ColumnDef } from '@/components/ui/DataTable';
 import { AddCompanyModal } from './AddCompanyModal';
 import { MoneyDisplay } from '@/components/ui/MoneyDisplay';
+import { ConfirmModal } from '@/components/ui/ConfirmModal';
 
 export const CompaniesListView: React.FC = () => {
   const router = useRouter();
@@ -20,11 +22,14 @@ export const CompaniesListView: React.FC = () => {
     loans,
     selectedCompanyId,
     setSelectedCompanyId,
+    deleteCompany,
     isLoading,
   } = useApp();
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [partyFilter, setPartyFilter] = useState<'ALL' | 'ASR' | 'OUTSIDE'>('ALL');
+  const [companyToDelete, setCompanyToDelete] = useState<Company | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const COMPANY_ORDER: Record<string, number> = {
     'PASS ENTERPRISES': 1,
@@ -99,6 +104,17 @@ export const CompaniesListView: React.FC = () => {
 
   const asrCount = useMemo(() => companies.filter((c) => !c.isOutsideParty).length, [companies]);
   const outsideCount = useMemo(() => companies.filter((c) => c.isOutsideParty).length, [companies]);
+
+  const handleDeleteConfirm = async () => {
+    if (!companyToDelete) return;
+    setIsDeleting(true);
+    try {
+      await deleteCompany(companyToDelete.id);
+      setCompanyToDelete(null);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   const columns: ColumnDef<Company>[] = [
     {
@@ -198,6 +214,13 @@ export const CompaniesListView: React.FC = () => {
           >
             <Eye className="w-3.5 h-3.5" />
           </button>
+          <button
+            onClick={() => setCompanyToDelete(c)}
+            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+            title="Delete Company"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
         </div>
       ),
     },
@@ -251,16 +274,25 @@ export const CompaniesListView: React.FC = () => {
         <span>
           Funded Loans: <strong className="text-slate-800 font-mono">{c.activeLoansCount || 0}</strong>
         </span>
-        <button
-          onClick={() => {
-            setSelectedCompanyId(c.id);
-            router.push(`/companies/${c.id}`);
-          }}
-          className="py-1 px-3 text-xs font-semibold text-[#701A35] bg-[#FAF5ED] hover:bg-[#F3ECE0] border border-[#E2D2B0] rounded-lg flex items-center gap-1 cursor-pointer transition-colors"
-        >
-          <Eye className="w-3.5 h-3.5" />
-          <span>View Details</span>
-        </button>
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={() => {
+              setSelectedCompanyId(c.id);
+              router.push(`/companies/${c.id}`);
+            }}
+            className="py-1 px-3 text-xs font-semibold text-[#701A35] bg-[#FAF5ED] hover:bg-[#F3ECE0] border border-[#E2D2B0] rounded-lg flex items-center gap-1 cursor-pointer transition-colors"
+          >
+            <Eye className="w-3.5 h-3.5" />
+            <span>View Details</span>
+          </button>
+          <button
+            onClick={() => setCompanyToDelete(c)}
+            className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg border border-slate-200 transition-colors cursor-pointer"
+            title="Delete Company"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -299,32 +331,29 @@ export const CompaniesListView: React.FC = () => {
           </div>
         </div>
 
-        {/* Action Buttons */}
-        <div className="flex items-center gap-2 flex-wrap">
-          <button
-            onClick={() => setIsAddModalOpen(true)}
-            className="px-4 py-2 text-xs font-bold text-slate-950 bg-gradient-to-r from-amber-400 via-amber-300 to-[#C5A059] hover:from-amber-300 hover:to-amber-400 active:scale-98 rounded-xl transition-all shadow-sm flex items-center gap-1.5 cursor-pointer shrink-0"
-          >
-            <Plus className="w-4 h-4 font-bold" />
-            <span>New Company</span>
-          </button>
-        </div>
+        <button
+          onClick={() => setIsAddModalOpen(true)}
+          className="btn-gold px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 shadow-sm shrink-0 cursor-pointer"
+        >
+          <Plus className="w-4 h-4" />
+          <span>New Company</span>
+        </button>
       </div>
 
-      {/* ─── 3 High-Impact KPI Badges ─── */}
+      {/* ─── Metric Cards ─── */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
-        <div className="bg-white p-4.5 rounded-2xl border-2 border-slate-200/90 shadow-sm hover:border-slate-300 transition-all">
-          <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider font-mono">
+        <div className="bg-gradient-to-br from-[#701A35]/10 via-[#FAF8F5] to-white p-4.5 rounded-2xl border-2 border-[#701A35]/30 shadow-sm hover:border-[#701A35]/50 transition-all">
+          <span className="text-[11px] font-bold text-[#701A35] uppercase tracking-wider font-mono">
             Total Capital Funded
           </span>
           <div className="mt-1.5">
             <MoneyDisplay
               amount={totalFundedSum}
               size="xl"
-              amountClassName="text-slate-950 font-black text-2xl block tracking-tight"
+              amountClassName="text-[#701A35] font-black text-2xl block tracking-tight"
             />
           </div>
-          <span className="text-[11px] text-slate-500 font-medium mt-1 block">
+          <span className="text-[11px] text-slate-600 font-medium mt-1 block">
             Sum across all partner company split allocations
           </span>
         </div>
@@ -339,7 +368,7 @@ export const CompaniesListView: React.FC = () => {
             </span>
           </div>
           <span className="text-[11px] text-emerald-800 font-bold mt-1 block truncate">
-            PASS, KARS, INFIN, INFINITY, INNOVATIVE, MARS, TRIVENI, GLOBAL, ALAGESH
+            PASS, KARS, INFIN, INFINITY, INNOVATIVE, MARS, TRIVENI, GLOB...
           </span>
         </div>
 
@@ -348,35 +377,43 @@ export const CompaniesListView: React.FC = () => {
             Outside Parties
           </span>
           <div className="mt-1.5">
-            <span className="text-2xl font-black font-mono text-purple-700 block tracking-tight">
+            <span className="text-2xl font-black font-mono text-purple-800 block tracking-tight">
               {outsideCount} Entities
             </span>
           </div>
           <span className="text-[11px] text-purple-800 font-bold mt-1 block truncate">
-            FINCUBE, CS ASSOCIATES, M CHINNIAH, TATVA, BHAVANA, THIRUCHENDURAON
+            FINCUBE, CS ASSOCIATES, M CHINNIAH, TATVA, BHAVANA, THIR...
           </span>
         </div>
       </div>
 
-      {/* ─── Filter Toggle Bar ─── */}
-      <div className="bg-white p-4.5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between gap-3.5 flex-wrap">
-        <div className="flex items-center gap-1.5 bg-slate-100/80 p-1 rounded-xl border border-slate-200/80 overflow-x-auto max-w-full">
-          {(['ALL', 'ASR', 'OUTSIDE'] as const).map((f) => (
-            <button
-              key={f}
-              onClick={() => setPartyFilter(f)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold btn-press transition-all duration-120 whitespace-nowrap cursor-pointer ${
-                partyFilter === f
-                  ? 'bg-[#701A35] text-white shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
-              }`}
-            >
-              {f === 'ALL' ? 'All Entities' : f === 'ASR' ? 'ASR Group Internal' : 'Outside Parties'}
-            </button>
-          ))}
+      {/* ─── Entity Filter Pills ─── */}
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex items-center gap-1.5 bg-slate-100/80 p-1 rounded-xl border border-slate-200">
+          {[
+            { id: 'ALL', label: 'All Entities' },
+            { id: 'ASR', label: 'ASR Group Internal' },
+            { id: 'OUTSIDE', label: 'Outside Parties' },
+          ].map((tab) => {
+            const isActive = partyFilter === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setPartyFilter(tab.id as any)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold btn-press transition-all cursor-pointer ${
+                  isActive
+                    ? 'bg-[#701A35] text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                {tab.label}
+              </button>
+            );
+          })}
         </div>
-        <span className="text-xs text-slate-500 font-medium">
-          Showing <strong className="text-slate-800 font-mono">{filteredCompanies.length}</strong> companies
+
+        <span className="text-xs text-slate-500 font-mono">
+          Showing <strong className="text-slate-800">{enrichedCompanies.length}</strong> companies
         </span>
       </div>
 
@@ -416,6 +453,20 @@ export const CompaniesListView: React.FC = () => {
       <AddCompanyModal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
+      />
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={!!companyToDelete}
+        onClose={() => setCompanyToDelete(null)}
+        onConfirm={handleDeleteConfirm}
+        title="Delete Funding Company"
+        itemName={companyToDelete?.name}
+        itemCode={companyToDelete?.shortCode}
+        message="Are you sure you want to delete this funding entity? This action will remove the company from the registry."
+        confirmText="Delete Company"
+        variant="danger"
+        isLoading={isDeleting}
       />
     </div>
   );

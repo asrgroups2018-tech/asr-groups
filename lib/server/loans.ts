@@ -6,7 +6,7 @@ import {
   Installment,
   HistoricalReceiptRow,
 } from '@/lib/types';
-import { getCompanies, createCompany } from './companies';
+import { getCompanies, createCompany, resolveCompany } from './companies';
 import { logAudit } from './administration';
 
 let schemaInitialized = false;
@@ -134,7 +134,7 @@ export async function getLoans(query?: string): Promise<Loan[]> {
 
     installments.forEach((ins) => {
       const st = String(ins.status || '').trim().toUpperCase();
-      if (['PASS', 'NEFT', 'CASH', 'PAID', 'CLS', 'CS', 'SETTLED', 'CLOSED', 'RET NEFT', 'RET PASS'].includes(st)) {
+      if (['CLEARED', 'NEFT', 'RTGS', 'CASH', 'PASS', 'PAID', 'CLS', 'CS', 'SETTLED', 'CLOSED', 'RET NEFT', 'RET PASS'].includes(st)) {
         totalCollected += ins.amountDue;
       } else if (!nextDueDate && ins.dueDate) {
         nextDueDate = ins.dueDate;
@@ -441,9 +441,10 @@ export async function updateLoanInstallment(
     args: [loanId],
   });
   const newTotal = allInstRes.rows.reduce((sum, r) => sum + Number(r.amount_due || 0), 0);
-  const hasOverdue = allInstRes.rows.some((r) => ['RET', 'RET NEFT', 'RET PASS', 'Overdue'].includes(String(r.status)));
-  const allPaid = allInstRes.rows.every((r) => ['PASS', 'NEFT', 'CASH', 'PAID', 'Paid'].includes(String(r.status)));
-  const parentStatus = hasOverdue ? 'Overdue' : allPaid ? 'Closed' : 'Active';
+  const allPaid = allInstRes.rows.every((r) =>
+    ['CLEARED', 'NEFT', 'RTGS', 'CASH', 'PASS', 'PAID', 'Paid', 'Closed', 'Settled'].includes(String(r.status || '').trim())
+  );
+  const parentStatus = allPaid ? 'Cleared' : 'Pending';
 
   await client.execute({
     sql: 'UPDATE loans SET total_amount = ?, status = ? WHERE id = ?',
@@ -487,6 +488,7 @@ export async function updateFullLoan(
       chqNo?: string | null;
       place?: string | null;
       depName?: string | null;
+      bank?: string | null;
       remarks?: string | null;
       companySplits: Record<string, number>;
       othersName?: string | null;
@@ -498,23 +500,22 @@ export async function updateFullLoan(
 
   const currentLoan = await getLoanById(loanId);
   if (!currentLoan) return null;
+  const canonicalLoanId = currentLoan.id;
 
-  const companies = await getCompanies();
-  const companyIdMap = new Map(companies.map((c) => [c.id, c]));
-  const companyCodeMap = new Map(companies.map((c) => [c.shortCode.toUpperCase(), c]));
+  let companies = await getCompanies();
 
   // Register any new company from othersName if found
   for (const inst of data.installments) {
     if (inst.othersName && inst.othersName.trim()) {
       const cleanName = inst.othersName.trim().toUpperCase();
-      if (!companyCodeMap.has(cleanName)) {
+      const existing = resolveCompany(cleanName, companies);
+      if (!existing) {
         const newComp = await createCompany({
           name: cleanName,
           shortCode: cleanName,
           isOutsideParty: true,
         });
-        companyIdMap.set(newComp.id, newComp);
-        companyCodeMap.set(newComp.shortCode.toUpperCase(), newComp);
+        companies.push(newComp);
       }
     }
   }
@@ -522,12 +523,38 @@ export async function updateFullLoan(
   const statements: any[] = [];
   const now = new Date().toISOString().slice(0, 10);
 
-  // 1. Calculate overall loan totals and company allocations
-  const newTotalAmount = data.installments.reduce((sum, inst) => sum + (Number(inst.amountDue) || 0), 0);
-  const hasOverdue = data.installments.some((r) => ['RET', 'RET NEFT', 'RET PASS', 'Overdue'].includes(String(r.status)));
-  const allPaid = data.installments.length > 0 && data.installments.every((r) => ['PASS', 'NEFT', 'CASH', 'PAID', 'Paid'].includes(String(r.status)));
-  const finalStatus = data.status || (hasOverdue ? 'Overdue' : allPaid ? 'Closed' : 'Active');
+  // 1. Calculate overall loan totals and company allocations with strict capital validation
+  if (!data.installments || data.installments.length === 0) {
+    throw new Error('At least one installment row is required.');
+  }
 
+  const capitalAmount = currentLoan.totalAmount;
+  const newTotalAmount = data.installments.reduce((sum, inst) => sum + (Number(inst.amountDue) || 0), 0);
+
+  // Validation: Loan amount is required and cannot exceed capital
+  for (const inst of data.installments) {
+    const amt = Number(inst.amountDue) || 0;
+    if (amt <= 0) {
+      throw new Error(`Loan amount is required. Installment #${inst.seqNo || ''} amount must be greater than 0.`);
+    }
+    if (amt > capitalAmount) {
+      throw new Error(`Amount cannot exceed capital amount (₹${capitalAmount.toLocaleString('en-IN')}).`);
+    }
+  }
+
+  // Validation: Total must stay equal to capital
+  if (Math.abs(newTotalAmount - capitalAmount) > 0.01) {
+    throw new Error(
+      `Total installment amounts (₹${newTotalAmount.toLocaleString('en-IN')}) must equal loan capital amount (₹${capitalAmount.toLocaleString('en-IN')}).`
+    );
+  }
+
+  const allPaid = data.installments.every((r) =>
+    ['CLEARED', 'NEFT', 'RTGS', 'CASH', 'PASS', 'PAID', 'CLOSED', 'SETTLED'].includes(String(r.status || '').toUpperCase())
+  );
+  const finalStatus = data.status || (allPaid ? 'Closed' : 'Active');
+
+  // 1. Update loan metadata
   statements.push({
     sql: `UPDATE loans SET
             code_no = ?,
@@ -548,7 +575,7 @@ export async function updateFullLoan(
       data.installments.length,
       data.frequency || currentLoan.frequency,
       finalStatus,
-      loanId,
+      canonicalLoanId,
     ],
   });
 
@@ -559,111 +586,121 @@ export async function updateFullLoan(
               name = COALESCE(?, name),
               place = COALESCE(?, place)
             WHERE id = (SELECT customer_id FROM loans WHERE id = ?)`,
-      args: [data.customerName || null, data.place || null, loanId],
+      args: [data.customerName || null, data.place || null, canonicalLoanId],
     });
   }
 
-  // 3. Recompute overall company splits across all installments
-  const companyTotals = new Map<string, number>();
-  for (const inst of data.installments) {
-    for (const [key, amt] of Object.entries(inst.companySplits || {})) {
-      const numAmt = Number(amt) || 0;
-      if (numAmt > 0) {
-        const comp = companyIdMap.get(key) || companyCodeMap.get(key.toUpperCase());
-        if (comp) {
-          companyTotals.set(comp.id, (companyTotals.get(comp.id) || 0) + numAmt);
-        }
-      }
-    }
-  }
+  // 3. Clear existing splits for this loan FIRST to prevent foreign key constraints
+  statements.push({
+    sql: 'DELETE FROM installment_company_splits WHERE installment_id IN (SELECT id FROM installments WHERE loan_id = ?)',
+    args: [canonicalLoanId],
+  });
 
   statements.push({
     sql: 'DELETE FROM loan_company_splits WHERE loan_id = ?',
-    args: [loanId],
+    args: [canonicalLoanId],
   });
 
-  for (const [compId, compAmt] of companyTotals.entries()) {
-    const splitPercent = newTotalAmount > 0 ? Number(((compAmt / newTotalAmount) * 100).toFixed(2)) : 0;
-    statements.push({
-      sql: `INSERT INTO loan_company_splits (id, loan_id, company_id, split_percent, split_amount)
-            VALUES (?, ?, ?, ?, ?)`,
-      args: [`LCS-${loanId}-${compId}`, loanId, compId, splitPercent, compAmt],
-    });
-  }
-
-  // 4. Handle Installments: delete splits for existing installments, delete removed installments, upsert current ones
-  const existingInstRes = await client.execute({
-    sql: 'SELECT id FROM installments WHERE loan_id = ?',
-    args: [loanId],
-  });
-  const existingInstIds = existingInstRes.rows.map((r) => String(r.id));
-
-  if (existingInstIds.length > 0) {
-    const placeholders = existingInstIds.map(() => '?').join(',');
-    statements.push({
-      sql: `DELETE FROM installment_company_splits WHERE installment_id IN (${placeholders})`,
-      args: existingInstIds,
-    });
-  }
-
-  // Keep track of valid installment IDs to keep
+  // 4. Determine IDs of installments that will be retained / inserted
   const updatedInstIds: string[] = [];
+  const instIdBySeq: string[] = [];
 
   for (let idx = 0; idx < data.installments.length; idx++) {
     const inst = data.installments[idx];
-    const instId = inst.id && inst.id.trim() ? inst.id.trim() : `INST-2026-${String(Date.now() + idx).slice(-6)}`;
+    const instId =
+      inst.id && inst.id.trim() && !inst.id.startsWith('INST-NEW')
+        ? inst.id.trim()
+        : `INST-${(data.startDate || currentLoan.startDate || '2026').slice(0, 4)}-${String(Date.now() + idx).slice(-6)}`;
     updatedInstIds.push(instId);
+    instIdBySeq.push(instId);
+  }
+
+  // 5. Delete installments that were removed from the loan SECOND
+  if (updatedInstIds.length > 0) {
+    const placeholders = updatedInstIds.map(() => '?').join(',');
+    statements.push({
+      sql: `DELETE FROM installments WHERE loan_id = ? AND id NOT IN (${placeholders})`,
+      args: [canonicalLoanId, ...updatedInstIds],
+    });
+  } else {
+    statements.push({
+      sql: 'DELETE FROM installments WHERE loan_id = ?',
+      args: [canonicalLoanId],
+    });
+  }
+
+  // 6. Insert / update retained and new installments using ON CONFLICT DO UPDATE
+  for (let idx = 0; idx < data.installments.length; idx++) {
+    const inst = data.installments[idx];
+    const instId = instIdBySeq[idx];
 
     statements.push({
-      sql: `INSERT OR REPLACE INTO installments (
-              id, loan_id, seq_no, due_date, amount_due, status, recd_date, chq_no, place, dep_name, remarks, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      sql: `INSERT INTO installments (
+              id, loan_id, seq_no, due_date, amount_due, status, recd_date, chq_no, place, dep_name, bank, remarks, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET
+              loan_id = excluded.loan_id,
+              seq_no = excluded.seq_no,
+              due_date = excluded.due_date,
+              amount_due = excluded.amount_due,
+              status = excluded.status,
+              recd_date = excluded.recd_date,
+              chq_no = excluded.chq_no,
+              place = excluded.place,
+              dep_name = excluded.dep_name,
+              bank = excluded.bank,
+              remarks = excluded.remarks`,
       args: [
         instId,
-        loanId,
+        canonicalLoanId,
         inst.seqNo || idx + 1,
-        inst.dueDate || '1-Jul-2026',
+        inst.dueDate || '2026-07-01',
         Number(inst.amountDue) || 0,
-        inst.status || 'PENDING',
+        inst.status || 'Pending',
         inst.recdDate || null,
         inst.chqNo || null,
         inst.place || data.place || currentLoan.place || 'CHENNAI',
         inst.depName || null,
+        inst.bank || null,
         inst.remarks || null,
         now,
       ],
     });
+  }
 
-    // Insert new installment company splits
+  // 7. Calculate and insert fresh loan_company_splits and installment_company_splits
+  const companyTotals = new Map<string, number>();
+
+  for (let idx = 0; idx < data.installments.length; idx++) {
+    const inst = data.installments[idx];
+    const instId = instIdBySeq[idx];
+
     for (const [key, amt] of Object.entries(inst.companySplits || {})) {
       const numAmt = Number(amt) || 0;
       if (numAmt > 0) {
-        const comp = companyIdMap.get(key) || companyCodeMap.get(key.toUpperCase());
+        const comp = resolveCompany(key, companies);
         if (comp) {
+          companyTotals.set(comp.id, (companyTotals.get(comp.id) || 0) + numAmt);
           statements.push({
             sql: `INSERT INTO installment_company_splits (id, installment_id, company_id, amount)
                   VALUES (?, ?, ?, ?)`,
-            args: [`ICS-${instId}-${comp.shortCode}`, instId, comp.id, numAmt],
+            args: [`ICS-${instId}-${comp.shortCode.replace(/[^A-Za-z0-9]/g, '')}`, instId, comp.id, numAmt],
           });
         }
       }
     }
   }
 
-  // Delete installments that were removed from the loan
-  if (updatedInstIds.length > 0) {
-    const placeholders = updatedInstIds.map(() => '?').join(',');
+  for (const [compId, compAmt] of companyTotals.entries()) {
+    const splitPercent = newTotalAmount > 0 ? Number(((compAmt / newTotalAmount) * 100).toFixed(2)) : 0;
     statements.push({
-      sql: `DELETE FROM installments WHERE loan_id = ? AND id NOT IN (${placeholders})`,
-      args: [loanId, ...updatedInstIds],
-    });
-  } else {
-    statements.push({
-      sql: 'DELETE FROM installments WHERE loan_id = ?',
-      args: [loanId],
+      sql: `INSERT INTO loan_company_splits (id, loan_id, company_id, split_percent, split_amount)
+            VALUES (?, ?, ?, ?, ?)`,
+      args: [`LCS-${canonicalLoanId}-${compId}`, canonicalLoanId, compId, splitPercent, compAmt],
     });
   }
 
+  // 8. Execute all statements in single atomic batch
   await client.batch(statements, 'write');
 
   await logAudit({
@@ -671,13 +708,13 @@ export async function updateFullLoan(
     actorName: 'System Administrator (Super User)',
     actorRoleId: 0,
     action: 'Updated Loan',
-    target: `Loan: ${data.customerName || currentLoan.customerName} (${loanId})`,
+    target: `Loan: ${data.customerName || currentLoan.customerName} (${canonicalLoanId})`,
     beforeVal: `Amount: ₹${currentLoan.totalAmount.toLocaleString('en-IN')}, EMIs: ${currentLoan.installmentCount}`,
     afterVal: `Amount: ₹${newTotalAmount.toLocaleString('en-IN')}, EMIs: ${data.installments.length}`,
     isSensitive: true,
   });
 
-  return await getLoanById(loanId);
+  return await getLoanById(canonicalLoanId);
 }
 
 export async function deleteLoan(id: string): Promise<boolean> {

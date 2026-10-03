@@ -10,13 +10,13 @@ export const Footer: React.FC = () => {
         
         {/* Left: Brand Logo & Title */}
         <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded overflow-hidden relative shrink-0">
+          <div className="w-5 h-5 rounded-full overflow-hidden relative shrink-0">
             <Image
               src="/groups-finalized.png"
               alt="ASR Groups Logo"
               fill
-              sizes="16px"
-              className="object-contain"
+              sizes="20px"
+              className="object-cover"
             />
           </div>
           <span className="font-bold text-slate-800 tracking-tight text-xs font-serif">

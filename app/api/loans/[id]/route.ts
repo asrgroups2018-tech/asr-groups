@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/server/db';
+import { getLoanById, updateFullLoan, deleteLoan } from '@/lib/server/loans';
 
 export async function GET(
   request: NextRequest,
@@ -7,7 +7,7 @@ export async function GET(
 ) {
   try {
     const { id } = await context.params;
-    const loan = await db.getLoanById(id);
+    const loan = await getLoanById(id);
     if (!loan) {
       return NextResponse.json({ error: 'Loan not found' }, { status: 404 });
     }
@@ -26,15 +26,15 @@ export async function PUT(
     const { id } = await context.params;
     const body = await request.json();
 
-    const updatedLoan = await db.updateFullLoan(id, body);
+    const updatedLoan = await updateFullLoan(id, body);
     if (!updatedLoan) {
       return NextResponse.json({ error: 'Loan not found or update failed' }, { status: 404 });
     }
 
     return NextResponse.json(updatedLoan);
   } catch (err: any) {
-    console.error('Error updating loan:', err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    console.error(`[API PUT /api/loans/[id]] Error updating loan:`, err);
+    return NextResponse.json({ error: err.message, stack: err.stack, message: err.message }, { status: 500 });
   }
 }
 
@@ -44,7 +44,7 @@ export async function DELETE(
 ) {
   try {
     const { id } = await context.params;
-    const success = await db.deleteLoan(id);
+    const success = await deleteLoan(id);
     return NextResponse.json({ success });
   } catch (err: any) {
     console.error('Error deleting loan:', err);

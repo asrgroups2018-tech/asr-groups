@@ -15,10 +15,11 @@ import {
   X,
   Edit3,
 } from 'lucide-react';
-import { StatusPill } from '@/components/ui/StatusPill';
-import { Installment } from '@/lib/types';
 import { EditLoanExcelModal } from './EditLoanExcelModal';
 import { MoneyDisplay } from '@/components/ui/MoneyDisplay';
+import { StatusPill } from '@/components/ui/StatusPill';
+import { ConfirmModal } from '@/components/ui/ConfirmModal';
+import { getDerivedLoanStatus } from './LoansListView';
 
 const COMPANY_COLORS = [
   '#701A35',
@@ -48,6 +49,7 @@ export const LoanDetailsView: React.FC = () => {
 
   const [activeTab, setActiveTab] = useState<'overview' | 'schedule'>('overview');
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
   const cleanSelectedId = String(selectedLoanId || '').trim().toLowerCase();
   const loan = loans.find(
@@ -151,16 +153,10 @@ export const LoanDetailsView: React.FC = () => {
             <span>Edit Loan & Schedule</span>
           </button>
 
-          <StatusPill status={loan.status} size="md" />
+          <StatusPill status={getDerivedLoanStatus(loan)} size="md" />
           <button
-            onClick={() => {
-              if (confirm(`Delete loan for ${loan.customerName}?`)) {
-                deleteLoan(loan.id);
-                setSelectedLoanId(null);
-                router.push('/loans');
-              }
-            }}
-            className="p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 transition-colors cursor-pointer shadow-2xs"
+            onClick={() => setIsDeleteModalOpen(true)}
+            className="p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 transition-colors cursor-pointer shadow-2xs btn-press"
             title="Delete Loan"
           >
             <Trash2 className="w-4 h-4" />
@@ -170,24 +166,24 @@ export const LoanDetailsView: React.FC = () => {
 
       {/* ─── Financial Summary Cards ─── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
-        <div className="bg-white p-4.5 rounded-2xl border-2 border-slate-200/90 shadow-sm hover:border-slate-300 transition-all">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 font-mono block">
+        <div className="bg-gradient-to-br from-[#701A35]/12 via-[#FAF8F5] to-white p-4.5 rounded-2xl border-2 border-[#701A35]/30 shadow-sm hover:border-[#701A35]/50 transition-all">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-[#701A35] font-mono block">
             Total Loan Amount
           </span>
           <div className="mt-1.5">
             <MoneyDisplay
               amount={loan.totalAmount}
               size="xl"
-              amountClassName="text-slate-950 font-black text-2xl block tracking-tight"
+              amountClassName="text-[#701A35] font-black text-2xl block tracking-tight"
             />
           </div>
-          <span className="text-[11px] text-slate-500 font-medium mt-1 block">
+          <span className="text-[11px] text-slate-600 font-medium mt-1 block">
             Gross repayable across {splits.length} partner companies
           </span>
         </div>
 
-        <div className="bg-gradient-to-br from-slate-50 via-white to-slate-100 p-4.5 rounded-2xl border-2 border-slate-300 shadow-sm hover:border-slate-400 transition-all">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600 font-mono block">
+        <div className="bg-gradient-to-br from-indigo-100/80 via-indigo-50/40 to-white p-4.5 rounded-2xl border-2 border-indigo-200/90 shadow-sm hover:border-indigo-300 transition-all">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-indigo-950 font-mono block">
             Paid / Disbursed
           </span>
           <div className="mt-1.5">
@@ -195,13 +191,13 @@ export const LoanDetailsView: React.FC = () => {
               <MoneyDisplay
                 amount={loan.disbursedAmount}
                 size="xl"
-                amountClassName="text-slate-900 font-black text-2xl block tracking-tight"
+                amountClassName="text-indigo-950 font-black text-2xl block tracking-tight"
               />
             ) : (
               <span className="text-2xl font-black text-slate-400 font-mono block tracking-tight">—</span>
             )}
           </div>
-          <span className="text-[11px] text-slate-500 font-medium mt-1 block">
+          <span className="text-[11px] text-indigo-800 font-medium mt-1 block">
             Net capital handed to borrower
           </span>
         </div>
@@ -484,6 +480,25 @@ export const LoanDetailsView: React.FC = () => {
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
         loan={loan}
+      />
+
+      {/* Custom Application Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={async () => {
+          await deleteLoan(loan.id);
+          setSelectedLoanId(null);
+          setIsDeleteModalOpen(false);
+          router.push('/loans');
+        }}
+        title="Delete Loan"
+        message={`Are you sure you want to delete loan ${loan.id} for ${loan.customerName}? All installments, company splits, and ledger history will be permanently deleted.`}
+        itemName={loan.customerName}
+        itemCode={loan.id}
+        itemAmount={loan.totalAmount}
+        confirmText="Delete Loan"
+        variant="danger"
       />
     </div>
   );

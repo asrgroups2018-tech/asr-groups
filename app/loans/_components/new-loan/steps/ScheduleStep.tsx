@@ -3,7 +3,8 @@
 import React from 'react';
 import { CheckCircle2, AlertCircle } from 'lucide-react';
 import { Company } from '@/lib/types';
-import { numberToWordsINR } from '@/lib/utils/formatCurrency';
+import { numberToIndianWords } from '@/lib/utils/numberToWords';
+import { DatePicker } from '@/components/ui/DatePicker';
 
 export interface ScheduleStepRow {
   seqNo: number;
@@ -52,12 +53,12 @@ export const ScheduleStep: React.FC<ScheduleStepProps> = ({
     <div className="space-y-4">
       <div className="flex items-center justify-between text-xs">
         <span className="text-slate-400">
-          Edit individual installment amounts or company cells below. Row company splits automatically recalculate when changing installment amount.
+          Edit individual installment amounts, due dates, or company cells below. Row company splits automatically recalculate when changing installment amount.
         </span>
         <button
           type="button"
           onClick={generateInitialSchedule}
-          className="px-2.5 py-1 bg-[#240F1D] border border-[#3D1A2C] text-[#C5A059] rounded hover:bg-white/5 text-[11px] font-mono"
+          className="px-2.5 py-1 bg-[#240F1D] border border-[#3D1A2C] text-[#C5A059] rounded hover:bg-white/5 text-[11px] font-mono cursor-pointer"
         >
           Reset Schedule
         </button>
@@ -69,13 +70,13 @@ export const ScheduleStep: React.FC<ScheduleStepProps> = ({
           <thead>
             <tr className="bg-[#240F1D] border-b border-[#3D1A2C] text-slate-300 font-mono">
               <th className="p-3 w-12 text-center">#</th>
-              <th className="p-3 w-32">Due Date</th>
+              <th className="p-3 w-36">Due Date</th>
               <th className="p-3 w-36 text-right font-bold text-[#EED8A1]">Installment (₹)</th>
               {selectedCompanies.map((c) => (
-                <th key={c.id} className="p-3 font-bold text-[#EED8A1] min-w-[150px] text-right">
+                <th key={c.id} className="p-3 font-bold text-[#EED8A1] min-w-[130px] text-right">
                   <div className="text-xs font-bold text-white leading-tight">{c.name}</div>
-                  <div className={`text-[10px] font-mono font-normal mt-0.5 ${c.isOutsideParty ? 'text-purple-300' : 'text-emerald-300'}`}>
-                    {c.shortCode} • {c.isOutsideParty ? 'Outside' : 'ASR'}
+                  <div className={`text-[10px] font-mono font-semibold mt-0.5 ${c.isOutsideParty ? 'text-purple-300' : 'text-emerald-300'}`}>
+                    {c.shortCode}
                   </div>
                 </th>
               ))}
@@ -89,21 +90,16 @@ export const ScheduleStep: React.FC<ScheduleStepProps> = ({
                 <tr key={row.seqNo} className="hover:bg-white/5 font-mono">
                   <td className="p-2.5 text-center text-slate-500 font-bold">{row.seqNo}</td>
                   <td className="p-2.5">
-                    <input
-                      type="date"
+                    <DatePicker
                       value={row.dueDate}
-                      onChange={(e) => {
-                        const newDate = e.target.value;
+                      onChange={(newDate) => {
                         setScheduleRows((prev) =>
                           prev.map((r) => (r.seqNo === row.seqNo ? { ...r, dueDate: newDate } : r))
                         );
                       }}
-                      onClick={(e) => {
-                        try {
-                          (e.target as any).showPicker?.();
-                        } catch {}
-                      }}
-                      className="bg-[#240F1D] border border-[#3D1A2C] rounded px-2.5 py-1 text-xs font-mono text-slate-200 cursor-pointer [appearance:textfield] [&::-webkit-inner-spin-button]:hidden [&::-webkit-calendar-picker-indicator]:cursor-pointer"
+                      theme="dark"
+                      size="sm"
+                      compact={true}
                     />
                   </td>
                   <td className="p-2.5">
@@ -192,8 +188,24 @@ export const ScheduleStep: React.FC<ScheduleStepProps> = ({
           )}
           <div>
             <span className="font-bold block flex items-center gap-1.5">
-              <span>Scheduled Total: <strong title={numberToWordsINR(scheduledTotal)} className="underline decoration-dotted cursor-help">₹{scheduledTotal.toLocaleString('en-IN')}</strong></span>
-              <span>vs Loan Total: <strong title={numberToWordsINR(totalAmount)} className="underline decoration-dotted cursor-help">₹{totalAmount.toLocaleString('en-IN')}</strong></span>
+              <span>
+                Scheduled Total:{' '}
+                <strong
+                  title={numberToIndianWords(scheduledTotal)}
+                  className="underline decoration-dotted cursor-help text-[#EED8A1]"
+                >
+                  ₹{scheduledTotal.toLocaleString('en-IN')}
+                </strong>
+              </span>
+              <span>
+                vs Loan Total:{' '}
+                <strong
+                  title={numberToIndianWords(totalAmount)}
+                  className="underline decoration-dotted cursor-help text-[#EED8A1]"
+                >
+                  ₹{totalAmount.toLocaleString('en-IN')}
+                </strong>
+              </span>
             </span>
             <span className="text-[11px] opacity-80 mt-0.5 block font-sans">
               {isStep4Valid

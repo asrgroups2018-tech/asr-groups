@@ -100,17 +100,17 @@ export const OverviewTab: React.FC = () => {
         {/* Card 1: Users */}
         <div
           onClick={() => setActiveAdminTab('users')}
-          className="bg-white p-4.5 rounded-2xl border-2 border-slate-200/90 shadow-sm hover:border-slate-300 transition-all cursor-pointer group flex flex-col justify-between"
+          className="bg-gradient-to-br from-[#701A35]/12 via-[#FAF8F5] to-white p-4.5 rounded-2xl border-2 border-[#701A35]/30 shadow-sm hover:border-[#701A35]/50 transition-all cursor-pointer group flex flex-col justify-between"
         >
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider font-mono">Accounts Directory</span>
-            <div className="w-8 h-8 rounded-xl bg-[#FAF8F5] border border-slate-200 flex items-center justify-center text-[#701A35] group-hover:bg-[#701A35] group-hover:text-white transition-colors">
+            <span className="text-[11px] font-bold text-[#701A35] uppercase tracking-wider font-mono">Accounts Directory</span>
+            <div className="w-8 h-8 rounded-xl bg-[#701A35]/10 border border-[#701A35]/30 flex items-center justify-center text-[#701A35] group-hover:bg-[#701A35] group-hover:text-white transition-colors">
               <Users className="w-4 h-4" />
             </div>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-2xl font-black text-slate-950 tabular-nums">{totalUsers}</span>
-            <span className="text-[11px] text-slate-500 font-medium">({staffCount} staff, {customerCount} cust)</span>
+            <span className="text-2xl font-black text-[#701A35] tabular-nums">{totalUsers}</span>
+            <span className="text-[11px] text-slate-600 font-medium">({staffCount} staff, {customerCount} cust)</span>
           </div>
         </div>
 

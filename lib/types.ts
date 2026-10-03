@@ -146,7 +146,10 @@ export type AuditActionType =
   | 'Edited Sheet Row'
   | 'Merged Loans'
   | 'Split Loan'
-  | 'Spreadsheet Import Committed';
+  | 'Spreadsheet Import Committed'
+  | 'Logged Cheque'
+  | 'Deposited Cheque'
+  | 'Deleted Cheque';
 
 export interface AuditLogEntry {
   id: string; // e.g. "AUD-9402"
@@ -261,12 +264,28 @@ export interface Customer {
   status?: 'Active' | 'Overdue' | 'Closed' | 'Pending';
 }
 
+// 1b. Cheques = Standalone Physical Customer Cheques for Bank Deposit
+export type ChequeStatus = 'Pending' | 'Deposited';
+
+export interface Cheque {
+  id: string; // e.g. "CHQ-2026-0001"
+  chequeNumber: string; // Cheque leaf number (e.g. "000194", "482019")
+  customerId?: string | null; // Optional reference to Customer
+  customerName: string; // Customer / Drawee Name
+  amount: number; // Cheque Amount (₹)
+  depositDate: string; // Expected Date to Deposit ("YYYY-MM-DD")
+  status: ChequeStatus; // 'Pending' | 'Deposited'
+  depositedAt?: string | null; // Actual Timestamp when deposited
+  createdAt: string; // Timestamp when logged
+}
+
 // 2. Company = Funding Entity (ASR own or Outside-party)
 export interface Company {
   id: string; // e.g. "COMP-PASS", "COMP-CS"
   name: string; // Full Company Name
   shortCode: string; // Short ticker code (PASS, ALA, IG, GS, MARS, TG, FIN, MM, CS, MC, TA (SS), TATVA, etc.)
   isOutsideParty: boolean; // false = ASR Group Own, true = Outside-Party
+  isActive?: boolean; // true = active for new loans, false = legacy/hidden
   totalFunded?: number; // Total ₹ capital provided across all loans
   totalCollected?: number; // Total ₹ collected back
   outstandingAmount?: number; // Total principal/interest still due to this company
@@ -295,17 +314,22 @@ export interface InstallmentCompanySplit {
   amount: number; // e.g. ₹1,00,000
 }
 
+export type LoanStatus = 'Active' | 'Closed' | 'Overdue' | 'Pending';
+export type AppStatus = 'Pending' | 'Cleared' | 'NEFT' | 'RTGS' | 'Cash';
+export type RepaymentFrequency = 'Monthly' | 'Weekly' | 'Bi-Weekly' | 'Custom';
+
 export type CollectionStatus =
+  | AppStatus
   | 'PASS'
-  | 'NEFT'
-  | 'CASH'
   | 'CLS'
-  | 'PENDING'
+  | 'CS'
+  | 'PAID'
+  | 'Paid'
   | 'RET'
   | 'RET NEFT'
   | 'RET PASS'
-  | 'CS'
-  | 'Paid'
+  | 'Active'
+  | 'Closed'
   | 'Overdue'
   | 'Rescheduled';
 
@@ -316,11 +340,12 @@ export interface Installment {
   seqNo: number; // 1, 2, 3...
   dueDate: string; // ISO "YYYY-MM-DD" or formatted date
   amountDue: number; // Total amount customer owes for this installment
-  status: CollectionStatus; // PASS, NEFT, CASH, CLS, PENDING, RET, etc.
+  status: CollectionStatus; // Allowed: Pending, Cleared, NEFT, RTGS, Cash
   recdDate?: string | null; // Date payment was actually received
   chqNo?: string; // Cheque number or reference text ("NEFT", "CS", "000194")
   place?: string; // Place (e.g. "CHENNAI", "CBE")
   depName?: string; // Deposit account company name
+  bank?: string; // Bank account / name
   remarks?: string;
   companySplits: Record<string, number>; // companyCode -> amount (e.g. { "PASS": 100000, "ALA": 100000 })
   createdAt: string;
@@ -340,8 +365,8 @@ export interface Loan {
   interestAmount?: number | null; // Upfront interest amount earned by ASR (e.g. ₹10,000)
   startDate: string;
   installmentCount: number; // e.g. 2, 4, 12
-  frequency: 'Weekly' | 'Monthly';
-  status: 'Active' | 'On Track' | 'Overdue' | 'Closed' | 'Draft';
+  frequency: RepaymentFrequency;
+  status: AppStatus | 'Active' | 'On Track' | 'Overdue' | 'Closed' | 'Draft';
   createdAt: string;
   splits: LoanCompanySplit[]; // Company contribution percentages & amounts
   installments: Installment[]; // List of all EMIs for this loan

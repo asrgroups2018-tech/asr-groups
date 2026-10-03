@@ -3,6 +3,9 @@
 import React from 'react';
 import { Calendar, IndianRupee } from 'lucide-react';
 import { MoneyDisplay } from '@/components/ui/MoneyDisplay';
+import { AmountInput } from '@/components/ui/AmountInput';
+import { DatePicker } from '@/components/ui/DatePicker';
+import { RepaymentFrequency } from '@/lib/types';
 
 interface TermsStepProps {
   totalAmount: number;
@@ -11,8 +14,8 @@ interface TermsStepProps {
   setDisbursedAmount: (amount: number) => void;
   interestAmount: number;
   setInterestAmount: (amount: number) => void;
-  frequency: 'Weekly' | 'Monthly';
-  setFrequency: (freq: 'Weekly' | 'Monthly') => void;
+  frequency: RepaymentFrequency;
+  setFrequency: (freq: RepaymentFrequency) => void;
   installmentCount: number;
   setInstallmentCount: (count: number) => void;
   startDate: string;
@@ -33,6 +36,13 @@ export const TermsStep: React.FC<TermsStepProps> = ({
   startDate,
   setStartDate,
 }) => {
+  const frequencyOptions: { label: string; value: RepaymentFrequency; subtitle?: string }[] = [
+    { label: 'Monthly', value: 'Monthly' },
+    { label: 'Weekly', value: 'Weekly' },
+    { label: 'Bi-Weekly', value: 'Bi-Weekly', subtitle: '14 days' },
+    { label: 'Custom', value: 'Custom', subtitle: 'Manual' },
+  ];
+
   return (
     <div className="space-y-6">
       {/* Total Loan Capital Amount */}
@@ -40,42 +50,26 @@ export const TermsStep: React.FC<TermsStepProps> = ({
         <label className="text-sm font-semibold text-[#EED8A1] flex items-center gap-2">
           <IndianRupee className="w-4 h-4 text-[#C5A059]" /> Total Loan Account Amount (₹)
         </label>
-        <div className="relative">
-          <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#C5A059] font-bold text-lg">₹</span>
-          <input
-            type="number"
-            min="1000"
-            step="1000"
-            value={totalAmount || ''}
-            onChange={(e) => {
-              const val = e.target.value === '' ? 0 : Number(e.target.value);
-              setTotalAmount(val);
-              if (interestAmount > 0 && val > interestAmount) {
-                setDisbursedAmount(val - interestAmount);
-              }
-            }}
-            className="w-full bg-[#160810] border border-[#3D1A2C] rounded-lg pl-8 pr-4 py-3 text-lg font-mono font-bold text-[#EED8A1] focus:outline-hidden focus:border-[#C5A059] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-            placeholder="Enter total gross loan amount to repay (e.g. 1000000)"
-          />
-        </div>
-        <div className="flex items-center gap-2 text-xs text-slate-400 flex-wrap">
-          <span>Common presets:</span>
-          {[500000, 1000000, 2000000, 5000000].map((val) => (
-            <button
-              key={val}
-              type="button"
-              onClick={() => {
-                setTotalAmount(val);
-                if (interestAmount > 0 && val > interestAmount) {
-                  setDisbursedAmount(val - interestAmount);
-                }
-              }}
-              className="px-2.5 py-1 bg-[#160810] hover:bg-[#C5A059]/20 hover:text-[#EED8A1] border border-[#3D1A2C] rounded-md font-mono text-[11px] cursor-pointer transition-colors"
-            >
-              ₹{(val / 100000).toFixed(0)} Lakh
-            </button>
-          ))}
-        </div>
+        <AmountInput
+          value={totalAmount}
+          onChange={(val) => {
+            setTotalAmount(val);
+            if (interestAmount > 0 && val > interestAmount) {
+              setDisbursedAmount(val - interestAmount);
+            }
+          }}
+          placeholder="e.g. 1,00,000"
+          theme="dark"
+          size="lg"
+          showWords={true}
+          presets={[500000, 1000000, 2000000, 5000000]}
+          onPresetClick={(val) => {
+            setTotalAmount(val);
+            if (interestAmount > 0 && val > interestAmount) {
+              setDisbursedAmount(val - interestAmount);
+            }
+          }}
+        />
       </div>
 
       {/* Disbursed Amount & Upfront Interest (ASR Earnings) */}
@@ -84,22 +78,19 @@ export const TermsStep: React.FC<TermsStepProps> = ({
           <label className="text-xs font-mono uppercase text-slate-300 font-bold block">
             Net Disbursed / Paid (₹)
           </label>
-          <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-mono text-sm">₹</span>
-            <input
-              type="number"
-              placeholder="e.g. 850000"
-              value={disbursedAmount || ''}
-              onChange={(e) => {
-                const val = e.target.value === '' ? 0 : Number(e.target.value);
-                setDisbursedAmount(val);
-                if (totalAmount > 0 && val <= totalAmount) {
-                  setInterestAmount(totalAmount - val);
-                }
-              }}
-              className="w-full bg-[#160810] border border-[#3D1A2C] rounded-lg pl-7 pr-3 py-2 text-sm font-mono font-bold text-slate-100 focus:outline-hidden focus:border-[#C5A059] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-            />
-          </div>
+          <AmountInput
+            value={disbursedAmount}
+            onChange={(val) => {
+              setDisbursedAmount(val);
+              if (totalAmount > 0 && val <= totalAmount) {
+                setInterestAmount(totalAmount - val);
+              }
+            }}
+            placeholder="e.g. 8,50,000"
+            theme="dark"
+            size="md"
+            showWords={true}
+          />
           <span className="text-[11px] text-slate-400 block">
             Principal given to the borrower
           </span>
@@ -114,22 +105,19 @@ export const TermsStep: React.FC<TermsStepProps> = ({
               ASR Profit
             </span>
           </div>
-          <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#C5A059] font-mono text-sm">₹</span>
-            <input
-              type="number"
-              placeholder="e.g. 150000"
-              value={interestAmount || ''}
-              onChange={(e) => {
-                const val = e.target.value === '' ? 0 : Number(e.target.value);
-                setInterestAmount(val);
-                if (totalAmount > 0 && val <= totalAmount) {
-                  setDisbursedAmount(totalAmount - val);
-                }
-              }}
-              className="w-full bg-[#160810] border border-[#3D1A2C] rounded-lg pl-7 pr-3 py-2 text-sm font-mono font-bold text-[#EED8A1] focus:outline-hidden focus:border-[#C5A059] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-            />
-          </div>
+          <AmountInput
+            value={interestAmount}
+            onChange={(val) => {
+              setInterestAmount(val);
+              if (totalAmount > 0 && val <= totalAmount) {
+                setDisbursedAmount(totalAmount - val);
+              }
+            }}
+            placeholder="e.g. 1,50,000"
+            theme="dark"
+            size="md"
+            showWords={true}
+          />
           <span className="text-[11px] text-amber-300/80 block">
             Deducted upfront upon loan creation
           </span>
@@ -142,40 +130,36 @@ export const TermsStep: React.FC<TermsStepProps> = ({
           <Calendar className="w-4 h-4 text-[#C5A059]" /> Repayment Terms
         </h3>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {/* Frequency */}
-          <div>
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-3.5 items-end">
+          {/* Frequency - 4 Options: Monthly, Weekly, Bi-Weekly, Custom */}
+          <div className="md:col-span-6">
             <label className="block text-xs font-mono uppercase text-slate-300 font-bold mb-1.5">
               Repayment Frequency
             </label>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => setFrequency('Monthly')}
-                className={`py-2 px-3 rounded-lg text-xs font-semibold cursor-pointer transition-all ${
-                  frequency === 'Monthly'
-                    ? 'bg-[#C5A059] text-slate-950 font-bold shadow-xs'
-                    : 'bg-[#160810] text-slate-300 border border-[#3D1A2C] hover:border-slate-500'
-                }`}
-              >
-                Monthly
-              </button>
-              <button
-                type="button"
-                onClick={() => setFrequency('Weekly')}
-                className={`py-2 px-3 rounded-lg text-xs font-semibold cursor-pointer transition-all ${
-                  frequency === 'Weekly'
-                    ? 'bg-[#C5A059] text-slate-950 font-bold shadow-xs'
-                    : 'bg-[#160810] text-slate-300 border border-[#3D1A2C] hover:border-slate-500'
-                }`}
-              >
-                Weekly
-              </button>
+            <div className="grid grid-cols-4 gap-1 p-1 bg-[#160810] rounded-xl border border-[#3D1A2C] h-10 items-center">
+              {frequencyOptions.map((opt) => {
+                const isSelected = frequency === opt.value;
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setFrequency(opt.value)}
+                    className={`h-8 px-1 text-xs font-semibold rounded-lg transition-all cursor-pointer flex items-center justify-center text-center whitespace-nowrap ${
+                      isSelected
+                        ? 'bg-[#C5A059] text-slate-950 font-bold shadow-xs'
+                        : 'text-slate-300 hover:text-white hover:bg-white/5'
+                    }`}
+                    title={opt.subtitle ? `${opt.label} (${opt.subtitle})` : opt.label}
+                  >
+                    <span>{opt.label}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
           {/* Number of Installments */}
-          <div>
+          <div className="md:col-span-2">
             <label className="block text-xs font-mono uppercase text-slate-300 font-bold mb-1.5">
               Number of EMIs
             </label>
@@ -194,41 +178,45 @@ export const TermsStep: React.FC<TermsStepProps> = ({
                   setInstallmentCount(isNaN(n) ? 0 : n);
                 }
               }}
-              className="w-full bg-[#160810] border border-[#3D1A2C] rounded-lg px-3.5 py-2 text-sm font-mono text-slate-100 focus:outline-hidden focus:border-[#C5A059] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              className="w-full h-10 bg-[#160810] border border-[#3D1A2C] rounded-xl px-3 text-sm font-mono text-slate-100 focus:outline-hidden focus:border-[#C5A059] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none text-center"
             />
           </div>
 
-          {/* Start Date */}
-          <div>
+          {/* Start Date / First Due Date with Custom DatePicker */}
+          <div className="md:col-span-4">
             <label className="block text-xs font-mono uppercase text-slate-300 font-bold mb-1.5">
               First Due Date
             </label>
-            <input
-              type="date"
+            <DatePicker
               value={startDate}
-              onChange={(e) => {
-                try {
-                  const [y, m, d] = e.target.value.split('-');
-                  if (y && m && d) {
-                    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-                    setStartDate(`${parseInt(d, 10)}-${months[parseInt(m, 10) - 1]}-${y}`);
-                  }
-                } catch {}
-              }}
-              className="w-full bg-[#160810] border border-[#3D1A2C] rounded-lg px-3.5 py-2 text-sm font-mono text-slate-100 focus:outline-hidden focus:border-[#C5A059] cursor-pointer [appearance:textfield] [&::-webkit-inner-spin-button]:hidden [&::-webkit-calendar-picker-indicator]:cursor-pointer"
+              onChange={(d) => setStartDate(d)}
+              theme="dark"
+              size="md"
+              placeholder="Select first due date..."
+              className="w-full"
+              buttonClassName="w-full h-10"
             />
           </div>
         </div>
 
-        <div className="p-4 bg-[#160810] rounded-lg border border-[#3D1A2C] flex items-center justify-between text-xs">
-          <span className="text-slate-400">Estimated Equal Installment:</span>
+        <div className="p-3.5 bg-[#160810] rounded-xl border border-[#3D1A2C] flex items-center justify-between text-xs">
+          <span className="text-slate-400 font-medium">Estimated Equal Installment:</span>
           <div className="text-right flex items-baseline gap-1.5">
             <MoneyDisplay
               amount={Math.round((totalAmount || 0) / (installmentCount || 1))}
               size="md"
-              amountClassName="text-[#EED8A1] font-bold"
+              amountClassName="text-[#EED8A1] font-bold text-base"
             />
-            <span className="text-xs font-normal text-slate-400">/ {frequency === 'Weekly' ? 'week' : 'month'}</span>
+            <span className="text-xs font-normal text-slate-400">
+              /{' '}
+              {frequency === 'Weekly'
+                ? 'week'
+                : frequency === 'Bi-Weekly'
+                ? '14 days'
+                : frequency === 'Custom'
+                ? 'installment'
+                : 'month'}
+            </span>
           </div>
         </div>
       </div>

@@ -201,18 +201,18 @@ export const BorrowerExposureReport: React.FC = () => {
     <div className="space-y-6">
       {/* 3 High-Impact KPI Badges matching Loans page */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
-        <div className="bg-white p-4.5 rounded-2xl border-2 border-slate-200/90 shadow-sm hover:border-slate-300 transition-all">
-          <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider font-mono">
+        <div className="bg-gradient-to-br from-[#701A35]/12 via-[#FAF8F5] to-white p-4.5 rounded-2xl border-2 border-[#701A35]/30 shadow-sm hover:border-[#701A35]/50 transition-all">
+          <span className="text-[11px] font-bold text-[#701A35] uppercase tracking-wider font-mono">
             Cumulative Borrowed Volume
           </span>
           <div className="mt-1.5">
             <MoneyDisplay
               amount={stats.totalBorrowed}
               size="xl"
-              amountClassName="text-slate-950 font-black text-2xl block tracking-tight"
+              amountClassName="text-[#701A35] font-black text-2xl block tracking-tight"
             />
           </div>
-          <span className="text-[11px] text-slate-500 font-medium mt-1 block">
+          <span className="text-[11px] text-slate-600 font-medium mt-1 block">
             Across <strong className="text-slate-800">{stats.borrowerCount}</strong> active borrowers
           </span>
         </div>

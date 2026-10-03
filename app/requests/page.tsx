@@ -73,16 +73,16 @@ export default function RequestsPage() {
 
         {/* 3 High-Impact KPI Badges matching Loans page */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
-          <div className="bg-white p-4.5 rounded-2xl border-2 border-slate-200/90 shadow-sm hover:border-slate-300 transition-all">
-            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider font-mono">
+          <div className="bg-gradient-to-br from-[#701A35]/12 via-[#FAF8F5] to-white p-4.5 rounded-2xl border-2 border-[#701A35]/30 shadow-sm hover:border-[#701A35]/50 transition-all">
+            <span className="text-[11px] font-bold text-[#701A35] uppercase tracking-wider font-mono">
               Total Requests Logged
             </span>
             <div className="mt-1.5">
-              <h3 className="text-slate-950 font-black text-2xl tracking-tight font-mono">
+              <h3 className="text-[#701A35] font-black text-2xl tracking-tight font-mono">
                 {approvalRequests.length}
               </h3>
             </div>
-            <span className="text-[11px] text-slate-500 font-medium mt-1 block">
+            <span className="text-[11px] text-slate-600 font-medium mt-1 block">
               Across all operational workflows
             </span>
           </div>

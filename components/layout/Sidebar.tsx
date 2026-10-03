@@ -13,6 +13,7 @@ import {
   FileBarChart,
   CalendarDays,
   CheckSquare,
+  Landmark,
   ChevronRight,
   X,
 } from 'lucide-react';
@@ -49,6 +50,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpenMobile, onCloseMobile })
     { id: 'loans', href: '/loans', label: 'Loans', icon: <CreditCard className="w-4 h-4" /> },
     { id: 'customers', href: '/customers', label: 'Customers', icon: <Users className="w-4 h-4" /> },
     { id: 'companies', href: '/companies', label: 'Companies', icon: <Building2 className="w-4 h-4" /> },
+    { id: 'cheques', href: '/cheques', label: 'Cheques', icon: <Landmark className="w-4 h-4" /> },
     { id: 'schedule', href: '/schedule', label: 'Schedule', icon: <CalendarDays className="w-4 h-4" /> },
     { id: 'reports', href: '/reports', label: 'Reports', icon: <FileBarChart className="w-4 h-4" /> },
     {
@@ -109,14 +111,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpenMobile, onCloseMobile })
         {/* Brand Header */}
         <div className="p-4 border-b border-[#2C1420] flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
-            {/* Logo container that cleanly fills the box edge-to-edge */}
-            <div className="w-12 h-12 rounded-xl border border-[#C5A059]/50 overflow-hidden relative shadow-md shrink-0">
+            {/* Circular Logo - no square container or background */}
+            <div className="w-11 h-11 rounded-full overflow-hidden relative shrink-0 shadow-xs">
               <Image
                 src="/groups-finalized.png"
                 alt="ASR Groups Logo"
                 fill
-                sizes="48px"
-                className="object-cover scale-105"
+                sizes="44px"
+                className="object-cover"
                 priority
               />
             </div>

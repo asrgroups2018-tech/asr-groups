@@ -7,10 +7,12 @@ export const SCHEMA_STATEMENTS = [
     name TEXT NOT NULL,
     place TEXT,
     phone TEXT,
+    is_active INTEGER NOT NULL DEFAULT 1,
     created_at TEXT NOT NULL
   );`,
   `CREATE INDEX IF NOT EXISTS idx_customers_name ON customers(name);`,
   `CREATE INDEX IF NOT EXISTS idx_customers_place ON customers(place);`,
+  `CREATE INDEX IF NOT EXISTS idx_customers_active ON customers(is_active);`,
 
   // 2. Companies (Funding & Deposit Entities)
   `CREATE TABLE IF NOT EXISTS companies (
@@ -18,6 +20,7 @@ export const SCHEMA_STATEMENTS = [
     name TEXT NOT NULL,
     short_code TEXT NOT NULL UNIQUE,
     is_outside_party INTEGER NOT NULL DEFAULT 0,
+    is_active INTEGER NOT NULL DEFAULT 1,
     created_at TEXT NOT NULL
   );`,
   `CREATE INDEX IF NOT EXISTS idx_companies_code ON companies(short_code);`,
@@ -34,7 +37,7 @@ export const SCHEMA_STATEMENTS = [
     start_date TEXT,
     installment_count INTEGER NOT NULL DEFAULT 1,
     frequency TEXT NOT NULL DEFAULT 'Monthly',
-    status TEXT NOT NULL DEFAULT 'Active',
+    status TEXT NOT NULL DEFAULT 'Pending',
     created_at TEXT NOT NULL
   );`,
   `CREATE INDEX IF NOT EXISTS idx_loans_customer ON loans(customer_id);`,
@@ -59,11 +62,12 @@ export const SCHEMA_STATEMENTS = [
     seq_no INTEGER NOT NULL,
     due_date TEXT,
     amount_due REAL NOT NULL,
-    status TEXT NOT NULL DEFAULT 'PENDING',
+    status TEXT NOT NULL DEFAULT 'Pending',
     recd_date TEXT,
     chq_no TEXT,
     place TEXT,
     dep_name TEXT,
+    bank TEXT,
     remarks TEXT,
     created_at TEXT NOT NULL
   );`,
@@ -190,6 +194,49 @@ export const SCHEMA_STATEMENTS = [
     backup_status TEXT DEFAULT 'Idle',
     updated_at TEXT NOT NULL
   );`,
+
+  // 14. Approval Requests
+  `CREATE TABLE IF NOT EXISTS approval_requests (
+    id TEXT PRIMARY KEY,
+    rule_id TEXT,
+    change_type TEXT NOT NULL,
+    title TEXT NOT NULL,
+    description TEXT,
+    entity_type TEXT NOT NULL,
+    entity_id TEXT NOT NULL,
+    requester_id TEXT NOT NULL,
+    requester_name TEXT NOT NULL,
+    requester_role_id INTEGER NOT NULL DEFAULT 2,
+    approver_role_id INTEGER NOT NULL DEFAULT 1,
+    amount REAL NOT NULL DEFAULT 0,
+    status TEXT NOT NULL DEFAULT 'Pending',
+    before_payload TEXT,
+    proposed_payload TEXT NOT NULL DEFAULT '{}',
+    reviewer_id TEXT,
+    reviewer_name TEXT,
+    reviewer_notes TEXT,
+    created_at TEXT NOT NULL,
+    resolved_at TEXT
+  );`,
+  `CREATE INDEX IF NOT EXISTS idx_approval_reqs_status ON approval_requests(status);`,
+  `CREATE INDEX IF NOT EXISTS idx_approval_reqs_change ON approval_requests(change_type);`,
+  `CREATE INDEX IF NOT EXISTS idx_approval_reqs_entity ON approval_requests(entity_id);`,
+
+  // 15. Cheques (Standalone Cheque Deposits)
+  `CREATE TABLE IF NOT EXISTS cheques (
+    id TEXT PRIMARY KEY,
+    cheque_number TEXT NOT NULL,
+    customer_id TEXT REFERENCES customers(id) ON DELETE SET NULL,
+    customer_name TEXT NOT NULL,
+    amount REAL NOT NULL DEFAULT 0,
+    deposit_date TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'Pending',
+    deposited_at TEXT,
+    created_at TEXT NOT NULL
+  );`,
+  `CREATE INDEX IF NOT EXISTS idx_cheques_status ON cheques(status);`,
+  `CREATE INDEX IF NOT EXISTS idx_cheques_deposit_date ON cheques(deposit_date);`,
+  `CREATE INDEX IF NOT EXISTS idx_cheques_customer_name ON cheques(customer_name);`,
 ];
 
 let schemaInitialization: Promise<void> | null = null;
@@ -200,13 +247,34 @@ let schemaInitialization: Promise<void> | null = null;
  */
 export function initializeSchema(client: Client): Promise<void> {
   if (!schemaInitialization) {
-    schemaInitialization = client
-      .batch(SCHEMA_STATEMENTS)
-      .then(() => undefined)
-      .catch((error) => {
-        schemaInitialization = null;
-        throw error;
-      });
+    schemaInitialization = (async () => {
+      // Run table column migrations for existing databases
+      try {
+        await client.execute('ALTER TABLE customers ADD COLUMN is_active INTEGER NOT NULL DEFAULT 1');
+      } catch {
+        // Column may already exist
+      }
+      try {
+        await client.execute('ALTER TABLE companies ADD COLUMN is_active INTEGER NOT NULL DEFAULT 1');
+      } catch {
+        // Column may already exist
+      }
+      try {
+        await client.execute('ALTER TABLE loans ADD COLUMN disbursed_amount REAL');
+      } catch {
+        // Column may already exist
+      }
+      try {
+        await client.execute('ALTER TABLE loans ADD COLUMN interest_amount REAL');
+      } catch {
+        // Column may already exist
+      }
+
+      await client.batch(SCHEMA_STATEMENTS);
+    })().catch((error) => {
+      schemaInitialization = null;
+      throw error;
+    });
   }
   return schemaInitialization;
 }

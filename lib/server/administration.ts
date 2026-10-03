@@ -570,7 +570,7 @@ export async function logAudit(
   const now = new Date().toISOString().slice(0, 16).replace('T', ' ');
 
   const newLog: AuditLogEntry = {
-    id: `AUD-${Math.floor(1000 + Math.random() * 9000)}`,
+    id: `AUD-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`,
     timestamp: now,
     actorId: entry.actorId || 'ADM-1001',
     actorName: entry.actorName || 'System Administrator',
