@@ -25,7 +25,7 @@ async function ensureDbInitialized() {
 // ==========================================
 // Loans (Client-level Aggregated & Expandable)
 // ==========================================
-export async function getLoans(query?: string): Promise<Loan[]> {
+export async function getLoans(query?: string, customerId?: string): Promise<Loan[]> {
   await ensureDbInitialized();
   const client = getTursoClient();
 
@@ -43,6 +43,10 @@ export async function getLoans(query?: string): Promise<Loan[]> {
     sql += ' AND (LOWER(c.name) LIKE ? OR LOWER(l.code_no) LIKE ? OR LOWER(l.id) LIKE ? OR LOWER(c.place) LIKE ?)';
     const q = `%${query.toLowerCase()}%`;
     args.push(q, q, q, q);
+  }
+  if (customerId) {
+    sql += ' AND l.customer_id = ?';
+    args.push(customerId);
   }
   sql += ' ORDER BY l.id ASC';
 
@@ -168,8 +172,8 @@ export async function getLoans(query?: string): Promise<Loan[]> {
   });
 }
 
-export async function getLoanById(id: string): Promise<Loan | null> {
-  const list = await getLoans();
+export async function getLoanById(id: string, customerId?: string): Promise<Loan | null> {
+  const list = await getLoans(undefined, customerId);
   const cleanId = String(id || '').trim().toLowerCase();
   return (
     list.find(
@@ -1277,11 +1281,11 @@ export async function getHistoricalReceipts(filters?: {
 // ==========================================
 // Dashboard Metrics & Signature Analytics
 // ==========================================
-export async function getDashboardStats() {
+export async function getDashboardStats(customerId?: string) {
   await ensureDbInitialized();
   const client = getTursoClient();
 
-  const loans = await getLoans();
+  const loans = await getLoans(undefined, customerId);
   // 1. Portfolio-level Metrics (All-time, never affected by time filter)
   const totalDisbursed = loans.reduce((sum, l) => sum + Number(l.totalAmount || 0), 0);
   const totalRecovered = loans.reduce((sum, l) => sum + Number(l.totalCollected || 0), 0);
@@ -1339,15 +1343,16 @@ export async function getDashboardStats() {
   const totalDelinquentAmount = bouncedAmount + unpaidPastDueAmount;
 
   // Company Funding Breakdown
-  const companies = await getCompanies();
-  const companyFunding = companies.map((c) => ({
-    name: c.name,
-    shortCode: c.shortCode,
-    isOutsideParty: c.isOutsideParty,
-    totalFunded: c.totalFunded || 0,
-    totalCollected: c.totalCollected || 0,
-    outstanding: c.outstandingAmount || 0,
-  })).filter((c) => (c.totalFunded || 0) > 0);
+  const companyFunding = customerId
+    ? []
+    : (await getCompanies()).map((c) => ({
+      name: c.name,
+      shortCode: c.shortCode,
+      isOutsideParty: c.isOutsideParty,
+      totalFunded: c.totalFunded || 0,
+      totalCollected: c.totalCollected || 0,
+      outstanding: c.outstandingAmount || 0,
+    })).filter((c) => (c.totalFunded || 0) > 0);
 
   // 7-day collection sparkline
   const sparkline = [45, 52, 58, 62, 70, 78, Math.round(collectionRate)];

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/server/db';
 import { toPublicUser } from '@/lib/server/administration';
+import { CUSTOMER_ROLE_ID } from '@/lib/types';
 
 // GET /api/admin/users
 export async function GET(request: NextRequest) {
@@ -26,7 +27,8 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    if (!body.name || !body.email || !body.assignedRoleIds?.length) {
+    const isCustomerAccount = Array.isArray(body.assignedRoleIds) && body.assignedRoleIds.length === 1 && Number(body.assignedRoleIds[0]) === CUSTOMER_ROLE_ID;
+    if (!body.name || (!body.email && (!isCustomerAccount || !body.customerId)) || !body.assignedRoleIds?.length) {
       return NextResponse.json(
         { success: false, error: 'Name, email, and at least one role are required.' },
         { status: 400 }
@@ -35,6 +37,7 @@ export async function POST(request: NextRequest) {
 
     const newUser = await db.createUser({
       ...body,
+      email: typeof body.email === 'string' && body.email.trim() ? body.email.trim().toLowerCase() : body.customerId,
       phone: typeof body.phone === 'string' ? body.phone : '',
       department: typeof body.department === 'string' ? body.department : '',
       designation: typeof body.designation === 'string' ? body.designation : '',

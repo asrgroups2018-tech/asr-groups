@@ -17,12 +17,12 @@ import { EditRoleModal } from './modals/EditRoleModal';
 type RoleFilter = 'all' | 'protected' | 'custom';
 
 export const RolesPermissionsTab: React.FC = () => {
-  const { roles, users, showToast, createRole, simulatedRoleId } = useApp();
+  const { roles, users, showToast, createRole, deleteRole, currentActor } = useApp();
   const [isCreateRoleModalOpen, setIsCreateRoleModalOpen] = useState(false);
   const [editingRole, setEditingRole] = useState<Role | null>(null);
   const [roleFilter, setRoleFilter] = useState<RoleFilter>('all');
 
-  const isSuperAdmin = simulatedRoleId === 0;
+  const isSuperAdmin = currentActor.assignedRoleIds.includes(0);
 
   const filteredRoles = useMemo(() => {
     if (roleFilter === 'protected') return roles.filter((role) => role.isSystemProtected);
@@ -178,7 +178,7 @@ export const RolesPermissionsTab: React.FC = () => {
             {/* Delete Action (only for non-protected roles by Super Admin) */}
             {!r.isSystemProtected && isSuperAdmin && (
               <button
-                onClick={() => showToast('Protected', 'Default system tiers cannot be deleted.', 'warning')}
+                onClick={() => void deleteRole(r.id)}
                 className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
                 title="Delete Role"
               >
@@ -189,7 +189,7 @@ export const RolesPermissionsTab: React.FC = () => {
         ),
       },
     ],
-    [users, isSuperAdmin]
+    [users, isSuperAdmin, deleteRole]
   );
 
   return (

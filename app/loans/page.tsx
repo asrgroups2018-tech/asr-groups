@@ -5,9 +5,10 @@ import { useApp } from '@/lib/store';
 import { AppShell } from '@/components/layout/AppShell';
 import { LoansListView } from './_components/LoansListView';
 import { LoanDetailsView } from './_components/LoanDetailsView';
+import { CustomerLoansView } from './_components/CustomerLoansView';
 
 export default function LoansPage() {
-  const { setActiveMainTab, selectedLoanId } = useApp();
+  const { setActiveMainTab, selectedLoanId, currentActor } = useApp();
 
   useEffect(() => {
     setActiveMainTab('loans');
@@ -16,7 +17,7 @@ export default function LoansPage() {
   return (
     <AppShell>
       <main className="p-4 sm:p-8 max-w-7xl w-full mx-auto space-y-6">
-        {selectedLoanId ? <LoanDetailsView /> : <LoansListView />}
+        {currentActor.isCustomer ? <CustomerLoansView /> : selectedLoanId ? <LoanDetailsView /> : <LoansListView />}
       </main>
     </AppShell>
   );

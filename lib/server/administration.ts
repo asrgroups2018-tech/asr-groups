@@ -10,10 +10,13 @@ import {
   SystemSettingsState,
   RoleId,
   UserSession,
+  CUSTOMER_ROLE_ID,
+  ModuleAction,
 } from '@/lib/types';
 import {
   INITIAL_PERMISSION_MATRIX,
   INITIAL_SYSTEM_SETTINGS,
+  MODULES_DATA,
 } from '@/lib/seedData';
 
 let schemaInitialized = false;
@@ -23,6 +26,15 @@ async function ensureDbInitialized() {
   const client = getTursoClient();
   try {
     await initializeSchema(client);
+    const tableInfo = await client.execute('PRAGMA table_info(users)');
+    const hasCustomerId = tableInfo.rows.some((row) => String(row.name) === 'customer_id');
+    if (!hasCustomerId) {
+      await client.execute('ALTER TABLE users ADD COLUMN customer_id TEXT REFERENCES customers(id)');
+    }
+    const customerTableInfo = await client.execute('PRAGMA table_info(customers)');
+    if (!customerTableInfo.rows.some((row) => String(row.name) === 'code_no')) {
+      await client.execute('ALTER TABLE customers ADD COLUMN code_no TEXT');
+    }
     schemaInitialized = true;
   } catch (err) {
     console.error('Turso Schema initialization warning:', err);
@@ -63,7 +75,8 @@ export function mapUserRow(row: any): User {
     twoFactorEnabled: Boolean(row.two_factor_enabled),
     suspendReason: row.suspend_reason ? String(row.suspend_reason) : undefined,
     sessions: parseJson<UserSession[]>(row.sessions, []),
-    isCustomer: Boolean(row.is_customer),
+    isCustomer: Boolean(row.is_customer) || Number(row.primary_role_id) === CUSTOMER_ROLE_ID,
+    customerId: row.customer_id ? String(row.customer_id) : undefined,
   };
 }
 
@@ -290,19 +303,31 @@ export async function createUser(user: Omit<User, 'id' | 'createdAt' | 'lastLogi
   const now = new Date().toISOString().slice(0, 16).replace('T', ' ');
 
   const isAdmin = user.assignedRoleIds.includes(0) || user.assignedRoleIds.includes(1);
+  const isCustomer = user.assignedRoleIds.length === 1 && user.assignedRoleIds[0] === CUSTOMER_ROLE_ID;
+  if (isCustomer) {
+    if (!user.customerId) throw new Error('Select an existing customer before creating a customer login.');
+    const customerResult = await client.execute({ sql: 'SELECT id, code_no FROM customers WHERE id = ? LIMIT 1', args: [user.customerId] });
+    if (customerResult.rows.length === 0) throw new Error('The selected customer no longer exists. Refresh the customer list and try again.');
+    const existingLogin = await client.execute({ sql: 'SELECT id FROM users WHERE customer_id = ? AND is_customer = 1 LIMIT 1', args: [user.customerId] });
+    if (existingLogin.rows.length > 0) throw new Error('This customer already has a login account.');
+  }
+  const customerAccountId = isCustomer
+    ? String((await client.execute({ sql: 'SELECT id, code_no FROM customers WHERE id = ? LIMIT 1', args: [user.customerId || ''] })).rows[0]?.code_no || user.customerId)
+    : undefined;
   const newUser: User = {
     ...user,
     id: newId,
     phone: user.phone || '',
     department: user.department || '',
     designation: user.designation || '',
-    username: isAdmin ? undefined : (user.username || user.name.toLowerCase().replace(/[^a-z0-9]/g, '.')),
+    username: isAdmin ? undefined : (customerAccountId || user.username || user.name.toLowerCase().replace(/[^a-z0-9]/g, '.')),
     loginMethod: isAdmin ? 'email' : 'username',
-    tempPassword: user.tempPassword || `ASR@${Math.floor(1000 + Math.random() * 9000)}`,
+    tempPassword: user.tempPassword || randomBytes(18).toString('base64url'),
     createdAt: now,
     lastLogin: 'Never',
     sessions: [],
-    isCustomer: user.assignedRoleIds.length === 1 && user.assignedRoleIds[0] === 6,
+    isCustomer,
+    customerId: isCustomer ? user.customerId : undefined,
   };
 
   const passwordToStore = newUser.tempPassword ? hashPasswordValue(newUser.tempPassword) : null;
@@ -312,8 +337,8 @@ export async function createUser(user: Omit<User, 'id' | 'createdAt' | 'lastLogi
       id, name, username, email, phone, temp_password, login_method, avatar, initials,
       assigned_role_ids, primary_role_id, status, department, designation, joined_date,
       created_at, last_login, address, emergency_contact, two_factor_enabled, suspend_reason,
-      sessions, is_customer
-    ) VALUES (?, ?, ?, ?, COALESCE(?, ''), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      sessions, is_customer, customer_id
+    ) VALUES (?, ?, ?, ?, COALESCE(?, ''), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     args: [
       newUser.id,
       newUser.name,
@@ -338,6 +363,7 @@ export async function createUser(user: Omit<User, 'id' | 'createdAt' | 'lastLogi
       newUser.suspendReason || null,
       JSON.stringify(newUser.sessions),
       newUser.isCustomer ? 1 : 0,
+      newUser.customerId || null,
     ],
   });
 
@@ -352,6 +378,12 @@ export async function updateUser(id: string, updates: Partial<User>): Promise<Us
   if (!existing) return null;
 
   const updated = { ...existing, ...updates };
+  const isCustomer = updated.assignedRoleIds.length === 1 && updated.assignedRoleIds[0] === CUSTOMER_ROLE_ID;
+  if (isCustomer) {
+    if (!updated.customerId) throw new Error('A customer login must remain mapped to an existing customer.');
+    const customerResult = await client.execute({ sql: 'SELECT id FROM customers WHERE id = ? LIMIT 1', args: [updated.customerId] });
+    if (customerResult.rows.length === 0) throw new Error('The selected customer no longer exists.');
+  }
   const passwordChanged = typeof updates.tempPassword === 'string'
     && updates.tempPassword.trim().length > 0
     && updates.tempPassword !== existing.tempPassword;
@@ -367,7 +399,7 @@ export async function updateUser(id: string, updates: Partial<User>): Promise<Us
       name = ?, username = ?, email = ?, phone = ?, temp_password = ?, login_method = ?,
       avatar = ?, initials = ?, assigned_role_ids = ?, primary_role_id = ?, status = ?,
       department = ?, designation = ?, joined_date = ?, address = ?, emergency_contact = ?,
-      two_factor_enabled = ?, suspend_reason = ?, sessions = ?, is_customer = ?
+      two_factor_enabled = ?, suspend_reason = ?, sessions = ?, is_customer = ?, customer_id = ?
     WHERE id = ?`,
     args: [
       updated.name,
@@ -389,7 +421,8 @@ export async function updateUser(id: string, updates: Partial<User>): Promise<Us
       updated.twoFactorEnabled ? 1 : 0,
       updated.suspendReason || null,
       JSON.stringify(updated.sessions),
-      updated.isCustomer ? 1 : 0,
+      isCustomer ? 1 : 0,
+      isCustomer ? updated.customerId || null : null,
       id,
     ],
   });
@@ -397,7 +430,7 @@ export async function updateUser(id: string, updates: Partial<User>): Promise<Us
   // A suspended account and an account with a changed password must not keep
   // previously issued sessions alive. Login will create a fresh session after
   // the account is active again.
-  if ((statusChanged && updated.status === 'Suspended') || passwordChanged) {
+  if ((statusChanged && (updated.status === 'Suspended' || updated.status === 'Inactive')) || passwordChanged) {
     await client.execute({
       sql: 'DELETE FROM auth_sessions WHERE user_id = ?',
       args: [id],
@@ -467,6 +500,19 @@ export async function updateRole(id: number, updates: Partial<Role>): Promise<Ro
   return updated;
 }
 
+export async function deleteRole(id: number): Promise<boolean> {
+  await ensureDbInitialized();
+  const client = getTursoClient();
+  const roleResult = await client.execute({ sql: 'SELECT is_system_protected FROM roles WHERE id = ? LIMIT 1', args: [id] });
+  if (roleResult.rows.length === 0) return false;
+  if (Boolean(roleResult.rows[0].is_system_protected) || id === 0) throw new Error('System roles cannot be deleted.');
+  const usersResult = await client.execute('SELECT assigned_role_ids FROM users');
+  const assigned = usersResult.rows.some((row) => parseJson<number[]>(row.assigned_role_ids, []).includes(id));
+  if (assigned) throw new Error('Remove this role from all assigned users before deleting it.');
+  const result = await client.execute({ sql: 'DELETE FROM roles WHERE id = ?', args: [id] });
+  return result.rowsAffected > 0;
+}
+
 // ==========================================
 // Permission Matrix
 // ==========================================
@@ -474,18 +520,69 @@ export async function getPermissionMatrix(): Promise<PermissionMatrixState> {
   await ensureDbInitialized();
   const client = getTursoClient();
   const res = await client.execute("SELECT data FROM permission_matrix WHERE id = 'current'");
-  if (res.rows.length === 0) return INITIAL_PERMISSION_MATRIX;
-  return parseJson<PermissionMatrixState>(res.rows[0].data, INITIAL_PERMISSION_MATRIX);
+  if (res.rows.length === 0) return normalizePermissionMatrix(INITIAL_PERMISSION_MATRIX);
+  const stored = parseJson<PermissionMatrixState>(res.rows[0].data, INITIAL_PERMISSION_MATRIX);
+  // Keep persisted permissions compatible when the page registry evolves.
+  // Existing installations used `agents` for this page before it became Companies.
+  if (!stored.companies && stored.agents) stored.companies = stored.agents;
+  return normalizePermissionMatrix({ ...INITIAL_PERMISSION_MATRIX, ...stored });
 }
 
 export async function updatePermissionMatrix(matrix: PermissionMatrixState): Promise<PermissionMatrixState> {
   await ensureDbInitialized();
   const client = getTursoClient();
+  const normalized = normalizePermissionMatrix(matrix);
   await client.execute({
     sql: 'INSERT OR REPLACE INTO permission_matrix (id, data, updated_at) VALUES (?, ?, ?)',
-    args: ['current', JSON.stringify(matrix), new Date().toISOString()],
+    args: ['current', JSON.stringify(normalized), new Date().toISOString()],
   });
-  return matrix;
+  return normalized;
+}
+
+function normalizePermissionMatrix(matrix: PermissionMatrixState): PermissionMatrixState {
+  return Object.fromEntries(MODULES_DATA.map((module) => {
+    const source = matrix[module.id] || {};
+    const initial = INITIAL_PERMISSION_MATRIX[module.id] || {};
+    const normalized: PermissionMatrixState[string] = JSON.parse(JSON.stringify(initial));
+
+    // Older saves used role -> action -> boolean. Import that shape first.
+    Object.entries(source).forEach(([key, value]) => {
+      if (!/^\d+$/.test(key) || !value || typeof value !== 'object') return;
+      // Legacy customer permissions outside the two portal defaults were
+      // generated by the old role-first matrix. Only explicit current-format
+      // action entries should grant those pages to a customer.
+      if (
+        Number(key) === CUSTOMER_ROLE_ID &&
+        !['dashboard', 'loans'].includes(module.id)
+      ) return;
+      Object.entries(value as Record<string, unknown>).forEach(([action, allowed]) => {
+        const typedAction = action as ModuleAction;
+        if (module.actions.includes(typedAction) && typeof allowed === 'boolean') {
+          normalized[typedAction] = {
+            ...(normalized[typedAction] || {}),
+            [Number(key)]: allowed,
+          };
+        }
+      });
+    });
+
+    // Current saves use action -> role -> boolean. This wins when both
+    // formats exist in a legacy record, so the latest checkbox choice wins.
+    module.actions.forEach((action) => {
+      const values = source[action];
+      if (!values || typeof values !== 'object') return;
+      normalized[action] = {
+        ...(normalized[action] || {}),
+        ...Object.fromEntries(
+          Object.entries(values as Record<string, unknown>)
+            .filter(([, allowed]) => typeof allowed === 'boolean')
+            .map(([roleId, allowed]) => [Number(roleId), allowed])
+        ),
+      };
+    });
+
+    return [module.id, normalized];
+  }));
 }
 
 // ==========================================

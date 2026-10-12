@@ -1,11 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/server/db';
+import { CUSTOMER_ROLE_ID } from '@/lib/types';
 
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const q = searchParams.get('q') || undefined;
-    const loans = await db.getLoans(q);
+    const user = await db.getUserBySessionToken(req.cookies.get('asr_session')?.value);
+    const isCustomer = user?.isCustomer || user?.primaryRoleId === CUSTOMER_ROLE_ID;
+    if (isCustomer && !user?.customerId) {
+      return NextResponse.json({ success: false, error: 'This customer account is not mapped to a customer record.' }, { status: 403 });
+    }
+    const loans = await db.getLoans(q, isCustomer ? user?.customerId : undefined);
     return NextResponse.json({ success: true, data: loans });
   } catch (err: any) {
     return NextResponse.json({ success: false, error: err.message }, { status: 500 });
@@ -14,6 +20,10 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    const user = await db.getUserBySessionToken(req.cookies.get('asr_session')?.value);
+    if (user?.isCustomer || user?.primaryRoleId === CUSTOMER_ROLE_ID) {
+      return NextResponse.json({ success: false, error: 'Customer accounts can only view their loan records.' }, { status: 403 });
+    }
     const body = await req.json();
 
     if (!body.customerId || !body.totalAmount || !body.installments?.length) {
@@ -43,6 +53,10 @@ export async function POST(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
+    const user = await db.getUserBySessionToken(req.cookies.get('asr_session')?.value);
+    if (user?.isCustomer || user?.primaryRoleId === CUSTOMER_ROLE_ID) {
+      return NextResponse.json({ success: false, error: 'Customer accounts cannot delete loan records.' }, { status: 403 });
+    }
     const { searchParams } = new URL(req.url);
     const id = searchParams.get('id');
     if (!id) {

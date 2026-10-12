@@ -136,6 +136,7 @@ export const TopNav: React.FC<TopNavProps> = ({ onOpenMobileMenu }) => {
   };
 
   const breadcrumbs = getBreadcrumbs();
+  const activeRoleName = roles.find((role) => role.id === simulatedRoleId)?.name || 'Role';
   return (
     <header className="bg-white border-b border-[#EBE7DF] sticky top-0 z-30 px-4 sm:px-6 py-3 flex items-center justify-between gap-4 relative">
       {/* Top Progress Loading Bar */}
@@ -202,7 +203,7 @@ export const TopNav: React.FC<TopNavProps> = ({ onOpenMobileMenu }) => {
                 {currentActor.name}
               </p>
               <p className="text-[10px] font-semibold text-slate-500 mt-0.5 flex items-center gap-1">
-                <span>{roles.find((r) => r.id === simulatedRoleId)?.name || 'Super Admin'}</span>
+                <span>{activeRoleName}</span>
                 <ChevronDown className="w-3 h-3 text-slate-400" />
               </p>
             </div>
@@ -215,7 +216,7 @@ export const TopNav: React.FC<TopNavProps> = ({ onOpenMobileMenu }) => {
                 <p className="text-xs font-bold text-slate-900">{currentActor.name}</p>
                 <p className="text-[11px] text-slate-500">{currentActor.email}</p>
                 <div className="mt-2 flex items-center gap-1.5 flex-wrap">
-                  <RoleBadge roleId={simulatedRoleId} size="xs" />
+                  <RoleBadge roleId={simulatedRoleId} roleName={activeRoleName} size="xs" />
                   <span className="text-[10px] text-slate-400 font-mono">
                     ID: {currentActor.id}
                   </span>

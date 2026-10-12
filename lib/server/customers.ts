@@ -10,6 +10,12 @@ export async function ensureDbInitialized() {
   const client = getTursoClient();
   try {
     await initializeSchema(client);
+    const tableInfo = await client.execute('PRAGMA table_info(customers)');
+    const hasCodeNo = tableInfo.rows.some((row) => String(row.name) === 'code_no');
+    if (!hasCodeNo) {
+      await client.execute('ALTER TABLE customers ADD COLUMN code_no TEXT');
+    }
+    await client.execute('CREATE INDEX IF NOT EXISTS idx_customers_code_no ON customers(code_no)');
     schemaInitialized = true;
   } catch (err) {
     console.error('Turso Schema initialization warning:', err);
@@ -23,9 +29,9 @@ export async function getCustomers(query?: string): Promise<Customer[]> {
   let sql = 'SELECT * FROM customers WHERE 1=1';
   const args: any[] = [];
   if (query) {
-    sql += ' AND (LOWER(name) LIKE ? OR LOWER(place) LIKE ? OR phone LIKE ? OR LOWER(id) LIKE ?)';
+    sql += ' AND (LOWER(name) LIKE ? OR LOWER(place) LIKE ? OR phone LIKE ? OR LOWER(id) LIKE ? OR LOWER(COALESCE(code_no, \'\')) LIKE ?)';
     const q = `%${query.toLowerCase()}%`;
-    args.push(q, q, q, q);
+    args.push(q, q, q, q, q);
   }
   sql += ' ORDER BY name ASC';
 
@@ -72,8 +78,9 @@ export async function getCustomers(query?: string): Promise<Customer[]> {
     return {
       id: cid,
       name: String(row.name),
-      place: String(row.place || 'CHENNAI'),
-      phone: String(row.phone || '+91 98400 00000'),
+      place: String(row.place || ''),
+      codeNo: row.code_no ? String(row.code_no) : cid,
+      phone: row.phone ? String(row.phone) : undefined,
       createdAt: String(row.created_at || new Date().toISOString().slice(0, 10)),
       totalBorrowed,
       totalRepaid,
@@ -111,9 +118,9 @@ export async function createCustomer(data: { name: string; place?: string; codeN
   const newCustomer: Customer = {
     id: newId,
     name: data.name.trim(),
-    place: data.place?.trim() || 'CHENNAI',
+    place: data.place?.trim() || '',
     codeNo: data.codeNo?.trim() || newId,
-    phone: data.phone?.trim() || '+91 98400 00000',
+    phone: data.phone?.trim() || undefined,
     createdAt: now,
     totalBorrowed: 0,
     totalRepaid: 0,
@@ -123,8 +130,8 @@ export async function createCustomer(data: { name: string; place?: string; codeN
   };
 
   await client.execute({
-    sql: 'INSERT INTO customers (id, name, place, phone, created_at) VALUES (?, ?, ?, ?, ?)',
-    args: [newCustomer.id, newCustomer.name, newCustomer.place, newCustomer.phone || null, newCustomer.createdAt],
+    sql: 'INSERT INTO customers (id, name, place, code_no, phone, created_at) VALUES (?, ?, ?, ?, ?, ?)',
+    args: [newCustomer.id, newCustomer.name, newCustomer.place, newCustomer.codeNo || null, newCustomer.phone || null, newCustomer.createdAt],
   });
 
   await logAudit({
@@ -151,8 +158,8 @@ export async function updateCustomer(id: string, updates: Partial<Customer>): Pr
   const updated = { ...existing, ...updates };
 
   await client.execute({
-    sql: 'UPDATE customers SET name = ?, place = ?, phone = ? WHERE id = ?',
-    args: [updated.name, updated.place, updated.phone || null, id],
+    sql: 'UPDATE customers SET name = ?, place = ?, code_no = ?, phone = ? WHERE id = ?',
+    args: [updated.name, updated.place, updated.codeNo || null, updated.phone || null, id],
   });
 
   return updated;

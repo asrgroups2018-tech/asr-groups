@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/server/db';
+import { CUSTOMER_ROLE_ID } from '@/lib/types';
 
 export async function GET(
   request: NextRequest,
@@ -7,7 +8,12 @@ export async function GET(
 ) {
   try {
     const { id } = await context.params;
-    const loan = await db.getLoanById(id);
+    const user = await db.getUserBySessionToken(request.cookies.get('asr_session')?.value);
+    const isCustomer = user?.isCustomer || user?.primaryRoleId === CUSTOMER_ROLE_ID;
+    if (isCustomer && !user?.customerId) {
+      return NextResponse.json({ error: 'This customer account is not mapped to a customer record.' }, { status: 403 });
+    }
+    const loan = await db.getLoanById(id, isCustomer ? user?.customerId : undefined);
     if (!loan) {
       return NextResponse.json({ error: 'Loan not found' }, { status: 404 });
     }
@@ -23,6 +29,10 @@ export async function PUT(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const user = await db.getUserBySessionToken(request.cookies.get('asr_session')?.value);
+    if (user?.isCustomer || user?.primaryRoleId === CUSTOMER_ROLE_ID) {
+      return NextResponse.json({ error: 'Customer accounts cannot edit loan records.' }, { status: 403 });
+    }
     const { id } = await context.params;
     const body = await request.json();
 
@@ -43,6 +53,10 @@ export async function DELETE(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const user = await db.getUserBySessionToken(request.cookies.get('asr_session')?.value);
+    if (user?.isCustomer || user?.primaryRoleId === CUSTOMER_ROLE_ID) {
+      return NextResponse.json({ error: 'Customer accounts cannot delete loan records.' }, { status: 403 });
+    }
     const { id } = await context.params;
     const success = await db.deleteLoan(id);
     return NextResponse.json({ success });

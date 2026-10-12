@@ -1,4 +1,8 @@
-export type RoleId = 0 | 1 | 2 | 3 | 4 | 5 | 6;
+// Role identifiers are database records. Keep the well-known role constants
+// typed as numbers, but allow custom roles to use the IDs assigned by the DB.
+export type RoleId = number;
+
+export const CUSTOMER_ROLE_ID: RoleId = 6;
 
 export interface Role {
   id: RoleId;
@@ -15,7 +19,7 @@ export interface Role {
   hierarchyLevel: number; // 0 = highest, 6 = lowest
 }
 
-export type UserStatus = 'Active' | 'Pending' | 'Suspended';
+export type UserStatus = 'Active' | 'Inactive' | 'Pending' | 'Suspended';
 
 export interface UserSession {
   id: string;
@@ -51,6 +55,7 @@ export interface User {
   suspendReason?: string;
   sessions: UserSession[];
   isCustomer: boolean;
+  customerId?: string;
 }
 
 export type ModuleAction = 'view' | 'create' | 'edit' | 'delete' | 'approve' | 'export';
@@ -96,6 +101,24 @@ export interface ApprovalRule {
 }
 
 export type ApprovalRequestStatus = 'Pending' | 'Approved' | 'Rejected' | 'Auto-Approved';
+
+export type AccessRequestStatus = 'Pending' | 'Approved' | 'Rejected';
+
+export interface AccessRequest {
+  id: string;
+  userId: string;
+  userName: string;
+  roleId: RoleId;
+  moduleId: string;
+  action: ModuleAction;
+  reason: string;
+  status: AccessRequestStatus;
+  reviewerId?: string;
+  reviewerName?: string;
+  reviewerNotes?: string;
+  createdAt: string;
+  resolvedAt?: string;
+}
 
 export type EntityType = 'loan' | 'customer' | 'company' | 'historical_receipt' | 'user';
 
@@ -232,6 +255,8 @@ export type AdminTab =
   | 'overview'
   | 'users'
   | 'roles'
+  | 'permissions'
+  | 'access-requests'
   | 'audit'
   | 'settings';
 

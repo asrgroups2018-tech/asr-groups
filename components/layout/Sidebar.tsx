@@ -10,6 +10,7 @@ import {
   CreditCard,
   Users,
   Building2,
+  Banknote,
   FileBarChart,
   CalendarDays,
   CheckSquare,
@@ -41,7 +42,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpenMobile, onCloseMobile })
     setSelectedCustomerId,
     setSelectedCompanyId,
     setSelectedLoanId,
-    permissionMatrix 
+    permissionMatrix,
+    currentActor,
   } = useApp();
 
   const allNavItems: NavItem[] = [
@@ -50,6 +52,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpenMobile, onCloseMobile })
     { id: 'customers', href: '/customers', label: 'Customers', icon: <Users className="w-4 h-4" /> },
     { id: 'companies', href: '/companies', label: 'Companies', icon: <Building2 className="w-4 h-4" /> },
     { id: 'schedule', href: '/schedule', label: 'Schedule', icon: <CalendarDays className="w-4 h-4" /> },
+    { id: 'collections', href: '/collections', label: 'Collections', icon: <Banknote className="w-4 h-4" /> },
     { id: 'reports', href: '/reports', label: 'Reports', icon: <FileBarChart className="w-4 h-4" /> },
     {
       id: 'requests',
@@ -65,19 +68,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpenMobile, onCloseMobile })
     },
   ];
 
-  // Dynamic filter: Role 0 sees all. Other roles see only modules where 'view' permission is allowed!
+  // Every account, including customers, follows the persisted view permission
+  // for its effective role. The database seed provides the default customer
+  // pages; any additional saved page access is picked up here automatically.
   const navItems = allNavItems.filter((item) => {
     if (simulatedRoleId === 0) return true; // Super admin sees all
-    if (permissionMatrix && permissionMatrix[item.id]?.view !== undefined) {
-      return !!permissionMatrix[item.id]?.view?.[simulatedRoleId];
-    }
-    // Fallback: Administration is restricted to roles <= 1
-    if (item.id === 'administration') return simulatedRoleId <= 1;
-    // Customer sees only customer portal pages
-    if (simulatedRoleId === 6) {
-      return ['dashboard', 'loans', 'requests'].includes(item.id);
-    }
-    return true;
+    return Boolean(permissionMatrix?.[item.id]?.view?.[simulatedRoleId]);
   });
 
   const handleNavClick = (tabId: string, href: string) => {

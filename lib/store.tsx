@@ -22,6 +22,8 @@ import {
   Installment,
   HistoricalReceiptRow,
   ApprovalRequest,
+  ModuleAction,
+  CUSTOMER_ROLE_ID,
 } from './types';
 import {
   ROLES_DATA,
@@ -104,6 +106,8 @@ interface AppContextType {
   simulatedRoleId: RoleId;
   setSimulatedRoleId: (roleId: RoleId) => void;
   currentActor: User;
+  authReady: boolean;
+  isAuthenticated: boolean;
 
   // Data State
   users: User[];
@@ -146,6 +150,7 @@ interface AppContextType {
   updatePermissionMatrix: (newMatrix: PermissionMatrixState) => Promise<void>;
   updateRole: (roleId: number, data: Partial<Role>) => Promise<boolean>;
   createRole: (roleData: Partial<Role>) => Promise<Role | null>;
+  deleteRole: (roleId: number) => Promise<boolean>;
   addApprovalRule: (rule: Omit<ApprovalRule, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
   updateApprovalRule: (id: string, updates: Partial<ApprovalRule>) => Promise<void>;
   deleteApprovalRule: (id: string) => Promise<void>;
@@ -285,17 +290,45 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const hasLoadedDataRef = React.useRef(false);
   const isFetchingAuthRef = React.useRef(false);
 
+  const resetSessionData = useCallback(() => {
+    // These collections are session-scoped. Never allow records loaded for a
+    // previous administrator or customer to remain visible during a new login.
+    setUsers([]);
+    setRoles([]);
+    setApprovalRules([]);
+    setAuditLogs([]);
+    setSystemSettings(INITIAL_SYSTEM_SETTINGS);
+    setCustomers([]);
+    setCompanies([]);
+    setLoans([]);
+    setReceipts([]);
+    setApprovalRequests([]);
+    setDashboardData(null);
+    setIsLoading(true);
+    hasLoadedDataRef.current = false;
+  }, []);
+
   useEffect(() => {
     if (pathname === '/login') {
+      resetSessionData();
       setAuthenticatedUser(null);
+      // Protected layouts are not mounted on the login page. Keep authReady
+      // false so the next protected route must complete a fresh session check
+      // before AppShell can redirect or load application data.
+      setAuthReady(false);
+      return;
+    }
+
+    if (authenticatedUser) {
       setAuthReady(true);
       return;
     }
 
-    if (authenticatedUser || isFetchingAuthRef.current) {
-      setAuthReady(true);
-      return;
-    }
+    // A successful login changes the route before the session lookup below
+    // completes. Keep the shell in its loading state during that window so
+    // it cannot redirect a valid session back to the login page.
+    setAuthReady(false);
+    if (isFetchingAuthRef.current) return;
 
     isFetchingAuthRef.current = true;
     let cancelled = false;
@@ -303,11 +336,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       .then((response) => (response.ok ? response.json() : { success: false }))
       .then((json) => {
         if (cancelled) return;
-        setAuthenticatedUser(json.success ? json.data : null);
+        if (json.success) {
+          const sessionUser = json.data as User;
+          resetSessionData();
+          setAuthenticatedUser(sessionUser);
+          if (json.permissionMatrix) setPermissionMatrix(json.permissionMatrix);
+          if (json.roles) setRoles(json.roles);
+        } else {
+          resetSessionData();
+          setAuthenticatedUser(null);
+        }
         setAuthReady(true);
       })
       .catch(() => {
         if (!cancelled) {
+          resetSessionData();
           setAuthenticatedUser(null);
           setAuthReady(true);
         }
@@ -319,7 +362,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return () => {
       cancelled = true;
     };
-  }, [pathname, authenticatedUser]);
+  }, [pathname, authenticatedUser, resetSessionData]);
+
+  const hasModulePermission = useCallback(
+    (moduleId: string, action: ModuleAction = 'view') => {
+      if (!authenticatedUser) return false;
+      if (authenticatedUser.assignedRoleIds.includes(0)) return true;
+      return authenticatedUser.assignedRoleIds.some(
+        (roleId) => permissionMatrix[moduleId]?.[action]?.[roleId] === true
+      );
+    },
+    [authenticatedUser, permissionMatrix]
+  );
 
   // Toast Helpers
   const showToast = useCallback(
@@ -336,6 +390,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Fetch Receipts for Excel Grid
   const fetchReceipts = useCallback(async (category?: 'ALL' | 'ASR_ONLY' | 'OUTSIDE_ONLY', query?: string) => {
+    if (!authenticatedUser || authenticatedUser.isCustomer || !hasModulePermission('loans')) {
+      setReceipts([]);
+      return;
+    }
+
     try {
       let url = '/api/receipts';
       const params = new URLSearchParams();
@@ -352,13 +411,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } catch (err) {
       console.error('Failed to fetch historical receipts:', err);
     }
-  }, []);
+  }, [authenticatedUser, hasModulePermission]);
 
   // Fetch all primary datasets
   const refreshAll = useCallback(async (showLoadingState = false) => {
+    if (!authenticatedUser) {
+      setIsLoading(false);
+      return;
+    }
+
     if (showLoadingState || !hasLoadedDataRef.current) {
       setIsLoading(true);
     }
+
+    const isCustomerSession = authenticatedUser.isCustomer || authenticatedUser.primaryRoleId === CUSTOMER_ROLE_ID;
+    const isSuperAdminSession = authenticatedUser.assignedRoleIds.includes(0);
+    const canView = (moduleId: string) =>
+      isSuperAdminSession || (isCustomerSession && moduleId === 'admin' ? false : hasModulePermission(moduleId));
+    const requestJson = (url: string, allowed: boolean) =>
+      allowed
+        ? fetch(url).then((response) => (response.ok ? response.json() : { success: false })).catch(() => ({ success: false }))
+        : Promise.resolve({ success: false });
+
     try {
       const [
         usersRes,
@@ -373,17 +447,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         dashRes,
         reqsRes,
       ] = await Promise.all([
-        fetch('/api/admin/users').then((r) => r.json()).catch(() => ({ success: false })),
-        fetch('/api/admin/roles').then((r) => r.json()).catch(() => ({ success: false })),
-        fetch('/api/admin/permissions').then((r) => r.json()).catch(() => ({ success: false })),
-        fetch('/api/admin/rules').then((r) => r.json()).catch(() => ({ success: false })),
-        fetch('/api/admin/audit').then((r) => r.json()).catch(() => ({ success: false })),
-        fetch('/api/admin/settings').then((r) => r.json()).catch(() => ({ success: false })),
-        fetch('/api/customers').then((r) => r.json()).catch(() => ({ success: false })),
-        fetch('/api/companies').then((r) => r.json()).catch(() => ({ success: false })),
-        fetch('/api/loans').then((r) => r.json()).catch(() => ({ success: false })),
-        fetch('/api/dashboard').then((r) => r.json()).catch(() => ({ success: false })),
-        fetch('/api/requests').then((r) => r.json()).catch(() => ({ success: false })),
+        requestJson('/api/admin/users', isSuperAdminSession),
+        requestJson('/api/admin/roles', isSuperAdminSession),
+        requestJson('/api/admin/permissions', isSuperAdminSession),
+        requestJson('/api/admin/rules', isSuperAdminSession),
+        requestJson('/api/admin/audit', isSuperAdminSession),
+        requestJson('/api/admin/settings', isSuperAdminSession),
+        requestJson('/api/customers', canView('customers')),
+        requestJson('/api/companies', canView('companies')),
+        requestJson('/api/loans', canView('loans')),
+        requestJson('/api/dashboard', canView('dashboard')),
+        requestJson('/api/requests', canView('requests')),
       ]);
 
       if (usersRes.success && usersRes.data) setUsers(usersRes.data);
@@ -406,10 +480,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } finally {
       setIsLoading(false);
     }
-  }, [fetchReceipts]);
+  }, [authenticatedUser, fetchReceipts, hasModulePermission]);
 
   useEffect(() => {
-    if (!authReady || pathname === '/login') {
+    if (!authReady || !authenticatedUser || pathname === '/login') {
       setIsLoading(false);
       return;
     }
@@ -417,7 +491,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!hasLoadedDataRef.current) {
       refreshAll(true);
     }
-  }, [authReady, pathname, refreshAll]);
+  }, [authReady, authenticatedUser, pathname, refreshAll]);
 
   // Current Actor
   const effectiveRoleId = authenticatedUser && !authenticatedUser.assignedRoleIds.includes(simulatedRoleId)
@@ -426,6 +500,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const currentActor = authenticatedUser || users[0] || ROOT_ADMIN_FALLBACK;
 
   const fetchApprovalRequests = useCallback(async (status?: string, changeType?: string, query?: string) => {
+    if (!authenticatedUser || !hasModulePermission('requests')) {
+      setApprovalRequests([]);
+      return;
+    }
+
     try {
       const params = new URLSearchParams();
       if (status && status !== 'ALL') params.set('status', status);
@@ -437,7 +516,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } catch (err) {
       console.error('Failed to fetch approval requests:', err);
     }
-  }, []);
+  }, [authenticatedUser, hasModulePermission]);
 
   const createApprovalRequest = async (data: any): Promise<ApprovalRequest | null> => {
     try {
@@ -943,8 +1022,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (json.success) {
         showToast('Permissions Saved', 'Access matrix updated.', 'success');
         refreshAll(false);
+      } else {
+        showToast('Permission save failed', json.error || 'The database did not accept the access changes.', 'error');
+        refreshAll(false);
       }
     } catch {
+      showToast('Permission save failed', 'The access changes could not be saved. Try again.', 'error');
       refreshAll(false);
     }
   };
@@ -990,6 +1073,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return null;
     } catch {
       return null;
+    }
+  };
+
+  const deleteRole = async (roleId: number): Promise<boolean> => {
+    try {
+      const res = await fetch(`/api/admin/roles?id=${roleId}`, { method: 'DELETE' });
+      const json = await res.json();
+      if (json.success) {
+        setRoles((prev) => prev.filter((role) => role.id !== roleId));
+        showToast('Role deleted', 'The unused custom role was removed.', 'info');
+        return true;
+      }
+      showToast('Role not deleted', json.error || 'The role is still assigned to users.', 'warning');
+      return false;
+    } catch {
+      return false;
     }
   };
 
@@ -1135,6 +1234,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       simulatedRoleId: effectiveRoleId,
       setSimulatedRoleId,
       currentActor,
+      authReady,
+      isAuthenticated: Boolean(authenticatedUser),
 
       users,
       roles,
@@ -1173,6 +1274,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       updatePermissionMatrix,
       updateRole,
       createRole,
+      deleteRole,
       addApprovalRule,
       updateApprovalRule,
       deleteApprovalRule,
@@ -1204,6 +1306,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       userDetailsTab,
       effectiveRoleId,
       currentActor,
+      authReady,
+      authenticatedUser,
       users,
       roles,
       permissionMatrix,

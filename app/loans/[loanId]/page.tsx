@@ -4,9 +4,10 @@ import React, { useEffect, use } from 'react';
 import { useApp } from '@/lib/store';
 import { AppShell } from '@/components/layout/AppShell';
 import { LoanDetailsView } from '@/app/loans/_components/LoanDetailsView';
+import { CustomerLoansView } from '@/app/loans/_components/CustomerLoansView';
 
 function LoanDetailContent({ loanId }: { loanId: string }) {
-  const { setActiveMainTab, setSelectedLoanId } = useApp();
+  const { setActiveMainTab, setSelectedLoanId, currentActor } = useApp();
 
   useEffect(() => {
     setActiveMainTab('loans');
@@ -17,7 +18,7 @@ function LoanDetailContent({ loanId }: { loanId: string }) {
 
   return (
     <main className="p-4 sm:p-8 max-w-7xl w-full mx-auto space-y-6">
-      <LoanDetailsView />
+      {currentActor.isCustomer ? <CustomerLoansView loanId={loanId} /> : <LoanDetailsView />}
     </main>
   );
 }

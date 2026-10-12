@@ -5,11 +5,13 @@ import * as customerOps from './customers';
 import * as companyOps from './companies';
 import * as loanOps from './loans';
 import * as adminOps from './administration';
+import * as accessRequestOps from './accessRequests';
 
 export * from './customers';
 export * from './companies';
 export * from './loans';
 export * from './administration';
+export * from './accessRequests';
 
 /**
  * Unified `db` facade object preserving full backward compatibility.
@@ -53,6 +55,7 @@ export const db = {
   getRoles: adminOps.getRoles,
   createRole: adminOps.createRole,
   updateRole: adminOps.updateRole,
+  deleteRole: adminOps.deleteRole,
 
   // Permission Matrix
   getPermissionMatrix: adminOps.getPermissionMatrix,
@@ -72,4 +75,9 @@ export const db = {
   getSystemSettings: adminOps.getSystemSettings,
   updateSystemSettings: adminOps.updateSystemSettings,
   triggerBackup: adminOps.triggerBackup,
+
+  // Access requests
+  getAccessRequests: accessRequestOps.getAccessRequests,
+  createAccessRequest: accessRequestOps.createAccessRequest,
+  reviewAccessRequest: accessRequestOps.reviewAccessRequest,
 };

@@ -62,3 +62,14 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const id = Number(new URL(request.url).searchParams.get('id'));
+    if (!Number.isInteger(id)) return NextResponse.json({ success: false, error: 'Role id is required.' }, { status: 400 });
+    const deleted = await db.deleteRole(id);
+    return NextResponse.json({ success: deleted }, { status: deleted ? 200 : 404 });
+  } catch (error: any) {
+    return NextResponse.json({ success: false, error: error.message }, { status: 409 });
+  }
+}

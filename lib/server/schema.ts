@@ -6,11 +6,30 @@ export const SCHEMA_STATEMENTS = [
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
     place TEXT,
+    code_no TEXT,
     phone TEXT,
     created_at TEXT NOT NULL
   );`,
   `CREATE INDEX IF NOT EXISTS idx_customers_name ON customers(name);`,
   `CREATE INDEX IF NOT EXISTS idx_customers_place ON customers(place);`,
+
+  `CREATE TABLE IF NOT EXISTS access_requests (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id),
+    user_name TEXT NOT NULL,
+    role_id INTEGER NOT NULL,
+    module_id TEXT NOT NULL,
+    action TEXT NOT NULL,
+    reason TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'Pending',
+    reviewer_id TEXT,
+    reviewer_name TEXT,
+    reviewer_notes TEXT,
+    created_at TEXT NOT NULL,
+    resolved_at TEXT
+  );`,
+  `CREATE INDEX IF NOT EXISTS idx_access_requests_status ON access_requests(status);`,
+  `CREATE INDEX IF NOT EXISTS idx_access_requests_user ON access_requests(user_id);`,
 
   // 2. Companies (Funding & Deposit Entities)
   `CREATE TABLE IF NOT EXISTS companies (
@@ -121,7 +140,8 @@ export const SCHEMA_STATEMENTS = [
     two_factor_enabled INTEGER NOT NULL DEFAULT 0,
     suspend_reason TEXT,
     sessions TEXT DEFAULT '[]',
-    is_customer INTEGER NOT NULL DEFAULT 0
+    is_customer INTEGER NOT NULL DEFAULT 0,
+    customer_id TEXT REFERENCES customers(id)
   );`,
   `CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);`,
   `CREATE INDEX IF NOT EXISTS idx_users_status ON users(status);`,

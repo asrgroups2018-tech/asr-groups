@@ -3,17 +3,20 @@
 import React, { useState } from 'react';
 import { useApp } from '@/lib/store';
 import { X, ShieldPlus } from 'lucide-react';
+import { Role } from '@/lib/types';
 
 interface CreateRoleModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onCreated?: (role: Role) => void;
 }
 
 export const CreateRoleModal: React.FC<CreateRoleModalProps> = ({
   isOpen,
   onClose,
+  onCreated,
 }) => {
-  const { showToast } = useApp();
+  const { createRole, showToast } = useApp();
 
   const [roleName, setRoleName] = useState('');
   const [roleCode, setRoleCode] = useState('');
@@ -21,16 +24,30 @@ export const CreateRoleModal: React.FC<CreateRoleModalProps> = ({
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!roleName.trim()) return;
+    if (!roleName.trim() || !roleCode.trim()) {
+      showToast('Role details required', 'Enter both a role name and a unique role code.', 'warning');
+      return;
+    }
 
-    showToast(
-      'Custom Role Created',
-      `Role "${roleName}" has been defined and registered in the permission matrix.`,
-      'success'
-    );
-    onClose();
+    const created = await createRole({
+      name: roleName.trim(),
+      code: roleCode.trim().toUpperCase(),
+      description: description.trim(),
+      colorName: 'blue',
+      bgClass: 'bg-blue-50',
+      textClass: 'text-blue-700',
+      borderClass: 'border-blue-200',
+      hexColor: '#2563EB',
+      isSystemProtected: false,
+      hierarchyLevel: 7,
+    });
+    if (created) {
+      setRoleName(''); setRoleCode(''); setDescription('');
+      onCreated?.(created);
+      onClose();
+    }
   };
 
   return (

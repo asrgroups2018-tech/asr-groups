@@ -133,38 +133,10 @@ export const MODULES_DATA: ModulePermissionConfig[] = [
     actions: ['view', 'create', 'edit', 'delete', 'export'],
   },
   {
-    id: 'income',
-    name: 'Income & Revenue',
-    category: 'Finance',
-    description: 'Interest earnings, penalty fees, documentation charges, and other income',
-    actions: ['view', 'create', 'edit', 'delete', 'export'],
-  },
-  {
-    id: 'expenses',
-    name: 'Expense Tracking',
-    category: 'Finance',
-    description: 'Operational expenses, rent, utilities, office tea, and vendor bills',
-    actions: ['view', 'create', 'edit', 'delete', 'approve', 'export'],
-  },
-  {
-    id: 'collections',
-    name: 'Collections & Recovery',
+    id: 'companies',
+    name: 'Companies',
     category: 'Operations',
-    description: 'Daily collection logs, route management, OD followups, and receipts',
-    actions: ['view', 'create', 'edit', 'delete', 'approve', 'export'],
-  },
-  {
-    id: 'salary',
-    name: 'Salary & Payroll',
-    category: 'Finance',
-    description: 'Staff payroll, attendance deductions, incentives, and salary slips',
-    actions: ['view', 'create', 'edit', 'delete', 'approve', 'export'],
-  },
-  {
-    id: 'agents',
-    name: 'Agent Network',
-    category: 'Operations',
-    description: 'Collection agent tracking, route allocation, and performance metrics',
+    description: 'Funding entities, company allocations, and contribution tracking',
     actions: ['view', 'create', 'edit', 'delete', 'export'],
   },
   {
@@ -173,13 +145,6 @@ export const MODULES_DATA: ModulePermissionConfig[] = [
     category: 'Finance',
     description: 'P&L statements, balance sheet, trial balance, and NPA aging analysis',
     actions: ['view', 'export'],
-  },
-  {
-    id: 'accounting',
-    name: 'Accounting & Ledger',
-    category: 'Finance',
-    description: 'Double-entry journals, chart of accounts, and daybook adjustments',
-    actions: ['view', 'create', 'edit', 'delete', 'approve', 'export'],
   },
   {
     id: 'schedule',
@@ -206,7 +171,7 @@ export const MODULES_DATA: ModulePermissionConfig[] = [
 
 export const INITIAL_PERMISSION_MATRIX: PermissionMatrixState = {
   dashboard: {
-    view: { 0: true, 1: true, 2: true, 3: true, 4: true, 5: true, 6: false },
+    view: { 0: true, 1: true, 2: true, 3: true, 4: true, 5: true, 6: true },
     export: { 0: true, 1: true, 2: true, 3: true, 4: false, 5: false, 6: false },
   },
   loans: {
@@ -218,7 +183,7 @@ export const INITIAL_PERMISSION_MATRIX: PermissionMatrixState = {
     export: { 0: true, 1: true, 2: true, 3: true, 4: false, 5: false, 6: false },
   },
   customers: {
-    view: { 0: true, 1: true, 2: true, 3: true, 4: true, 5: true, 6: true },
+    view: { 0: true, 1: true, 2: true, 3: true, 4: true, 5: true, 6: false },
     create: { 0: true, 1: true, 2: true, 3: true, 4: true, 5: false, 6: false },
     edit: { 0: true, 1: true, 2: true, 3: false, 4: false, 5: false, 6: false },
     delete: { 0: true, 1: true, 2: false, 3: false, 4: false, 5: false, 6: false },
@@ -255,7 +220,7 @@ export const INITIAL_PERMISSION_MATRIX: PermissionMatrixState = {
     approve: { 0: true, 1: true, 2: false, 3: false, 4: false, 5: false, 6: false },
     export: { 0: true, 1: true, 2: true, 3: true, 4: false, 5: false, 6: false },
   },
-  agents: {
+  companies: {
     view: { 0: true, 1: true, 2: true, 3: true, 4: false, 5: false, 6: false },
     create: { 0: true, 1: true, 2: true, 3: false, 4: false, 5: false, 6: false },
     edit: { 0: true, 1: true, 2: true, 3: false, 4: false, 5: false, 6: false },
@@ -275,7 +240,7 @@ export const INITIAL_PERMISSION_MATRIX: PermissionMatrixState = {
     export: { 0: true, 1: true, 2: true, 3: true, 4: false, 5: false, 6: false },
   },
   schedule: {
-    view: { 0: true, 1: true, 2: true, 3: true, 4: true, 5: false, 6: true },
+    view: { 0: true, 1: true, 2: true, 3: true, 4: true, 5: false, 6: false },
     edit: { 0: true, 1: true, 2: true, 3: false, 4: false, 5: false, 6: false },
     export: { 0: true, 1: true, 2: true, 3: true, 4: true, 5: false, 6: false },
   },

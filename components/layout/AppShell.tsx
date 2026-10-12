@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useState } from 'react';
-import { usePathname } from 'next/navigation';
+import React, { useEffect, useState } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
 import { Sidebar } from './Sidebar';
 import { TopNav } from './TopNav';
 import { Footer } from './Footer';
 import { ToastContainer } from '@/components/ui/Toast';
+import { useApp } from '@/lib/store';
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -13,7 +14,17 @@ interface AppShellProps {
 
 export const AppShell: React.FC<AppShellProps> = ({ children }) => {
   const pathname = usePathname();
+  const router = useRouter();
+  const { authReady, isAuthenticated } = useApp();
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    if (authReady && !isAuthenticated) router.replace('/login');
+  }, [authReady, isAuthenticated, router]);
+
+  if (!authReady || !isAuthenticated) {
+    return <div className="flex h-screen w-screen items-center justify-center bg-[#F8F6F1]"><div className="rounded-2xl border border-[#E7DFD2] bg-white px-6 py-5 text-sm font-semibold text-slate-600 shadow-sm">Loading your ASR account…</div></div>;
+  }
 
   return (
     <div className="h-screen w-screen overflow-hidden flex flex-col bg-[#F8F6F1] relative">
