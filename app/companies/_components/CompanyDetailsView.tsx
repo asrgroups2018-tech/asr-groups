@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { StatusPill } from '@/components/ui/StatusPill';
 import { MoneyDisplay } from '@/components/ui/MoneyDisplay';
+import { getDerivedLoanStatus } from '@/app/loans/_components/LoansListView';
 
 export const CompanyDetailsView: React.FC = () => {
   const router = useRouter();
@@ -126,18 +127,18 @@ export const CompanyDetailsView: React.FC = () => {
 
       {/* ─── 3 High-Impact KPI Badges ─── */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
-        <div className="bg-white p-4.5 rounded-2xl border-2 border-slate-200/90 shadow-sm hover:border-slate-300 transition-all">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 font-mono block">
+        <div className="bg-gradient-to-br from-[#701A35]/12 via-[#FAF8F5] to-white p-4.5 rounded-2xl border-2 border-[#701A35]/30 shadow-sm hover:border-[#701A35]/50 transition-all">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-[#701A35] font-mono block">
             Total Capital Funded
           </span>
           <div className="mt-1.5">
             <MoneyDisplay
               amount={totalFunded}
               size="xl"
-              amountClassName="text-slate-950 font-black text-2xl block tracking-tight"
+              amountClassName="text-[#701A35] font-black text-2xl block tracking-tight"
             />
           </div>
-          <span className="text-[11px] text-slate-500 font-medium mt-1 block">Disbursed across loan facilities</span>
+          <span className="text-[11px] text-slate-600 font-medium mt-1 block">Disbursed across loan facilities</span>
         </div>
 
         <div className="bg-gradient-to-br from-purple-100/90 via-purple-50 to-white p-4.5 rounded-2xl border-2 border-purple-300 shadow-sm hover:border-purple-400 transition-all">
@@ -256,7 +257,7 @@ export const CompanyDetailsView: React.FC = () => {
                           {mySplit?.splitPercent || 0}%
                         </td>
                         <td className="p-3">
-                          <StatusPill status={l.status} size="sm" />
+                          <StatusPill status={getDerivedLoanStatus(l)} size="sm" />
                         </td>
                         <td className="p-3 text-right">
                           <button

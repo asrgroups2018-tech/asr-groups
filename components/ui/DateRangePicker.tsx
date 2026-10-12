@@ -22,6 +22,7 @@ interface DateRangePickerProps {
   value: DateRangeValue;
   onChange: (val: DateRangeValue) => void;
   className?: string;
+  label?: string;
   isOpenControlled?: boolean;
   onOpenChange?: (open: boolean) => void;
 }

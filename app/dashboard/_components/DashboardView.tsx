@@ -18,6 +18,7 @@ import {
   PieChart as PieIcon,
   Info,
   Inbox,
+  Landmark,
 } from 'lucide-react';
 import { StatusPill } from '@/components/ui/StatusPill';
 import { MoneyDisplay } from '@/components/ui/MoneyDisplay';
@@ -52,6 +53,7 @@ export const DashboardView: React.FC = () => {
     dashboardData,
     loans,
     companies,
+    cheques,
     setActiveMainTab,
     setSelectedLoanId,
     isLoading,
@@ -273,6 +275,47 @@ export const DashboardView: React.FC = () => {
     };
   }, [loans, timeFilter]);
 
+  // Cheque Deposits Pending metric
+  const chequePendingStats = useMemo(() => {
+    const pendingCheques = (cheques || []).filter((c) => c.status === 'Pending');
+    const count = pendingCheques.length;
+
+    if (count === 0) {
+      return {
+        count: 0,
+        nextDateFormatted: 'None scheduled',
+      };
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const validDates = pendingCheques
+      .map((c) => parseDateString(c.depositDate) || (c.depositDate ? new Date(c.depositDate) : null))
+      .filter((d): d is Date => d !== null && !isNaN(d.getTime()))
+      .sort((a, b) => a.getTime() - b.getTime());
+
+    let nearestDate: Date | null = null;
+    if (validDates.length > 0) {
+      const upcoming = validDates.find((d) => d.getTime() >= today.getTime());
+      nearestDate = upcoming || validDates[0];
+    }
+
+    let nextDateFormatted = 'None scheduled';
+    if (nearestDate) {
+      nextDateFormatted = nearestDate.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      });
+    }
+
+    return {
+      count,
+      nextDateFormatted,
+    };
+  }, [cheques]);
+
   // Company funding distribution
   const companyFunding = useMemo(() => {
     if (dashboardData?.companyFunding && dashboardData.companyFunding.length > 0) {
@@ -417,64 +460,64 @@ export const DashboardView: React.FC = () => {
       </div>
 
       {/* ─── Hero Metric Banner: ALL-TIME PORTFOLIO (NEVER MOVES WITH TIME FILTER) ─── */}
-      <div className="relative rounded-2xl bg-gradient-to-br from-[#1A0A13] via-[#2A1020] to-[#14060E] border-2 border-[#701A35]/50 p-6 sm:p-8 text-white shadow-sm overflow-hidden">
+      <div className="relative rounded-xl bg-gradient-to-br from-[#1A0A13] via-[#2A1020] to-[#14060E] border-2 border-[#701A35]/50 p-4 sm:p-5 text-white shadow-sm overflow-hidden">
         <div className="absolute right-0 top-0 -mt-8 -mr-8 w-64 h-64 rounded-full bg-[#C5A059]/10 blur-3xl pointer-events-none" />
 
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="space-y-4 w-full">
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="space-y-3 w-full">
             <div className="flex items-center gap-2 text-[#C5A059] text-xs font-mono font-bold uppercase tracking-widest">
-              <TrendingUp className="w-4 h-4 shrink-0 text-[#C5A059]" />
+              <TrendingUp className="w-3.5 h-3.5 shrink-0 text-[#C5A059]" />
               <span>All-Time Portfolio Overview · Lifetime</span>
             </div>
 
             {/* Clear Side-by-Side Financial Hierarchy */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 pt-1">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-0.5">
               {/* 1. Total Outstanding Due Balance */}
-              <div className="space-y-1">
-                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block font-mono">
+              <div className="space-y-0.5">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block font-mono">
                   Current Outstanding Due
                 </span>
                 <MoneyDisplay
                   amount={portfolioMetrics.totalOutstanding}
-                  size="3xl"
-                  amountClassName="text-[#EED8A1] tracking-tight block font-black"
+                  size="2xl"
+                  amountClassName="text-[#EED8A1] tracking-tight block font-black text-xl sm:text-2xl"
                 />
-                <span className="text-[10px] text-slate-400 block pt-0.5 font-medium">
+                <span className="text-[10px] text-slate-400 block font-medium">
                   Capital remaining to be collected
                 </span>
               </div>
 
               {/* 2. Total Lifetime Capital Deployed */}
-              <div className="space-y-1 sm:border-l sm:border-white/10 sm:pl-6">
-                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block font-mono">
+              <div className="space-y-0.5 sm:border-l sm:border-white/10 sm:pl-4">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block font-mono">
                   Total Capital Deployed
                 </span>
                 <MoneyDisplay
                   amount={portfolioMetrics.totalDeployed}
-                  size="2xl"
-                  amountClassName="text-white tracking-tight block font-black"
+                  size="xl"
+                  amountClassName="text-white tracking-tight block font-black text-lg sm:text-xl"
                 />
-                <span className="text-[10px] text-slate-400 block pt-0.5 font-medium">
+                <span className="text-[10px] text-slate-400 block font-medium">
                   Principal across {portfolioMetrics.totalLoansCount} borrower accounts
                 </span>
               </div>
 
               {/* 3. Total Recovered / Settled */}
-              <div className="space-y-1 sm:border-l sm:border-white/10 sm:pl-6">
-                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block font-mono">
+              <div className="space-y-0.5 sm:border-l sm:border-white/10 sm:pl-4">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block font-mono">
                   Total Capital Recovered
                 </span>
                 <div className="flex items-center gap-2 flex-wrap">
                   <MoneyDisplay
                     amount={portfolioMetrics.totalRecovered}
-                    size="2xl"
-                    amountClassName="text-emerald-400 tracking-tight font-black"
+                    size="xl"
+                    amountClassName="text-emerald-400 tracking-tight font-black text-lg sm:text-xl"
                   />
                   <span className="inline-flex items-center justify-center text-[10px] text-emerald-300 bg-emerald-950/60 border border-emerald-500/30 px-1.5 py-0.5 rounded font-mono font-bold leading-none">
                     {portfolioMetrics.collectionRate}%
                   </span>
                 </div>
-                <span className="text-[10px] text-slate-400 block pt-0.5 font-medium">
+                <span className="text-[10px] text-slate-400 block font-medium">
                   Confirmed settled installment receipts
                 </span>
               </div>
@@ -482,7 +525,9 @@ export const DashboardView: React.FC = () => {
           </div>
         </div>
       </div>
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-2 pt-2">
+
+      {/* ─── Operational Activity Header & Controls ─── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-2 pt-1">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-xs font-bold text-slate-900 font-serif">
             Operational Activity
@@ -491,99 +536,110 @@ export const DashboardView: React.FC = () => {
             PERIOD: {filterLabel}
           </span>
         </div>
-        <span className="text-[11px] text-slate-500 font-medium">
+        <span className="text-[10px] text-slate-500 font-medium">
           Showing activity metrics for selected timeframe
         </span>
       </div>
 
       {/* ─── 4 High-Impact Period-Scoped KPI Badges ─── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         {/* Card 1: Active Syndicated Loans (Count) */}
-        <div className="bg-white p-4.5 rounded-2xl border-2 border-slate-200/90 shadow-sm hover:border-slate-300 transition-all flex flex-col justify-between">
+        <div className="bg-gradient-to-br from-[#701A35]/12 via-[#FAF8F5] to-white p-3 rounded-xl border-2 border-[#701A35]/30 shadow-sm hover:border-[#701A35]/50 transition-all flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-slate-500 font-mono uppercase tracking-wider">
+            <span className="text-[10px] font-bold text-[#701A35] font-mono uppercase tracking-wider">
               Active Client Facilities
             </span>
-            <div className="p-2 rounded-xl bg-[#701A35]/10 text-[#701A35]">
-              <Users className="w-4 h-4" />
+            <div className="p-1 rounded-lg bg-[#701A35]/10 text-[#701A35]">
+              <Users className="w-3.5 h-3.5" />
             </div>
           </div>
-          <div className="mt-3">
-            <div className="flex items-baseline gap-2">
-              <span className="text-2xl font-black font-mono text-slate-950">
+          <div className="mt-1.5">
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-xl font-black font-mono text-[#701A35]">
                 {portfolioMetrics.activeLoansCount}
               </span>
-              <span className="text-xs text-slate-500 font-medium">Active Loans</span>
+              <span className="text-[10px] text-slate-600 font-medium">Active Loans</span>
             </div>
-            <span className="text-[11px] text-slate-500 font-medium mt-1 block">
+            <span className="text-[10px] text-slate-600 font-medium mt-0.5 block">
               Across <strong className="text-slate-800">{portfolioMetrics.totalLoansCount}</strong> total borrowers
             </span>
           </div>
         </div>
 
         {/* Card 2: Period Collections */}
-        <div className="bg-gradient-to-br from-emerald-100/90 via-emerald-50 to-white p-4.5 rounded-2xl border-2 border-emerald-300 shadow-sm hover:border-emerald-400 transition-all flex flex-col justify-between">
+        <div className="bg-gradient-to-br from-emerald-100/90 via-emerald-50 to-white p-3 rounded-xl border-2 border-emerald-300 shadow-sm hover:border-emerald-400 transition-all flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-emerald-900 font-mono uppercase tracking-wider">
+            <span className="text-[10px] font-bold text-emerald-900 font-mono uppercase tracking-wider">
               Period Collections
             </span>
-            <div className="p-2 rounded-xl bg-emerald-100 text-emerald-700">
-              <Banknote className="w-4 h-4" />
+            <div className="p-1 rounded-lg bg-emerald-100 text-emerald-700">
+              <Banknote className="w-3.5 h-3.5" />
             </div>
           </div>
-          <div className="mt-3">
+          <div className="mt-1.5">
             <MoneyDisplay
               amount={periodData.periodCollections}
-              size="2xl"
-              amountClassName="text-emerald-700 block font-black text-2xl tracking-tight"
+              size="lg"
+              amountClassName="text-emerald-700 block font-black text-xl tracking-tight"
             />
-            <span className="text-[11px] text-emerald-800 font-bold mt-1 block">
+            <span className="text-[10px] text-emerald-800 font-bold mt-0.5 block">
               Direct settlements in {filterLabel}
             </span>
           </div>
         </div>
 
         {/* Card 3: Unpaid Past Due */}
-        <div className="bg-gradient-to-br from-amber-100/90 via-amber-50 to-white p-4.5 rounded-2xl border-2 border-amber-300 shadow-sm hover:border-amber-400 transition-all flex flex-col justify-between">
+        <div className="bg-gradient-to-br from-amber-100/90 via-amber-50 to-white p-3 rounded-xl border-2 border-amber-300 shadow-sm hover:border-amber-400 transition-all flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-amber-900 font-mono uppercase tracking-wider">
+            <span className="text-[10px] font-bold text-amber-900 font-mono uppercase tracking-wider">
               Unpaid Past Due
             </span>
-            <div className="p-2 rounded-xl bg-amber-100 text-amber-800">
-              <Clock className="w-4 h-4" />
+            <div className="p-1 rounded-lg bg-amber-100 text-amber-800">
+              <Clock className="w-3.5 h-3.5" />
             </div>
           </div>
-          <div className="mt-3">
+          <div className="mt-1.5">
             <MoneyDisplay
               amount={periodData.periodUnpaidPastDue}
-              size="2xl"
-              amountClassName="text-amber-800 block font-black text-2xl tracking-tight"
+              size="lg"
+              amountClassName="text-amber-800 block font-black text-xl tracking-tight"
             />
-            <span className="text-[11px] text-amber-800 font-bold mt-1 block">
+            <span className="text-[10px] text-amber-800 font-bold mt-0.5 block">
               {periodData.periodUnpaidCount} Pending EMIs
             </span>
           </div>
         </div>
 
-        {/* Card 4: Bounced / Returned Cheques */}
-        <div className="bg-gradient-to-br from-rose-100/90 via-rose-50 to-white p-4.5 rounded-2xl border-2 border-rose-300 shadow-sm hover:border-rose-400 transition-all flex flex-col justify-between">
+        {/* Card 4: Cheque Deposits Pending */}
+        <div
+          onClick={() => {
+            setActiveMainTab('cheques');
+            router.push('/cheques');
+          }}
+          className="bg-gradient-to-br from-amber-100/90 via-amber-50 to-white p-3 rounded-xl border-2 border-amber-300 shadow-sm hover:border-amber-400 hover:shadow-md transition-all flex flex-col justify-between cursor-pointer group"
+          role="button"
+          tabIndex={0}
+          aria-label="View Pending Cheque Deposits"
+        >
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-rose-900 font-mono uppercase tracking-wider">
-              Bounced Cheques (RET)
+            <span className="text-[10px] font-bold text-amber-900 font-mono uppercase tracking-wider">
+              Cheque Deposits Pending
             </span>
-            <div className="p-2 rounded-xl bg-rose-100 text-rose-700">
-              <Ban className="w-4 h-4" />
+            <div className="p-1 rounded-lg bg-amber-100 text-amber-800 group-hover:bg-amber-200 transition-colors">
+              <Landmark className="w-3.5 h-3.5" />
             </div>
           </div>
-          <div className="mt-3">
-            <MoneyDisplay
-              amount={periodData.periodBounced}
-              size="2xl"
-              amountClassName="text-rose-700 block font-black text-2xl tracking-tight"
-            />
-            <span className="text-[11px] text-rose-700 font-bold mt-1 block">
-              {periodData.periodBouncedCount} Returned Cheques
-            </span>
+          <div className="mt-1.5">
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-xl font-black font-mono text-amber-800">
+                {chequePendingStats.count}
+              </span>
+              <span className="text-[10px] text-amber-900 font-semibold">Pending Cheques</span>
+            </div>
+            <div className="text-[10px] text-amber-800 font-bold mt-0.5 flex items-center justify-between">
+              <span>Next: {chequePendingStats.nextDateFormatted}</span>
+              <ChevronRight className="w-3.5 h-3.5 opacity-60 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
+            </div>
           </div>
         </div>
       </div>

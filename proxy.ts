@@ -20,15 +20,15 @@ async function getCachedSessionUser(token: string | undefined) {
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Leave Next internals, public assets, and the authentication endpoints untouched.
+  // Leave Next internals, public assets, and all API endpoints untouched.
   if (
     pathname.startsWith('/_next') ||
     isPublicAsset(pathname) ||
     pathname === '/' ||
     pathname === '/login' ||
-    pathname.startsWith('/api/auth/')
+    pathname.startsWith('/api/')
   ) {
-    return normalizePath(request);
+    return NextResponse.next();
   }
 
   if (pathname !== pathname.toLowerCase()) {

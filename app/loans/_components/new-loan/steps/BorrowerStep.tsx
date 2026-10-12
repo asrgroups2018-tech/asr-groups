@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Users, IndianRupee, Check } from 'lucide-react';
 import { Customer } from '@/lib/types';
+import { AmountInput } from '@/components/ui/AmountInput';
 
 interface BorrowerStepProps {
   customers: Customer[];
@@ -187,31 +188,16 @@ export const BorrowerStep: React.FC<BorrowerStepProps> = ({
           <label className="text-sm font-semibold text-[#EED8A1] flex items-center gap-2">
             <IndianRupee className="w-4 h-4 text-[#C5A059]" /> Total Loan Capital Amount (₹)
           </label>
-          <div className="relative">
-            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#C5A059] font-bold text-lg">₹</span>
-            <input
-              type="number"
-              min="1000"
-              step="1000"
-              value={totalAmount || ''}
-              onChange={(e) => setTotalAmount(e.target.value === '' ? 0 : Number(e.target.value))}
-              className="w-full bg-[#160810] border border-[#3D1A2C] rounded-lg pl-8 pr-4 py-3 text-base sm:text-lg font-mono font-bold text-[#EED8A1] focus:outline-hidden focus:border-[#C5A059] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none placeholder:text-xs sm:placeholder:text-sm"
-              placeholder="Enter loan amount (e.g. 1000000)"
-            />
-          </div>
-          <div className="flex items-center gap-1.5 sm:gap-2 text-xs text-slate-400 flex-wrap">
-            <span className="text-[11px] sm:text-xs">Common presets:</span>
-            {[500000, 1000000, 2000000, 5000000].map((val) => (
-              <button
-                key={val}
-                type="button"
-                onClick={() => setTotalAmount(val)}
-                className="px-2.5 py-1 bg-[#160810] hover:bg-[#C5A059]/20 hover:text-[#EED8A1] border border-[#3D1A2C] rounded-md font-mono text-[11px] cursor-pointer transition-colors"
-              >
-                ₹{(val / 100000).toFixed(0)} Lakh
-              </button>
-            ))}
-          </div>
+          <AmountInput
+            value={totalAmount}
+            onChange={(val) => setTotalAmount(val)}
+            placeholder="e.g. 1,00,000"
+            theme="dark"
+            size="lg"
+            showWords={true}
+            presets={[500000, 1000000, 2000000, 5000000]}
+            onPresetClick={(val) => setTotalAmount(val)}
+          />
         </div>
       )}
     </div>

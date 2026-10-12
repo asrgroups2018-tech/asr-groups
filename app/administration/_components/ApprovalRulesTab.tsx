@@ -17,6 +17,7 @@ import { RoleBadge } from '@/components/ui/RoleBadge';
 import { AddApprovalRuleModal } from './modals/AddApprovalRuleModal';
 import { MoneyDisplay } from '@/components/ui/MoneyDisplay';
 import { DataTable, ColumnDef } from '@/components/ui/DataTable';
+import { ConfirmModal } from '@/components/ui/ConfirmModal';
 
 export const ApprovalRulesTab: React.FC = () => {
   const {
@@ -28,6 +29,7 @@ export const ApprovalRulesTab: React.FC = () => {
   } = useApp();
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [ruleToDelete, setRuleToDelete] = useState<ApprovalRule | null>(null);
 
   const activeRulesCount = approvalRules.filter((r) => r.isActive).length;
   const autoApproveCount = approvalRules.filter((r) => r.autoApproveBelow).length;
@@ -155,8 +157,8 @@ export const ApprovalRulesTab: React.FC = () => {
       render: (r) => (
         <div className="flex items-center justify-end gap-1.5">
           <button
-            onClick={() => deleteApprovalRule(r.id)}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+            onClick={() => setRuleToDelete(r)}
+            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
             title="Delete Rule"
           >
             <Trash2 className="w-3.5 h-3.5" />
@@ -270,6 +272,24 @@ export const ApprovalRulesTab: React.FC = () => {
       <AddApprovalRuleModal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
+      />
+
+      {/* Delete Rule Confirmation Modal */}
+      <ConfirmModal
+        isOpen={!!ruleToDelete}
+        onClose={() => setRuleToDelete(null)}
+        onConfirm={async () => {
+          if (ruleToDelete) {
+            await deleteApprovalRule(ruleToDelete.id);
+            setRuleToDelete(null);
+          }
+        }}
+        title="Delete Approval Rule"
+        message={`Are you sure you want to delete the approval rule for "${ruleToDelete?.changeType}"? Transactions of this type will no longer follow this workflow.`}
+        itemName={ruleToDelete?.changeType}
+        itemCode={ruleToDelete?.id}
+        confirmText="Delete Rule"
+        variant="danger"
       />
     </div>
   );

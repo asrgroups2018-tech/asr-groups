@@ -52,15 +52,13 @@ export function computeLifetimePortfolioMetrics(
     const amount = Number(inst.amountDue) || 0;
     const cat = getStatusCategory(inst.status);
 
-    if (cat === 'settled') {
+    if (isPaidStatus(inst.status)) {
       totalRecovered += amount;
       settledCount++;
-    } else if (cat === 'bounced') {
-      bouncedCount++;
-    } else if (cat === 'unclassified') {
-      unclassifiedCount++;
     } else if (cat === 'pending') {
       pendingCount++;
+    } else {
+      unclassifiedCount++;
     }
   });
 
@@ -105,6 +103,7 @@ export function computePeriodScopedMetrics(
   installments.forEach((inst) => {
     const dueDate = inst.dueDate || '';
     const amount = Number(inst.amountDue) || 0;
+    const isPaid = isPaidStatus(inst.status);
     const cat = getStatusCategory(inst.status);
 
     // Check if within date range filter
@@ -116,13 +115,9 @@ export function computePeriodScopedMetrics(
       periodDueAmount += amount;
       periodDueCount++;
 
-      if (cat === 'settled') {
+      if (isPaid) {
         periodCollections += amount;
         periodCollectedCount++;
-      }
-      if (cat === 'bounced') {
-        bouncedAmount += amount;
-        bouncedCount++;
       }
     }
 

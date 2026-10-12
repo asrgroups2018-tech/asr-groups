@@ -76,7 +76,7 @@ interface LedgerEntry extends LedgerRow {
   runningBalance: number;
 }
 
-const PAID_STATUSES = new Set(['PASS', 'NEFT', 'CASH', 'CLS', 'PAID']);
+const PAID_STATUSES = new Set(['PASS', 'NEFT', 'RTGS', 'CASH', 'CLS', 'PAID', 'CLEARED']);
 const isPaid = (status: string) => PAID_STATUSES.has(String(status || '').trim().toUpperCase());
 const dateKey = (value: string) => String(value || '').slice(0, 10);
 const formatDate = (value: string) => {
@@ -142,18 +142,18 @@ function reportForTransactions(report: CustomerReport, transactions: LedgerRow[]
 type ReportTab = 'master' | 'trial-balance' | 'day-book' | 'ageing' | 'monthly' | 'statement' | 'pnl' | 'receipt-book' | 'loan-ledger' | 'bounce-register' | 'area-wise' | 'foreclosure';
 
 const TABS: { id: ReportTab; label: string; icon: React.ReactNode; description: string; dividerBefore?: boolean }[] = [
-  { id: 'master',          label: 'Master Report',       icon: <FileBarChart className="h-3.5 w-3.5" />, description: 'Customer-wise ledger statements' },
-  { id: 'trial-balance',   label: 'Trial Balance',       icon: <Scale className="h-3.5 w-3.5" />,       description: 'Dr vs Cr balance check' },
-  { id: 'day-book',        label: 'Day Book',            icon: <BookOpen className="h-3.5 w-3.5" />,     description: 'Daily collection register' },
-  { id: 'ageing',          label: 'Ageing Report',       icon: <AlertTriangle className="h-3.5 w-3.5" />, description: 'Outstanding receivables' },
-  { id: 'monthly',         label: 'Monthly Summary',     icon: <BarChart3 className="h-3.5 w-3.5" />,    description: 'Month-wise collection rates' },
-  { id: 'statement',       label: 'Account Statement',   icon: <User className="h-3.5 w-3.5" />,         description: 'Print-ready customer statement' },
-  { id: 'pnl',             label: 'Portfolio P&L',       icon: <TrendingUp className="h-3.5 w-3.5" />,   description: 'Income vs capital deployed',    dividerBefore: true },
-  { id: 'receipt-book',    label: 'Receipt Book',        icon: <Banknote className="h-3.5 w-3.5" />,     description: 'Mode-wise receipt register' },
-  { id: 'loan-ledger',     label: 'Loan Ledger',         icon: <Layers className="h-3.5 w-3.5" />,       description: 'Per-loan Dr/Cr ledger' },
-  { id: 'bounce-register', label: 'Bounce Register',     icon: <AlertOctagon className="h-3.5 w-3.5" />, description: 'RET/bounce tracker with recovery' },
-  { id: 'area-wise',       label: 'Area-wise',           icon: <MapPin className="h-3.5 w-3.5" />,       description: 'Location-level analytics' },
-  { id: 'foreclosure',     label: 'Foreclosure',         icon: <Calculator className="h-3.5 w-3.5" />,   description: 'Pre-closure calculator' },
+  { id: 'master', label: 'Master Report', icon: <FileBarChart className="h-3.5 w-3.5" />, description: 'Customer-wise ledger statements' },
+  { id: 'trial-balance', label: 'Trial Balance', icon: <Scale className="h-3.5 w-3.5" />, description: 'Dr vs Cr balance check' },
+  { id: 'day-book', label: 'Day Book', icon: <BookOpen className="h-3.5 w-3.5" />, description: 'Daily collection register' },
+  { id: 'ageing', label: 'Ageing Report', icon: <AlertTriangle className="h-3.5 w-3.5" />, description: 'Outstanding receivables' },
+  { id: 'monthly', label: 'Monthly Summary', icon: <BarChart3 className="h-3.5 w-3.5" />, description: 'Month-wise collection rates' },
+  { id: 'statement', label: 'Account Statement', icon: <User className="h-3.5 w-3.5" />, description: 'Print-ready customer statement' },
+  { id: 'pnl', label: 'Portfolio P&L', icon: <TrendingUp className="h-3.5 w-3.5" />, description: 'Income vs capital deployed', dividerBefore: true },
+  { id: 'receipt-book', label: 'Receipt Book', icon: <Banknote className="h-3.5 w-3.5" />, description: 'Mode-wise receipt register' },
+  { id: 'loan-ledger', label: 'Loan Ledger', icon: <Layers className="h-3.5 w-3.5" />, description: 'Per-loan Dr/Cr ledger' },
+  { id: 'bounce-register', label: 'Bounce Register', icon: <AlertOctagon className="h-3.5 w-3.5" />, description: 'RET/bounce tracker with recovery' },
+  { id: 'area-wise', label: 'Area-wise', icon: <MapPin className="h-3.5 w-3.5" />, description: 'Location-level analytics' },
+  { id: 'foreclosure', label: 'Foreclosure', icon: <Calculator className="h-3.5 w-3.5" />, description: 'Pre-closure calculator' },
 ];
 
 export const ReportsView: React.FC = () => {
@@ -253,11 +253,10 @@ export const ReportsView: React.FC = () => {
               type="button"
               title={tab.description}
               onClick={() => setActiveReportTab(tab.id)}
-              className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-xl px-3 py-2 text-[11px] font-semibold transition-all ${
-                activeReportTab === tab.id
+              className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-xl px-3 py-2 text-[11px] font-semibold transition-all ${activeReportTab === tab.id
                   ? 'bg-[#701A35] text-white shadow-sm'
                   : 'text-slate-600 hover:bg-[#F8F4EE] hover:text-[#701A35]'
-              }`}
+                }`}
             >
               <span className={activeReportTab === tab.id ? 'text-white' : 'text-slate-400'}>{tab.icon}</span>
               {tab.label}
@@ -282,20 +281,92 @@ export const ReportsView: React.FC = () => {
 
     {/* Master Report (existing — shown only when master tab is active) */}
     {activeReportTab === 'master' && <>
-    <section className="rounded-3xl border border-[#E7DFD2] bg-white p-5 shadow-[0_12px_32px_rgba(58,34,22,0.05)] sm:p-7"><div className="flex flex-col gap-4"><div><p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#A07A39]">Financial reporting</p><div className="mt-1 flex items-center gap-3"><h1 className="text-2xl font-bold tracking-tight text-[#24131B]">Master report & ledger</h1><span className="rounded-full bg-[#F5EEE3] px-2.5 py-1 text-xs font-bold text-[#701A35]">{customerReports.length}</span></div><p className="mt-2 max-w-2xl text-sm text-slate-500">Customer-wise financial statements with date-wise ledger details, running balances, and downloadable reports.</p></div><div className="grid grid-cols-2 gap-2 border-t border-[#EEE8DE] pt-4 sm:flex sm:flex-wrap"><button type="button" onClick={() => exportPdf(customerReports)} disabled={!customerReports.length} className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-rose-200 bg-white px-3 py-2.5 text-xs font-bold text-rose-700 hover:bg-rose-50 disabled:opacity-45"><FileText className="h-4 w-4" /> PDF</button><button type="button" onClick={() => exportExcel(customerReports)} disabled={!customerReports.length} className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-emerald-200 bg-white px-3 py-2.5 text-xs font-bold text-emerald-700 hover:bg-emerald-50 disabled:opacity-45"><FileSpreadsheet className="h-4 w-4" /> Excel</button><button type="button" onClick={() => exportPdf(exportTargets, true)} disabled={!exportTargets.length} className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-[#D8D5FF] bg-[#FAFAFF] px-3 py-2.5 text-xs font-bold text-indigo-700 hover:bg-indigo-50 disabled:opacity-45"><Download className="h-4 w-4" /> {selectedCustomerIds.size ? 'Selected PDF' : 'All ledgers PDF'}</button><button type="button" onClick={() => exportExcel(exportTargets, true)} disabled={!exportTargets.length} className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-cyan-200 bg-cyan-50/30 px-3 py-2.5 text-xs font-bold text-cyan-700 hover:bg-cyan-50 disabled:opacity-45"><Download className="h-4 w-4" /> {selectedCustomerIds.size ? 'Selected Excel' : 'All ledgers Excel'}</button></div></div><div className="mt-6 grid grid-cols-2 gap-2 border-t border-[#EEE8DE] pt-5 sm:grid-cols-5"><MetricCard label="Total principal" value={formatINR(totals.principal)} tone="maroon" /><MetricCard label="Total collected" value={formatINR(totals.collected)} tone="green" /><MetricCard label="Total balance" value={formatINR(totals.balance)} tone="blue" /><MetricCard label="Active customers" value={String(activeCount)} tone="violet" /><MetricCard label="Closed customers" value={String(closedCount)} tone="slate" /></div></section>
+      <section className="rounded-3xl border border-[#E7DFD2] bg-white p-5 shadow-[0_12px_32px_rgba(58,34,22,0.05)] sm:p-7"><div className="flex flex-col gap-4"><div><p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#A07A39]">Financial reporting</p><div className="mt-1 flex items-center gap-3"><h1 className="text-2xl font-bold tracking-tight text-[#24131B]">Master report & ledger</h1><span className="rounded-full bg-[#F5EEE3] px-2.5 py-1 text-xs font-bold text-[#701A35]">{customerReports.length}</span></div><p className="mt-2 max-w-2xl text-sm text-slate-500">Customer-wise financial statements with date-wise ledger details, running balances, and downloadable reports.</p></div><div className="grid grid-cols-2 gap-2 border-t border-[#EEE8DE] pt-4 sm:flex sm:flex-wrap"><button type="button" onClick={() => exportPdf(customerReports)} disabled={!customerReports.length} className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-rose-200 bg-white px-3 py-2.5 text-xs font-bold text-rose-700 hover:bg-rose-50 disabled:opacity-45"><FileText className="h-4 w-4" /> PDF</button><button type="button" onClick={() => exportExcel(customerReports)} disabled={!customerReports.length} className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-emerald-200 bg-white px-3 py-2.5 text-xs font-bold text-emerald-700 hover:bg-emerald-50 disabled:opacity-45"><FileSpreadsheet className="h-4 w-4" /> Excel</button><button type="button" onClick={() => exportPdf(exportTargets, true)} disabled={!exportTargets.length} className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-[#D8D5FF] bg-[#FAFAFF] px-3 py-2.5 text-xs font-bold text-indigo-700 hover:bg-indigo-50 disabled:opacity-45"><Download className="h-4 w-4" /> {selectedCustomerIds.size ? 'Selected PDF' : 'All ledgers PDF'}</button><button type="button" onClick={() => exportExcel(exportTargets, true)} disabled={!exportTargets.length} className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-cyan-200 bg-cyan-50/30 px-3 py-2.5 text-xs font-bold text-cyan-700 hover:bg-cyan-50 disabled:opacity-45"><Download className="h-4 w-4" /> {selectedCustomerIds.size ? 'Selected Excel' : 'All ledgers Excel'}</button></div></div><div className="mt-6 grid grid-cols-2 gap-2 border-t border-[#EEE8DE] pt-5 sm:grid-cols-5"><MetricCard label="Total principal" value={formatINR(totals.principal)} tone="maroon" /><MetricCard label="Total collected" value={formatINR(totals.collected)} tone="green" /><MetricCard label="Total balance" value={formatINR(totals.balance)} tone="rose" /><MetricCard label="Active customers" value={String(activeCount)} tone="amber" /><MetricCard label="Closed customers" value={String(closedCount)} tone="slate" /></div></section>
 
-    <section className="rounded-3xl border border-[#E7DFD2] bg-white p-4 shadow-[0_12px_32px_rgba(58,34,22,0.04)] sm:p-5"><div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between"><div className="relative min-w-0 flex-1 xl:max-w-sm"><Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search customer, loan, code or reference" className="w-full rounded-xl border border-slate-200 bg-[#FCFBF9] py-2.5 pl-10 pr-3 text-xs outline-none focus:border-[#C5A059] focus:bg-white" /></div><div className="flex flex-wrap items-center gap-2"><Filter className="h-4 w-4 text-slate-400" /><SelectField label="Month" value={month} onChange={setMonth}><option value="all">All months</option>{months.map((value) => <option key={value} value={value}>{formatMonth(value)}</option>)}</SelectField><DateField label="From" value={fromDate} onChange={setFromDate} /><DateField label="To" value={toDate} onChange={setToDate} /></div></div><div className="mt-4 flex flex-wrap items-center gap-2 border-t border-[#EEE8DE] pt-4"><StatusChip label="All" count={allCustomerReports.length} active={status === 'All statuses'} onClick={() => setStatus('All statuses')} />{statusOptions.map((value) => <StatusChip key={value} label={value} count={allCustomerReports.filter((report) => report.status === value).length} active={status === value} onClick={() => setStatus(value)} />)}{(query || month !== 'all' || fromDate || toDate || status !== 'All statuses') && <button type="button" onClick={clearFilters} className="ml-auto inline-flex items-center gap-1.5 text-[11px] font-bold text-[#701A35] hover:underline">Clear filters</button>}</div><div className="mt-3 text-[11px] text-slate-500">{isLoading ? 'Syncing records…' : `Showing ${customerReports.length} customer${customerReports.length === 1 ? '' : 's'} from ${dateFilteredRows.length} ledger transaction${dateFilteredRows.length === 1 ? '' : 's'}`}{selectedCustomerIds.size > 0 && <span className="ml-2 font-bold text-[#701A35]">· {selectedCustomerIds.size} selected</span>}</div></section>
+      <section className="rounded-3xl border border-[#E7DFD2] bg-white p-4 shadow-[0_12px_32px_rgba(58,34,22,0.04)] sm:p-5"><div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between"><div className="relative min-w-0 flex-1 xl:max-w-sm"><Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search customer, loan, code or reference" className="w-full rounded-xl border border-slate-200 bg-[#FCFBF9] py-2.5 pl-10 pr-3 text-xs outline-none focus:border-[#C5A059] focus:bg-white" /></div><div className="flex flex-wrap items-center gap-2"><Filter className="h-4 w-4 text-slate-400" /><SelectField label="Month" value={month} onChange={setMonth}><option value="all">All months</option>{months.map((value) => <option key={value} value={value}>{formatMonth(value)}</option>)}</SelectField><DateField label="From" value={fromDate} onChange={setFromDate} /><DateField label="To" value={toDate} onChange={setToDate} /></div></div><div className="mt-4 flex flex-wrap items-center gap-2 border-t border-[#EEE8DE] pt-4"><StatusChip label="All" count={allCustomerReports.length} active={status === 'All statuses'} onClick={() => setStatus('All statuses')} />{statusOptions.map((value) => <StatusChip key={value} label={value} count={allCustomerReports.filter((report) => report.status === value).length} active={status === value} onClick={() => setStatus(value)} />)}{(query || month !== 'all' || fromDate || toDate || status !== 'All statuses') && <button type="button" onClick={clearFilters} className="ml-auto inline-flex items-center gap-1.5 text-[11px] font-bold text-[#701A35] hover:underline">Clear filters</button>}</div><div className="mt-3 text-[11px] text-slate-500">{isLoading ? 'Syncing records…' : `Showing ${customerReports.length} customer${customerReports.length === 1 ? '' : 's'} from ${dateFilteredRows.length} ledger transaction${dateFilteredRows.length === 1 ? '' : 's'}`}{selectedCustomerIds.size > 0 && <span className="ml-2 font-bold text-[#701A35]">· {selectedCustomerIds.size} selected</span>}</div></section>
 
-    <section className="overflow-hidden rounded-3xl border border-[#E7DFD2] bg-white shadow-[0_12px_32px_rgba(58,34,22,0.04)]"><div className="flex items-center justify-between border-b border-[#E7DFD2] bg-[#FCFBF9] px-4 py-4 sm:px-5"><div><h2 className="flex items-center gap-2 text-sm font-bold text-slate-900"><FileBarChart className="h-4 w-4 text-[#701A35]" /> Customer master report</h2><p className="mt-1 text-[11px] text-slate-500">Select customers for bulk ledgers or open one customer’s complete date-wise statement.</p></div><span className="hidden rounded-full bg-[#F5EEE3] px-2.5 py-1 text-[10px] font-bold text-[#701A35] sm:inline-flex">{customerReports.length} customers</span></div><div className="hidden overflow-hidden md:block"><table className="w-full table-fixed border-collapse text-left text-xs"><thead><tr className="border-b border-slate-200 bg-[#F8F6F2] text-[10px] font-bold uppercase tracking-[0.1em] text-slate-500"><th className="w-10 px-3 py-3 text-center"><input type="checkbox" aria-label="Select all visible customers" checked={allVisibleSelected} onChange={toggleAllCustomers} className="h-3.5 w-3.5 accent-[#701A35]" /></th><th className="w-12 px-3 py-3">S.No</th><th className="w-[28%] px-3 py-3">Customer</th><th className="w-[17%] px-3 py-3">Place</th><th className="w-[13%] px-3 py-3 text-right">Principal</th><th className="w-[13%] px-3 py-3 text-right">Collected</th><th className="w-[13%] px-3 py-3 text-right">Balance</th><th className="w-[10%] px-3 py-3">Status</th><th className="w-[104px] px-3 py-3 text-right">Action</th></tr></thead><tbody className="divide-y divide-slate-100">{customerReports.length === 0 ? <tr><td colSpan={9} className="px-6 py-16 text-center text-sm text-slate-500">No customer records match these filters.</td></tr> : customerReports.map((report, index) => <CustomerTableRow key={report.id} report={report} index={index} selected={selectedCustomerIds.has(report.id)} onToggle={() => toggleCustomer(report.id)} onView={() => setLedger(report)} />)}</tbody><tfoot><tr className="border-t border-slate-200 bg-[#F8F6F2] font-bold text-slate-800"><td></td><td></td><td className="px-3 py-3">TOTAL · {customerReports.length} customers</td><td></td><td className="px-3 py-3 text-right">{formatINR(totals.principal)}</td><td className="px-3 py-3 text-right text-emerald-700">{formatINR(totals.collected)}</td><td className="px-3 py-3 text-right text-[#245B9B]">{formatINR(totals.balance)}</td><td></td><td></td></tr></tfoot></table></div><div className="divide-y divide-slate-100 md:hidden">{customerReports.length === 0 ? <div className="p-10 text-center text-xs text-slate-500">No customer records match these filters.</div> : customerReports.map((report, index) => <CustomerMobileRow key={report.id} report={report} index={index} selected={selectedCustomerIds.has(report.id)} onToggle={() => toggleCustomer(report.id)} onView={() => setLedger(report)} />)}</div></section>
+      <section className="overflow-hidden rounded-3xl border border-[#E7DFD2] bg-white shadow-[0_12px_32px_rgba(58,34,22,0.04)]"><div className="flex items-center justify-between border-b border-[#E7DFD2] bg-[#FCFBF9] px-4 py-4 sm:px-5"><div><h2 className="flex items-center gap-2 text-sm font-bold text-slate-900"><FileBarChart className="h-4 w-4 text-[#701A35]" /> Customer master report</h2><p className="mt-1 text-[11px] text-slate-500">Select customers for bulk ledgers or open one customer’s complete date-wise statement.</p></div><span className="hidden rounded-full bg-[#F5EEE3] px-2.5 py-1 text-[10px] font-bold text-[#701A35] sm:inline-flex">{customerReports.length} customers</span></div><div className="hidden overflow-hidden md:block"><table className="w-full table-fixed border-collapse text-left text-xs"><thead><tr className="border-b border-slate-200 bg-[#F8F6F2] text-[10px] font-bold uppercase tracking-[0.1em] text-slate-500"><th className="w-10 px-3 py-3 text-center"><input type="checkbox" aria-label="Select all visible customers" checked={allVisibleSelected} onChange={toggleAllCustomers} className="h-3.5 w-3.5 accent-[#701A35]" /></th><th className="w-12 px-3 py-3">S.No</th><th className="w-[28%] px-3 py-3">Customer</th><th className="w-[17%] px-3 py-3">Place</th><th className="w-[13%] px-3 py-3 text-right">Principal</th><th className="w-[13%] px-3 py-3 text-right">Collected</th><th className="w-[13%] px-3 py-3 text-right">Balance</th><th className="w-[10%] px-3 py-3">Status</th><th className="w-[104px] px-3 py-3 text-right">Action</th></tr></thead><tbody className="divide-y divide-slate-100">{customerReports.length === 0 ? <tr><td colSpan={9} className="px-6 py-16 text-center text-sm text-slate-500">No customer records match these filters.</td></tr> : customerReports.map((report, index) => <CustomerTableRow key={report.id} report={report} index={index} selected={selectedCustomerIds.has(report.id)} onToggle={() => toggleCustomer(report.id)} onView={() => setLedger(report)} />)}</tbody><tfoot><tr className="border-t border-slate-200 bg-[#F8F6F2] font-bold text-slate-800"><td></td><td></td><td className="px-3 py-3">TOTAL · {customerReports.length} customers</td><td></td><td className="px-3 py-3 text-right">{formatINR(totals.principal)}</td><td className="px-3 py-3 text-right text-emerald-700">{formatINR(totals.collected)}</td><td className="px-3 py-3 text-right text-[#245B9B]">{formatINR(totals.balance)}</td><td></td><td></td></tr></tfoot></table></div><div className="divide-y divide-slate-100 md:hidden">{customerReports.length === 0 ? <div className="p-10 text-center text-xs text-slate-500">No customer records match these filters.</div> : customerReports.map((report, index) => <CustomerMobileRow key={report.id} report={report} index={index} selected={selectedCustomerIds.has(report.id)} onToggle={() => toggleCustomer(report.id)} onView={() => setLedger(report)} />)}</div></section>
 
-    {ledgerCustomer && <LedgerDrawer report={ledgerCustomer} onClose={() => setLedgerCustomer(null)} onPdf={(rows) => exportPdf([reportForTransactions(ledgerCustomer, rows)], true)} onExcel={(rows) => exportExcel([reportForTransactions(ledgerCustomer, rows)], true)} />}
+      {ledgerCustomer && <LedgerDrawer report={ledgerCustomer} onClose={() => setLedgerCustomer(null)} onPdf={(rows) => exportPdf([reportForTransactions(ledgerCustomer, rows)], true)} onExcel={(rows) => exportExcel([reportForTransactions(ledgerCustomer, rows)], true)} />}
     </>}
   </div>;
 };
 
-function MetricCard({ label, value, tone }: { label: string; value: string; tone: 'maroon' | 'green' | 'blue' | 'violet' | 'slate' }) {
-  const tones = { maroon: 'border-[#E1C98D] bg-[#FBF8F3] text-[#701A35]', green: 'border-emerald-200 bg-emerald-50/60 text-emerald-700', blue: 'border-blue-200 bg-blue-50/60 text-blue-700', violet: 'border-violet-200 bg-violet-50/60 text-violet-700', slate: 'border-slate-200 bg-slate-50 text-slate-700' };
-  return <div className={`rounded-2xl border px-3.5 py-3 ${tones[tone]}`}><span className="block text-[10px] font-bold uppercase tracking-[0.1em] opacity-70">{label}</span><strong className="mt-2 block truncate text-lg font-bold tabular-nums text-slate-900">{value}</strong></div>;
+function MetricCard({
+  label,
+  value,
+  subtitle,
+  tone,
+}: {
+  label: string;
+  value: string;
+  subtitle?: string;
+  tone: 'maroon' | 'green' | 'rose' | 'amber' | 'slate' | 'blue' | 'violet';
+}) {
+  const toneConfigs = {
+    maroon: {
+      card: 'bg-gradient-to-br from-[#701A35]/12 via-[#FAF8F5] to-white border-2 border-[#701A35]/30 hover:border-[#701A35]/50 shadow-sm',
+      label: 'text-[#701A35]',
+      value: 'text-[#701A35]',
+      sub: 'text-slate-600',
+    },
+    green: {
+      card: 'bg-gradient-to-br from-emerald-100/90 via-emerald-50 to-white border-2 border-emerald-300 hover:border-emerald-400 shadow-sm',
+      label: 'text-emerald-900',
+      value: 'text-emerald-700',
+      sub: 'text-emerald-800 font-bold',
+    },
+    rose: {
+      card: 'bg-gradient-to-br from-rose-100/90 via-rose-50 to-white border-2 border-rose-300 hover:border-rose-400 shadow-sm',
+      label: 'text-rose-900',
+      value: 'text-[#701A35]',
+      sub: 'text-rose-700 font-bold',
+    },
+    amber: {
+      card: 'bg-gradient-to-br from-amber-100/90 via-amber-50 to-white border-2 border-amber-300 hover:border-amber-400 shadow-sm',
+      label: 'text-amber-900',
+      value: 'text-amber-800',
+      sub: 'text-amber-800 font-bold',
+    },
+    slate: {
+      card: 'bg-gradient-to-br from-indigo-100/80 via-indigo-50/40 to-white border-2 border-indigo-200/90 hover:border-indigo-300 shadow-sm',
+      label: 'text-indigo-950',
+      value: 'text-indigo-950',
+      sub: 'text-indigo-800 font-medium',
+    },
+    blue: {
+      card: 'bg-gradient-to-br from-blue-100/80 via-blue-50/40 to-white border-2 border-blue-200/90 hover:border-blue-300 shadow-sm',
+      label: 'text-blue-950',
+      value: 'text-blue-950',
+      sub: 'text-blue-800 font-medium',
+    },
+    violet: {
+      card: 'bg-gradient-to-br from-violet-100/80 via-violet-50/40 to-white border-2 border-violet-200/90 hover:border-violet-300 shadow-sm',
+      label: 'text-violet-950',
+      value: 'text-violet-950',
+      sub: 'text-violet-800 font-medium',
+    },
+  };
+
+  const config = toneConfigs[tone] || toneConfigs.maroon;
+
+  return (
+    <div className={`p-3 rounded-xl transition-all flex flex-col justify-between ${config.card}`}>
+      <span className={`text-[10px] font-bold uppercase tracking-wider font-mono block ${config.label}`}>
+        {label}
+      </span>
+      <div className="mt-1">
+        <span className={`font-black text-xl tracking-tight block font-mono ${config.value}`}>
+          {value}
+        </span>
+      </div>
+      {subtitle && (
+        <span className={`text-[10px] mt-0.5 block truncate ${config.sub}`}>
+          {subtitle}
+        </span>
+      )}
+    </div>
+  );
 }
 
 function StatusChip({ label, count, active, onClick }: { label: string; count: number; active: boolean; onClick: () => void }) {
@@ -335,6 +406,20 @@ function LedgerDrawer({ report, onClose, onPdf, onExcel }: { report: CustomerRep
 }
 
 function DrawerMetric({ label, value, accent = false }: { label: string; value: string; accent?: boolean }) {
-  return <div className="rounded-xl bg-[#FBF8F3] px-2.5 sm:px-3 py-2 sm:py-2.5 border border-[#E7DFD2]/60 min-w-0"><span className="block text-[9px] font-bold uppercase tracking-[0.08em] text-slate-400 truncate">{label}</span><strong className={`mt-0.5 block truncate text-xs sm:text-sm font-bold ${accent ? 'text-[#245B9B]' : 'text-slate-800'}`}>{value}</strong></div>;
+  return (
+    <div
+      className={`rounded-xl px-2.5 sm:px-3 py-2 sm:py-2.5 border-2 min-w-0 ${accent
+          ? 'bg-gradient-to-br from-rose-100/90 via-rose-50 to-white border-rose-300'
+          : 'bg-gradient-to-br from-[#701A35]/12 via-[#FAF8F5] to-white border-[#701A35]/30'
+        }`}
+    >
+      <span className={`block text-[9px] font-bold uppercase tracking-[0.08em] font-mono truncate ${accent ? 'text-rose-900' : 'text-[#701A35]'}`}>
+        {label}
+      </span>
+      <strong className={`mt-0.5 block truncate text-xs sm:text-sm font-black font-mono ${accent ? 'text-[#701A35]' : 'text-[#701A35]'}`}>
+        {value}
+      </strong>
+    </div>
+  );
 }
 

@@ -2,15 +2,16 @@
 
 import React from 'react';
 import { CheckCircle2, Building2 } from 'lucide-react';
-import { Customer, Company } from '@/lib/types';
+import { Customer, Company, RepaymentFrequency } from '@/lib/types';
 import { MoneyDisplay } from '@/components/ui/MoneyDisplay';
+import { numberToIndianWords } from '@/lib/utils/numberToWords';
 
 interface ReviewStepProps {
   targetCustomer: Customer | undefined;
   customerSearch: string;
   totalAmount: number;
   installmentCount: number;
-  frequency: 'Weekly' | 'Monthly';
+  frequency: RepaymentFrequency;
   startDate: string;
   selectedCompanies: Company[];
   companyPcts: Record<string, number>;
@@ -49,6 +50,9 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({
               size="sm"
               amountClassName="font-bold text-[#EED8A1] block text-sm"
             />
+            <span className="text-[10px] text-amber-300/80 font-sans block truncate" title={numberToIndianWords(totalAmount)}>
+              {numberToIndianWords(totalAmount)}
+            </span>
           </div>
           <div>
             <span className="text-slate-500 block text-[10px] uppercase tracking-wider font-bold">Installments</span>
@@ -56,7 +60,7 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({
               {installmentCount} × {frequency}
             </span>
             <span className="text-[10px] text-slate-400 font-sans block">
-              ₹{Math.round(totalAmount / installmentCount).toLocaleString('en-IN')} / EMI
+              ₹{Math.round(totalAmount / (installmentCount || 1)).toLocaleString('en-IN')} / EMI
             </span>
           </div>
           <div>

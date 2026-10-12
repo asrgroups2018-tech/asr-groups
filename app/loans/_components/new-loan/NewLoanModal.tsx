@@ -13,6 +13,7 @@ import { TermsStep } from './steps/TermsStep';
 import { CompaniesStep } from './steps/CompaniesStep';
 import { ScheduleStep, ScheduleStepRow } from './steps/ScheduleStep';
 import { ReviewStep } from './steps/ReviewStep';
+import { RepaymentFrequency } from '@/lib/types';
 
 interface NewLoanModalProps {
   isOpen: boolean;
@@ -35,8 +36,8 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
   const [disbursedAmount, setDisbursedAmount] = useState<number>(0);
   const [interestAmount, setInterestAmount] = useState<number>(0);
 
-  // Step 2: Repayment Schedule
-  const [frequency, setFrequency] = useState<'Weekly' | 'Monthly'>('Monthly');
+  // Step 2: Repayment Schedule - 4 options: Monthly, Weekly, Bi-Weekly, Custom
+  const [frequency, setFrequency] = useState<RepaymentFrequency>('Monthly');
   const [installmentCount, setInstallmentCount] = useState<number>(5);
   const [startDate, setStartDate] = useState<string>(() => {
     return new Date().toISOString().slice(0, 10);
@@ -69,9 +70,18 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
       setStartDate(new Date().toISOString().slice(0, 10));
       setScheduleRows([]);
 
-      // Pick default ASR companies if none selected
-      if (selectedCompanyIds.length === 0 && companies.length > 0) {
-        const asrComps = companies.filter((c) => !c.isOutsideParty).slice(0, 3);
+      // Pick default active ASR companies (exclude INE and INS)
+      const activeAsr = companies.filter(
+        (c) =>
+          !c.isOutsideParty &&
+          c.isActive !== false &&
+          !['INE', 'INS'].includes(c.shortCode.toUpperCase()) &&
+          !c.name.toUpperCase().includes('INFINITY ENTERPRISES') &&
+          !c.name.toUpperCase().includes('INNOVATIVE SOLUTIONS')
+      );
+
+      if (selectedCompanyIds.length === 0 && activeAsr.length > 0) {
+        const asrComps = activeAsr.slice(0, 3);
         const ids = asrComps.map((c) => c.id);
         setSelectedCompanyIds(ids);
 
@@ -115,12 +125,15 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
   // Generate initial Step 4 Schedule from Step 2 & 3
   const generateInitialSchedule = () => {
     const rows: ScheduleStepRow[] = [];
-    const equalEmi = Math.round(totalAmount / installmentCount);
+    const count = installmentCount > 0 ? installmentCount : 1;
+    const equalEmi = Math.round(totalAmount / count);
 
-    for (let i = 0; i < installmentCount; i++) {
-      const d = new Date(startDate);
+    for (let i = 0; i < count; i++) {
+      const d = new Date(startDate || new Date().toISOString().slice(0, 10));
       if (frequency === 'Weekly') {
         d.setDate(d.getDate() + i * 7);
+      } else if (frequency === 'Bi-Weekly') {
+        d.setDate(d.getDate() + i * 14);
       } else {
         d.setMonth(d.getMonth() + i);
       }

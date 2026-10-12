@@ -2,8 +2,11 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { useApp } from '@/lib/store';
-import { Loan, Installment, Company } from '@/lib/types';
+import { Loan, Installment, Company, AppStatus, LoanStatus, RepaymentFrequency } from '@/lib/types';
 import { MoneyDisplay } from '@/components/ui/MoneyDisplay';
+import { DatePicker } from '@/components/ui/DatePicker';
+import { CustomSelect } from '@/components/ui/CustomSelect';
+import { numberToIndianWords } from '@/lib/utils/numberToWords';
 import {
   FileSpreadsheet,
   X,
@@ -13,6 +16,7 @@ import {
   AlertTriangle,
   CheckCircle2,
   RotateCcw,
+  AlertCircle,
 } from 'lucide-react';
 
 interface EditLoanExcelModalProps {
@@ -26,11 +30,12 @@ interface EditableInstallmentRow {
   seqNo: number;
   dueDate: string;
   amountDue: number;
-  status: string;
+  status: AppStatus | string;
   recdDate: string;
   chqNo: string;
   place: string;
   depName: string;
+  bank?: string;
   remarks: string;
   // ASR Companies (10)
   pass: number;
@@ -82,10 +87,34 @@ function formatToIso(dStr: string | null | undefined): string {
   return '';
 }
 
-const COMPANY_KEYS: (keyof EditableInstallmentRow)[] = [
-  'pass', 'kars', 'ig', 'ine', 'ins', 'mars', 'mm', 'tg', 'gs', 'ala',
-  'fin', 'cs', 'mc', 'tatva', 'bhavna', 'taSS',
+export interface CompanyColumnDef {
+  key: keyof EditableInstallmentRow;
+  label: string;
+  isOutside: boolean;
+}
+
+export const ALL_COMPANY_COLUMNS: CompanyColumnDef[] = [
+  // 10 ASR Group Companies
+  { key: 'pass', label: 'PASS ENTERPRISES', isOutside: false },
+  { key: 'kars', label: 'KARS ENTERPRISES', isOutside: false },
+  { key: 'ig', label: 'INFIN GROUP', isOutside: false },
+  { key: 'ine', label: 'INFINITY ENTERPRISES', isOutside: false },
+  { key: 'ins', label: 'INNOVATIVE SOLUTIONS', isOutside: false },
+  { key: 'mars', label: 'MARS SOLUTION', isOutside: false },
+  { key: 'mm', label: 'MM ASSOCIATES', isOutside: false },
+  { key: 'tg', label: 'TRIVENI GROUP', isOutside: false },
+  { key: 'gs', label: 'GLOBAL SOLITAIRE', isOutside: false },
+  { key: 'ala', label: 'ALAGESH', isOutside: false },
+  // 6 Outside Parties
+  { key: 'fin', label: 'FINCUBE', isOutside: true },
+  { key: 'cs', label: 'CS ASSOCIATES', isOutside: true },
+  { key: 'mc', label: 'M CHINNIAH', isOutside: true },
+  { key: 'tatva', label: 'TATVA ENTERPRISES', isOutside: true },
+  { key: 'bhavna', label: 'BHAVANA CORP', isOutside: true },
+  { key: 'taSS', label: 'THIRUCHENDUR (SS)', isOutside: true },
 ];
+
+const COMPANY_KEYS: (keyof EditableInstallmentRow)[] = ALL_COMPANY_COLUMNS.map((c) => c.key);
 
 function getFieldKeyForCompanyCode(code: string): keyof EditableInstallmentRow | null {
   const c = code.trim().toUpperCase();
@@ -108,6 +137,55 @@ function getFieldKeyForCompanyCode(code: string): keyof EditableInstallmentRow |
   return null;
 }
 
+export const ALLOWED_STATUS_LIST: AppStatus[] = ['Pending', 'Cleared', 'NEFT', 'RTGS', 'Cash'];
+export const ALLOWED_LOAN_STATUS_LIST = ['Active', 'Closed', 'Overdue'] as const;
+export type TopLoanStatus = (typeof ALLOWED_LOAN_STATUS_LIST)[number];
+
+export function isStatusPaid(st: string | null | undefined): boolean {
+  if (!st) return false;
+  const u = st.trim().toUpperCase();
+  return ['CLEARED', 'NEFT', 'RTGS', 'CASH', 'PASS', 'CLS', 'CS', 'PAID', 'CLOSED', 'SETTLED'].includes(u);
+}
+
+export function normalizeLoanStatus(st: string | null | undefined): TopLoanStatus {
+  if (!st) return 'Active';
+  const u = st.trim().toUpperCase();
+  if (['CLOSED', 'SETTLED', 'CLEARED', 'PAID', 'CLS', 'CS', 'PASS'].includes(u)) return 'Closed';
+  if (['OVERDUE', 'DELAYED'].includes(u)) return 'Overdue';
+  return 'Active';
+}
+
+export function normalizeStatus(st: string | null | undefined): AppStatus {
+  if (!st) return 'Pending';
+  const u = st.trim().toUpperCase();
+  if (['CLEARED', 'PASS', 'CLS', 'PAID', 'CS', 'CLOSED', 'SETTLED'].includes(u)) return 'Cleared';
+  if (['NEFT', 'RET NEFT'].includes(u)) return 'NEFT';
+  if (['RTGS'].includes(u)) return 'RTGS';
+  if (['CASH', 'CSH'].includes(u)) return 'Cash';
+  return 'Pending';
+}
+
+const LOAN_STATUS_OPTIONS: { value: TopLoanStatus; label: string; colorClass: string }[] = [
+  { value: 'Active', label: 'Active', colorClass: 'text-emerald-900 font-bold' },
+  { value: 'Closed', label: 'Closed', colorClass: 'text-slate-900 font-bold' },
+  { value: 'Overdue', label: 'Overdue', colorClass: 'text-rose-950 font-bold' },
+];
+
+const FREQUENCY_OPTIONS: { value: RepaymentFrequency; label: string }[] = [
+  { value: 'Monthly', label: 'Monthly' },
+  { value: 'Weekly', label: 'Weekly' },
+  { value: 'Bi-Weekly', label: 'Bi-Weekly (14 days)' },
+  { value: 'Custom', label: 'Custom' },
+];
+
+const ROW_STATUS_OPTIONS: { value: AppStatus; label: string; colorClass?: string }[] = [
+  { value: 'Pending', label: 'Pending', colorClass: 'text-amber-900 font-bold' },
+  { value: 'Cleared', label: 'Cleared', colorClass: 'text-emerald-900 font-bold' },
+  { value: 'NEFT', label: 'NEFT', colorClass: 'text-teal-900 font-bold' },
+  { value: 'RTGS', label: 'RTGS', colorClass: 'text-indigo-900 font-bold' },
+  { value: 'Cash', label: 'Cash', colorClass: 'text-emerald-900 font-bold' },
+];
+
 export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
   isOpen,
   onClose,
@@ -120,8 +198,8 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
   const [codeNo, setCodeNo] = useState('');
   const [place, setPlace] = useState('');
   const [startDate, setStartDate] = useState('');
-  const [frequency, setFrequency] = useState<'Weekly' | 'Monthly'>('Monthly');
-  const [status, setStatus] = useState<Loan['status']>('Active');
+  const [frequency, setFrequency] = useState<RepaymentFrequency>('Monthly');
+  const [status, setStatus] = useState<TopLoanStatus>('Active');
   const [disbursedAmount, setDisbursedAmount] = useState<number | ''>('');
   const [interestAmount, setInterestAmount] = useState<number | ''>('');
 
@@ -130,8 +208,13 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
   const [isSaving, setIsSaving] = useState(false);
 
   // Column View Filter
-  const [categoryFilter, setCategoryFilter] = useState<'ALL' | 'ASR_ONLY' | 'OUTSIDE_ONLY'>('ALL');
+  const [categoryFilter, setCategoryFilter] = useState<'ALL' | 'SELECTED_ONLY' | 'ASR_ONLY' | 'OUTSIDE_ONLY'>('ALL');
   const [isPropsExpanded, setIsPropsExpanded] = useState(false);
+
+  // Capital limit for the current loan
+  const capitalAmount = useMemo(() => {
+    return loan ? Number(loan.totalAmount || 0) : 0;
+  }, [loan]);
 
   // Initialize rows when loan changes
   useEffect(() => {
@@ -141,8 +224,8 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
     setCodeNo(loan.codeNo || '');
     setPlace(loan.place || 'CHENNAI');
     setStartDate(formatToIso(loan.startDate) || new Date().toISOString().slice(0, 10));
-    setFrequency(loan.frequency || 'Monthly');
-    setStatus(loan.status || 'Active');
+    setFrequency((loan.frequency as RepaymentFrequency) || 'Monthly');
+    setStatus(normalizeLoanStatus(loan.status));
     setDisbursedAmount(loan.disbursedAmount != null ? loan.disbursedAmount : '');
     setInterestAmount(loan.interestAmount != null ? loan.interestAmount : '');
 
@@ -153,11 +236,12 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
         seqNo: inst.seqNo || idx + 1,
         dueDate: formatToIso(inst.dueDate) || '2026-07-01',
         amountDue: inst.amountDue || 0,
-        status: inst.status || 'PENDING',
+        status: normalizeStatus(inst.status),
         recdDate: formatToIso(inst.recdDate) || '',
         chqNo: inst.chqNo || '',
         place: inst.place || loan.place || 'CHENNAI',
         depName: inst.depName || '',
+        bank: inst.bank || '',
         remarks: inst.remarks || '',
         // ASR Companies (10)
         pass: Number(splits['PASS'] || splits['PASS ENTERPRISES'] || 0),
@@ -188,6 +272,32 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
     return rows.reduce((sum, r) => sum + (Number(r.amountDue) || 0), 0);
   }, [rows]);
 
+  const totalPaidAmount = useMemo(() => {
+    return rows.reduce((sum, r) => (isStatusPaid(r.status) ? sum + (Number(r.amountDue) || 0) : sum), 0);
+  }, [rows]);
+
+  const paidRowsCount = useMemo(() => {
+    return rows.filter((r) => isStatusPaid(r.status)).length;
+  }, [rows]);
+
+  const pendingRowsCount = useMemo(() => {
+    return rows.length - paidRowsCount;
+  }, [rows, paidRowsCount]);
+
+  const totalPendingAmount = useMemo(() => {
+    return Math.max(0, capitalAmount - totalPaidAmount);
+  }, [capitalAmount, totalPaidAmount]);
+
+  // Auto-adjust top loan status when all installments are fully paid or unpaid
+  useEffect(() => {
+    if (rows.length === 0) return;
+    if (totalPendingAmount === 0 && paidRowsCount === rows.length && paidRowsCount > 0) {
+      setStatus('Closed');
+    } else if (status === 'Closed' && totalPendingAmount > 0) {
+      setStatus('Active');
+    }
+  }, [totalPendingAmount, paidRowsCount, rows.length]);
+
   // Column totals
   const companySums = useMemo(() => {
     return {
@@ -209,6 +319,45 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
       taSS: rows.reduce((s, r) => s + (Number(r.taSS) || 0), 0),
     };
   }, [rows]);
+
+  // Active/selected funding companies for this specific loan
+  const activeCompanyKeys = useMemo(() => {
+    const set = new Set<keyof EditableInstallmentRow>();
+
+    // 1. From loan.splits
+    if (loan?.splits && Array.isArray(loan.splits)) {
+      loan.splits.forEach((sp) => {
+        const k = getFieldKeyForCompanyCode(sp.companyCode || sp.companyName || '');
+        if (k && ((sp.splitPercent || 0) > 0 || (sp.splitAmount || 0) > 0)) {
+          set.add(k);
+        }
+      });
+    }
+
+    // 2. From existing rows in the loan
+    COMPANY_KEYS.forEach((k) => {
+      if (companySums[k as keyof typeof companySums] > 0) {
+        set.add(k);
+      }
+    });
+
+    return set;
+  }, [loan, companySums]);
+
+  const visibleCompanyColumns = useMemo(() => {
+    return ALL_COMPANY_COLUMNS.filter((col) => {
+      if (categoryFilter === 'SELECTED_ONLY') {
+        return activeCompanyKeys.has(col.key);
+      }
+      if (categoryFilter === 'ASR_ONLY') {
+        return !col.isOutside;
+      }
+      if (categoryFilter === 'OUTSIDE_ONLY') {
+        return col.isOutside;
+      }
+      return true; // 'ALL'
+    });
+  }, [categoryFilter, activeCompanyKeys]);
 
   // Check row validation mismatches
   const rowMismatches = useMemo(() => {
@@ -245,12 +394,133 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
 
   const hasAnyMismatches = rowMismatches.some((m) => m.isMismatch);
 
-  // Update cell handler with auto split proportional adjustment for amountDue
+  // Capital limit & required validations
+  const hasExceededCapital = useMemo(() => {
+    return rows.some((r) => (Number(r.amountDue) || 0) > capitalAmount) || totalLoanAmount > capitalAmount;
+  }, [rows, totalLoanAmount, capitalAmount]);
+
+  const hasEmptyOrZeroAmount = useMemo(() => {
+    return rows.some((r) => !r.amountDue || Number(r.amountDue) <= 0);
+  }, [rows]);
+
+  const isTotalEqualCapital = Math.abs(totalLoanAmount - capitalAmount) < 0.01;
+
+  // Validation error message
+  const validationError = useMemo(() => {
+    if (hasExceededCapital) {
+      return `Amount cannot exceed capital amount (₹${capitalAmount.toLocaleString('en-IN')})`;
+    }
+    if (hasEmptyOrZeroAmount) {
+      return 'Loan amount is required. Installment amount cannot be empty or zero.';
+    }
+    if (!isTotalEqualCapital) {
+      const diff = capitalAmount - totalLoanAmount;
+      return `Total installments (₹${totalLoanAmount.toLocaleString('en-IN')}) must equal capital amount (₹${capitalAmount.toLocaleString('en-IN')}). Difference: ₹${Math.abs(diff).toLocaleString('en-IN')}`;
+    }
+    if (hasAnyMismatches) {
+      return 'Some individual row company splits do not sum to their installment amount.';
+    }
+    return null;
+  }, [hasExceededCapital, hasEmptyOrZeroAmount, isTotalEqualCapital, hasAnyMismatches, capitalAmount, totalLoanAmount]);
+
+  const isSaveDisabled = Boolean(validationError) || isSaving;
+
+  // Fixed funding company split ratios for this loan
+  const loanSplitRatios = useMemo(() => {
+    const ratios: Partial<Record<keyof EditableInstallmentRow, number>> = {};
+
+    // 1. From loan.splits
+    const validSplits = (loan?.splits || []).filter(
+      (sp) => (sp.splitPercent || 0) > 0 || (sp.splitAmount || 0) > 0
+    );
+
+    if (validSplits.length > 0) {
+      const totalPct = validSplits.reduce((sum, sp) => sum + (sp.splitPercent || 0), 0);
+      validSplits.forEach((sp) => {
+        const k = getFieldKeyForCompanyCode(sp.companyCode || sp.companyName || '');
+        if (k) {
+          ratios[k] = totalPct > 0 ? (sp.splitPercent || 0) / totalPct : (sp.splitAmount || 1) / (loan?.totalAmount || 1);
+        }
+      });
+      return ratios;
+    }
+
+    // 2. From installments mapped on load
+    if (loan?.installments && loan.installments.length > 0) {
+      const sums: Record<string, number> = {};
+      let totalAll = 0;
+      loan.installments.forEach((inst) => {
+        const sp = inst.companySplits || {};
+        Object.entries(sp).forEach(([code, amt]) => {
+          const k = getFieldKeyForCompanyCode(code);
+          if (k && Number(amt) > 0) {
+            sums[k] = (sums[k] || 0) + Number(amt);
+            totalAll += Number(amt);
+          }
+        });
+      });
+
+      if (totalAll > 0) {
+        Object.entries(sums).forEach(([k, s]) => {
+          ratios[k as keyof EditableInstallmentRow] = s / totalAll;
+        });
+        return ratios;
+      }
+    }
+
+    // 3. Fallback to equal split among active companies
+    const activeList = Array.from(activeCompanyKeys);
+    if (activeList.length > 0) {
+      activeList.forEach((k) => {
+        ratios[k] = 1 / activeList.length;
+      });
+    }
+
+    return ratios;
+  }, [loan, activeCompanyKeys]);
+
+  // Distribute splits helper based on established loan ratio
+  const distributeSplits = (amt: number, splitsObj: any) => {
+    COMPANY_KEYS.forEach((k) => {
+      splitsObj[k] = 0;
+    });
+
+    if (amt <= 0) return splitsObj;
+
+    const entries = Object.entries(loanSplitRatios).filter(
+      ([k, ratio]) => (ratio || 0) > 0 && activeCompanyKeys.has(k as keyof EditableInstallmentRow)
+    ) as [keyof EditableInstallmentRow, number][];
+
+    if (entries.length === 0) return splitsObj;
+
+    const totalRatio = entries.reduce((sum, [_, r]) => sum + r, 0);
+    let allocated = 0;
+
+    entries.forEach(([key, ratio], idx) => {
+      if (idx === entries.length - 1) {
+        splitsObj[key] = Math.max(0, amt - allocated);
+      } else {
+        const normalizedRatio = totalRatio > 0 ? ratio / totalRatio : 1 / entries.length;
+        const share = Math.round(amt * normalizedRatio);
+        splitsObj[key] = share;
+        allocated += share;
+      }
+    });
+
+    return splitsObj;
+  };
+
+  // Update cell handler
   const handleCellChange = (index: number, field: keyof EditableInstallmentRow, val: any) => {
     setRows((prev) => {
       const next = [...prev];
       const currentRow = next[index];
       if (!currentRow) return prev;
+
+      // Prevent editing unselected company columns
+      if (COMPANY_KEYS.includes(field) && !activeCompanyKeys.has(field)) {
+        return prev;
+      }
 
       if (field === 'amountDue') {
         const newAmt = Number(val) || 0;
@@ -261,44 +531,7 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
             (updatedRow as any)[k] = 0;
           });
         } else {
-          // Check if current row already has active splits
-          const activeSplits = COMPANY_KEYS.filter((k) => (Number(currentRow[k]) || 0) > 0);
-          const currentSplitSum = activeSplits.reduce((sum, k) => sum + (Number(currentRow[k]) || 0), 0);
-
-          if (activeSplits.length > 0 && currentSplitSum > 0) {
-            // Proportionally adjust existing active company splits to match new amountDue
-            let allocated = 0;
-            activeSplits.forEach((k, idx) => {
-              if (idx === activeSplits.length - 1) {
-                // Exact remainder to prevent rounding discrepancies
-                (updatedRow as any)[k] = Math.max(0, newAmt - allocated);
-              } else {
-                const prevVal = Number(currentRow[k]) || 0;
-                const share = Math.round((newAmt * prevVal) / currentSplitSum);
-                (updatedRow as any)[k] = share;
-                allocated += share;
-              }
-            });
-          } else if (loan && loan.splits && loan.splits.length > 0) {
-            // Fallback to loan's syndicate ratio if row currently has no splits
-            const validSplits = loan.splits.filter((sp) => (sp.splitPercent || 0) > 0 || (sp.splitAmount || 0) > 0);
-            const totalPct = validSplits.reduce((sum, sp) => sum + (sp.splitPercent || 0), 0);
-            let allocated = 0;
-
-            validSplits.forEach((sp, idx) => {
-              const fieldKey = getFieldKeyForCompanyCode(sp.companyCode || '');
-              if (!fieldKey) return;
-
-              if (idx === validSplits.length - 1) {
-                (updatedRow as any)[fieldKey] = Math.max(0, newAmt - allocated);
-              } else {
-                const pct = totalPct > 0 ? (sp.splitPercent || 0) / totalPct : 1 / validSplits.length;
-                const share = Math.round(newAmt * pct);
-                (updatedRow as any)[fieldKey] = share;
-                allocated += share;
-              }
-            });
-          }
+          distributeSplits(newAmt, updatedRow);
         }
 
         next[index] = updatedRow;
@@ -310,6 +543,52 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
     });
   };
 
+  // Auto-balance remaining difference to capital
+  const handleAutoBalanceRemainder = () => {
+    const diff = capitalAmount - totalLoanAmount;
+    if (diff <= 0) return;
+
+    const nextSeq = rows.length + 1;
+    const lastDate = rows.length > 0 ? rows[rows.length - 1].dueDate : '2026-07-01';
+
+    const autoRow: EditableInstallmentRow = {
+      id: `INST-NEW-BAL-${Date.now()}-${nextSeq}`,
+      seqNo: nextSeq,
+      dueDate: lastDate,
+      amountDue: diff,
+      status: 'Pending',
+      recdDate: '',
+      chqNo: '',
+      place: place || 'CHENNAI',
+      depName: '',
+      remarks: 'Auto-balanced remainder',
+      pass: 0,
+      kars: 0,
+      ig: 0,
+      ine: 0,
+      ins: 0,
+      mars: 0,
+      mm: 0,
+      tg: 0,
+      gs: 0,
+      ala: 0,
+      fin: 0,
+      cs: 0,
+      mc: 0,
+      tatva: 0,
+      bhavna: 0,
+      taSS: 0,
+    };
+
+    distributeSplits(diff, autoRow);
+    setRows((prev) => [...prev, autoRow]);
+    showToast(
+      'Remainder Balanced',
+      `Added EMI #${nextSeq} with ₹${diff.toLocaleString('en-IN')} to equal capital amount of ₹${capitalAmount.toLocaleString('en-IN')}.`,
+      'success'
+    );
+  };
+
   // Add new EMI row
   const handleAddRow = () => {
     const nextSeq = rows.length + 1;
@@ -319,14 +598,15 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
       nextDate = lastDate || '2026-07-01';
     }
 
-    const defaultAmt = rows.length > 0 ? rows[0].amountDue : 100000;
+    const remaining = Math.max(0, capitalAmount - totalLoanAmount);
+    const defaultAmt = remaining > 0 ? remaining : rows.length > 0 ? rows[0].amountDue : 50000;
 
     const newRow: EditableInstallmentRow = {
       id: `INST-NEW-${Date.now()}-${nextSeq}`,
       seqNo: nextSeq,
       dueDate: nextDate,
       amountDue: defaultAmt,
-      status: 'PENDING',
+      status: 'Pending',
       recdDate: '',
       chqNo: '',
       place: place || 'CHENNAI',
@@ -350,26 +630,7 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
       taSS: 0,
     };
 
-    // Auto-balance new row based on loan syndicate splits
-    if (loan && loan.splits && loan.splits.length > 0 && defaultAmt > 0) {
-      const validSplits = loan.splits.filter((sp) => (sp.splitPercent || 0) > 0 || (sp.splitAmount || 0) > 0);
-      const totalPct = validSplits.reduce((sum, sp) => sum + (sp.splitPercent || 0), 0);
-      let allocated = 0;
-
-      validSplits.forEach((sp, idx) => {
-        const fieldKey = getFieldKeyForCompanyCode(sp.companyCode || '');
-        if (!fieldKey) return;
-        if (idx === validSplits.length - 1) {
-          (newRow as any)[fieldKey] = Math.max(0, defaultAmt - allocated);
-        } else {
-          const pct = totalPct > 0 ? (sp.splitPercent || 0) / totalPct : 1 / validSplits.length;
-          const share = Math.round(defaultAmt * pct);
-          (newRow as any)[fieldKey] = share;
-          allocated += share;
-        }
-      });
-    }
-
+    distributeSplits(defaultAmt, newRow);
     setRows((prev) => [...prev, newRow]);
   };
 
@@ -385,9 +646,8 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
     });
   };
 
-  // Auto-balance row splits based on initial percentages with exact remainder balancing
+  // Auto-balance row splits based on initial percentages
   const handleAutoBalanceRow = (index: number) => {
-    if (!loan || !loan.splits || loan.splits.length === 0) return;
     const row = rows[index];
     if (!row) return;
     const amt = Number(row.amountDue) || 0;
@@ -398,23 +658,7 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
       (updatedRow as any)[k] = 0;
     });
 
-    const validSplits = loan.splits.filter((sp) => (sp.splitPercent || 0) > 0 || (sp.splitAmount || 0) > 0);
-    const totalPct = validSplits.reduce((sum, sp) => sum + (sp.splitPercent || 0), 0);
-    let allocated = 0;
-
-    validSplits.forEach((sp, idx) => {
-      const fieldKey = getFieldKeyForCompanyCode(sp.companyCode || '');
-      if (!fieldKey) return;
-
-      if (idx === validSplits.length - 1) {
-        (updatedRow as any)[fieldKey] = Math.max(0, amt - allocated);
-      } else {
-        const pct = totalPct > 0 ? (sp.splitPercent || 0) / totalPct : 1 / validSplits.length;
-        const share = Math.round(amt * pct);
-        (updatedRow as any)[fieldKey] = share;
-        allocated += share;
-      }
-    });
+    distributeSplits(amt, updatedRow);
 
     setRows((prev) => {
       const next = [...prev];
@@ -424,53 +668,15 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
     showToast('Row Balanced', `EMI #${row.seqNo} company splits aligned to loan ratio.`, 'info');
   };
 
-  // Auto-balance all rows in one click
-  const handleAutoBalanceAllRows = () => {
-    if (!loan || !loan.splits || loan.splits.length === 0) return;
-    const validSplits = loan.splits.filter((sp) => (sp.splitPercent || 0) > 0 || (sp.splitAmount || 0) > 0);
-    if (validSplits.length === 0) return;
-    const totalPct = validSplits.reduce((sum, sp) => sum + (sp.splitPercent || 0), 0);
-
-    setRows((prev) =>
-      prev.map((row) => {
-        const amt = Number(row.amountDue) || 0;
-        if (amt <= 0) return row;
-
-        const updatedRow = { ...row };
-        COMPANY_KEYS.forEach((k) => {
-          (updatedRow as any)[k] = 0;
-        });
-
-        let allocated = 0;
-        validSplits.forEach((sp, idx) => {
-          const fieldKey = getFieldKeyForCompanyCode(sp.companyCode || '');
-          if (!fieldKey) return;
-
-          if (idx === validSplits.length - 1) {
-            (updatedRow as any)[fieldKey] = Math.max(0, amt - allocated);
-          } else {
-            const pct = totalPct > 0 ? (sp.splitPercent || 0) / totalPct : 1 / validSplits.length;
-            const share = Math.round(amt * pct);
-            (updatedRow as any)[fieldKey] = share;
-            allocated += share;
-          }
-        });
-
-        return updatedRow;
-      })
-    );
-    showToast('All Rows Balanced', 'All installment rows re-aligned to loan company ratios.', 'success');
-  };
-
-  // Save changes back to Turso Cloud DB
+  // Save changes back to Turso Cloud DB in one atomic transaction
   const handleSave = async () => {
     if (!loan) return;
     if (!customerName.trim()) {
       showToast('Validation Error', 'Customer / Client Name is required.', 'warning');
       return;
     }
-    if (rows.length === 0) {
-      showToast('Validation Error', 'At least one installment row is required.', 'warning');
+    if (validationError) {
+      showToast('Validation Error', validationError, 'warning');
       return;
     }
 
@@ -511,29 +717,35 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
           seqNo: Number(r.seqNo),
           dueDate: r.dueDate,
           amountDue: Number(r.amountDue) || 0,
-          status: r.status || 'PENDING',
+          status: normalizeStatus(r.status),
           recdDate: r.recdDate && r.recdDate.trim() ? r.recdDate.trim() : null,
           chqNo: r.chqNo && r.chqNo.trim() ? r.chqNo.trim() : null,
           place: r.place || place || 'CHENNAI',
           depName: r.depName && r.depName.trim() ? r.depName.trim() : null,
+          bank: r.bank && r.bank.trim() ? r.bank.trim() : null,
           remarks: r.remarks && r.remarks.trim() ? r.remarks.trim() : null,
           companySplits,
         };
       }),
     };
 
-    const result = await updateFullLoan(loan.id, payload);
-    setIsSaving(false);
+    try {
+      const result = await updateFullLoan(loan.id, payload);
+      setIsSaving(false);
 
-    if (result) {
-      onClose();
+      if (result) {
+        showToast('Saved Successfully', 'Loan edits and balanced installments synced to database.', 'success');
+        onClose();
+      }
+    } catch (err: any) {
+      setIsSaving(false);
+      showToast('Save Failed', err.message || 'Error updating loan.', 'error');
     }
   };
 
-  const showAsr = categoryFilter === 'ALL' || categoryFilter === 'ASR_ONLY';
-  const showOutside = categoryFilter === 'ALL' || categoryFilter === 'OUTSIDE_ONLY';
-
   if (!isOpen || !loan) return null;
+
+  const remainingDiff = capitalAmount - totalLoanAmount;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-1 sm:p-4 bg-black/80 backdrop-blur-xs animate-in fade-in duration-150">
@@ -552,25 +764,33 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
                 <span className="font-mono text-[10px] sm:text-xs font-bold px-2 py-0.5 rounded bg-[#701A35] text-white shrink-0">
                   {loan.id}
                 </span>
-                <span className="font-mono text-[10px] sm:text-xs font-bold px-2 py-0.5 rounded-lg bg-amber-100 text-amber-950 border border-amber-300 flex items-center gap-1 shrink-0">
-                  <span>Total:</span>
-                  <MoneyDisplay amount={totalLoanAmount} size="xs" amountClassName="text-amber-950 font-bold" />
+                <span className="font-mono text-[10px] sm:text-xs font-bold px-2.5 py-0.5 rounded-lg bg-amber-100 text-amber-950 border border-amber-300 flex items-center gap-1 shrink-0 shadow-2xs">
+                  <span className="text-amber-800">Capital:</span>
+                  <MoneyDisplay amount={capitalAmount} size="xs" amountClassName="text-amber-950 font-bold" />
                 </span>
-                {disbursedAmount !== '' && Number(disbursedAmount) > 0 && (
-                  <span className="font-mono text-[10px] sm:text-xs font-bold px-2 py-0.5 rounded-lg bg-emerald-100 text-emerald-950 border border-emerald-300 flex items-center gap-1 shrink-0">
-                    <span>Disbursed:</span>
-                    <span>₹{Number(disbursedAmount).toLocaleString('en-IN')}</span>
+
+                {totalPaidAmount > 0 && (
+                  <span className="font-mono text-[10px] sm:text-xs font-bold px-2.5 py-0.5 rounded-lg bg-emerald-100 text-emerald-950 border border-emerald-300 flex items-center gap-1 shrink-0 shadow-2xs transition-all animate-in fade-in duration-150">
+                    <span className="text-emerald-800">Paid:</span>
+                    <MoneyDisplay amount={totalPaidAmount} size="xs" amountClassName="text-emerald-950 font-bold" />
                   </span>
                 )}
-                {interestAmount !== '' && Number(interestAmount) > 0 && (
-                  <span className="font-mono text-[10px] sm:text-xs font-bold px-2 py-0.5 rounded-lg bg-amber-500/20 text-[#701A35] border border-amber-400 flex items-center gap-1 shrink-0">
-                    <span>Interest:</span>
-                    <span>₹{Number(interestAmount).toLocaleString('en-IN')}</span>
-                  </span>
-                )}
+
+                <span className={`font-mono text-[10px] sm:text-xs font-bold px-2.5 py-0.5 rounded-lg border flex items-center gap-1 shrink-0 shadow-2xs transition-all duration-150 ${
+                  totalPendingAmount === 0
+                    ? 'bg-emerald-100 text-emerald-950 border-emerald-300'
+                    : 'bg-rose-100 text-rose-950 border-rose-300'
+                }`}>
+                  <span className={totalPendingAmount === 0 ? 'text-emerald-800' : 'text-rose-800'}>Pending:</span>
+                  <MoneyDisplay
+                    amount={totalPendingAmount}
+                    size="xs"
+                    amountClassName={totalPendingAmount === 0 ? 'text-emerald-950 font-bold' : 'text-rose-950 font-bold'}
+                  />
+                </span>
               </div>
               <p className="text-[10px] sm:text-[11px] text-slate-500 font-mono mt-0.5 hidden sm:block">
-                Official Company Ledgers • Upfront Interest & Disbursed Tracking • Direct Cell Editing
+                Capital Limit: ₹{capitalAmount.toLocaleString('en-IN')} ({numberToIndianWords(capitalAmount)}) • Paid: ₹{totalPaidAmount.toLocaleString('en-IN')} ({paidRowsCount} Paid) • Pending: ₹{totalPendingAmount.toLocaleString('en-IN')} ({pendingRowsCount} EMIs) • Atomic Sync
               </p>
             </div>
           </div>
@@ -586,8 +806,9 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
 
             <button
               onClick={handleSave}
-              disabled={isSaving}
-              className="px-3 sm:px-5 py-1.5 sm:py-2 bg-[#701A35] hover:bg-[#5C142B] text-white text-xs font-bold rounded-lg shadow-xs flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50 btn-press"
+              disabled={isSaveDisabled}
+              title={validationError || 'Save loan changes'}
+              className="px-3 sm:px-5 py-1.5 sm:py-2 bg-[#701A35] hover:bg-[#5C142B] text-white text-xs font-bold rounded-lg shadow-xs flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed btn-press"
             >
               <Save className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-200" />
               <span>{isSaving ? 'Saving...' : 'Save & Sync'}</span>
@@ -602,6 +823,28 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
             </button>
           </div>
         </div>
+
+        {/* ─── Validation Error Banner (When Capital Exceeded, Zero Amount, or Total Mismatch) ─── */}
+        {validationError && (
+          <div className="px-4 py-2 bg-rose-100 border-b border-rose-300 text-rose-900 text-xs font-bold font-mono flex items-center justify-between shrink-0 flex-wrap gap-2 animate-in fade-in duration-100">
+            <div className="flex items-center gap-2 flex-wrap">
+              <AlertTriangle className="w-4 h-4 text-rose-700 shrink-0" />
+              <span>{validationError}</span>
+              {remainingDiff > 0 && (
+                <button
+                  type="button"
+                  onClick={handleAutoBalanceRemainder}
+                  className="px-2.5 py-0.5 rounded-md bg-[#701A35] hover:bg-[#5C142B] text-white text-[11px] font-bold shadow-xs cursor-pointer transition-colors"
+                >
+                  + Auto-Add Remainder Row (₹{remainingDiff.toLocaleString('en-IN')})
+                </button>
+              )}
+            </div>
+            <span className="text-[10px] uppercase px-2 py-0.5 rounded bg-rose-200 text-rose-900 border border-rose-400">
+              Save Blocked
+            </span>
+          </div>
+        )}
 
         {/* ─── Mobile Properties Bar Collapsible Toggle ─── */}
         <div className="sm:hidden px-3.5 py-2 bg-[#FDFCFA] border-b border-[#D0C8B8] flex items-center justify-between">
@@ -619,13 +862,13 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
         <div className={`${isPropsExpanded ? 'grid' : 'hidden sm:grid'} px-3.5 sm:px-5 py-3 bg-[#FDFCFA] border-b border-[#D0C8B8] grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2.5 sm:gap-3 text-xs shrink-0 max-h-[35vh] sm:max-h-none overflow-y-auto`}>
           <div className="col-span-2 sm:col-span-2 lg:col-span-1">
             <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1 font-mono">
-              Borrower Name <span className="text-rose-500">*</span>
+              Borrower Name *
             </label>
             <input
               type="text"
               value={customerName}
               onChange={(e) => setCustomerName(e.target.value)}
-              className="w-full px-2.5 py-1.5 rounded border border-slate-300 bg-white font-bold text-slate-900 focus:outline-2 focus:outline-[#701A35] text-xs"
+              className="w-full px-2.5 py-1.5 rounded border border-slate-300 bg-white font-bold text-slate-900 focus:outline-2 focus:outline-[#701A35] text-xs uppercase"
             />
           </div>
 
@@ -657,16 +900,13 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
             <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1 font-mono">
               Start Date
             </label>
-            <input
-              type="date"
+            <DatePicker
               value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              onClick={(e) => {
-                try {
-                  (e.target as any).showPicker?.();
-                } catch {}
-              }}
-              className="w-full px-2.5 py-1.5 rounded border border-slate-300 bg-white font-mono font-semibold text-slate-900 cursor-pointer focus:outline-2 focus:outline-[#701A35] text-xs [appearance:textfield] [&::-webkit-inner-spin-button]:hidden [&::-webkit-calendar-picker-indicator]:cursor-pointer"
+              onChange={setStartDate}
+              theme="light"
+              size="sm"
+              className="w-full"
+              buttonClassName="w-full py-1.5 text-xs"
             />
           </div>
 
@@ -681,8 +921,8 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
               onChange={(e) => {
                 const val = e.target.value === '' ? '' : Number(e.target.value);
                 setDisbursedAmount(val);
-                if (val !== '' && totalLoanAmount > 0 && Number(val) <= totalLoanAmount) {
-                  setInterestAmount(totalLoanAmount - Number(val));
+                if (val !== '' && capitalAmount > 0 && Number(val) <= capitalAmount) {
+                  setInterestAmount(capitalAmount - Number(val));
                 }
               }}
               className="w-full px-2.5 py-1.5 rounded border border-slate-300 bg-white font-mono font-bold text-slate-900 focus:outline-2 focus:outline-[#701A35] text-xs"
@@ -701,8 +941,8 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
               onChange={(e) => {
                 const val = e.target.value === '' ? '' : Number(e.target.value);
                 setInterestAmount(val);
-                if (val !== '' && totalLoanAmount > 0 && Number(val) <= totalLoanAmount) {
-                  setDisbursedAmount(totalLoanAmount - Number(val));
+                if (val !== '' && capitalAmount > 0 && Number(val) <= capitalAmount) {
+                  setDisbursedAmount(capitalAmount - Number(val));
                 }
               }}
               className="w-full px-2.5 py-1.5 rounded border border-amber-300 bg-amber-50/70 font-mono font-bold text-amber-950 focus:outline-2 focus:outline-[#701A35] text-xs"
@@ -713,31 +953,26 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
             <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1 font-mono">
               Frequency
             </label>
-            <select
+            <CustomSelect
               value={frequency}
-              onChange={(e) => setFrequency(e.target.value as any)}
-              className="w-full px-2.5 py-1.5 rounded border border-slate-300 bg-white text-slate-800 font-semibold focus:outline-2 focus:outline-[#701A35] text-xs cursor-pointer"
-            >
-              <option value="Weekly">Weekly</option>
-              <option value="Monthly">Monthly</option>
-            </select>
+              options={FREQUENCY_OPTIONS}
+              onChange={(val) => setFrequency(val as RepaymentFrequency)}
+              size="sm"
+              buttonClassName="bg-white border-slate-300 py-1.5"
+            />
           </div>
 
           <div>
             <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1 font-mono">
               Status
             </label>
-            <select
+            <CustomSelect
               value={status}
-              onChange={(e) => setStatus(e.target.value as any)}
-              className="w-full px-2.5 py-1.5 rounded border border-slate-300 bg-white text-slate-800 font-semibold focus:outline-2 focus:outline-[#701A35] text-xs cursor-pointer"
-            >
-              <option value="Active">Active</option>
-              <option value="On Track">On Track</option>
-              <option value="Overdue">Overdue</option>
-              <option value="Closed">Closed</option>
-              <option value="Draft">Draft</option>
-            </select>
+              options={LOAN_STATUS_OPTIONS}
+              onChange={(val) => setStatus(val as TopLoanStatus)}
+              size="sm"
+              buttonClassName="bg-white border-slate-300 py-1.5"
+            />
           </div>
         </div>
 
@@ -748,412 +983,285 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
             <div className="flex items-center bg-white rounded border border-[#D0C8B8] p-0.5 shrink-0">
               {[
                 { id: 'ALL', label: 'All Companies (16)' },
+                { id: 'SELECTED_ONLY', label: `Selected Only (${activeCompanyKeys.size})` },
                 { id: 'ASR_ONLY', label: 'ASR Companies (10)' },
                 { id: 'OUTSIDE_ONLY', label: 'Outside Companies (6)' },
-              ].map((f) => (
+              ].map((tab) => (
                 <button
-                  key={f.id}
-                  onClick={() => setCategoryFilter(f.id as any)}
-                  className={`px-2.5 sm:px-3 py-1 rounded text-[10px] sm:text-[11px] font-semibold transition-all cursor-pointer whitespace-nowrap ${
-                    categoryFilter === f.id
-                      ? 'bg-[#701A35] text-white font-bold'
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setCategoryFilter(tab.id as any)}
+                  className={`px-2 sm:px-3 py-1 rounded text-[11px] font-mono font-bold transition-all cursor-pointer ${
+                    categoryFilter === tab.id
+                      ? 'bg-[#701A35] text-white shadow-2xs'
                       : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
-                  {f.label}
+                  {tab.label}
                 </button>
               ))}
             </div>
           </div>
 
-          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap shrink-0">
-            {loan && loan.splits && loan.splits.length > 0 && (
-              <button
-                type="button"
-                onClick={handleAutoBalanceAllRows}
-                className="text-[#701A35] bg-[#701A35]/10 hover:bg-[#701A35]/20 border border-[#701A35]/30 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded text-[10px] sm:text-[11px] font-bold flex items-center gap-1 cursor-pointer transition-colors shrink-0"
-                title="Re-balance all company splits to match loan ratios"
-              >
-                <RotateCcw className="w-3 h-3 text-[#701A35]" />
-                <span>Auto-balance</span>
-              </button>
-            )}
-            {hasAnyMismatches ? (
-              <span className="text-rose-700 font-mono font-bold flex items-center gap-1 text-[10px] sm:text-[11px] bg-rose-50 px-2 py-0.5 rounded border border-rose-300 shrink-0">
-                <AlertTriangle className="w-3.5 h-3.5 text-rose-600" />
-                <span>Differences found</span>
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0 self-end sm:self-auto">
+            {isTotalEqualCapital && !hasAnyMismatches ? (
+              <span className="px-2.5 py-1 rounded-md bg-emerald-100 text-emerald-800 font-mono text-[11px] font-bold border border-emerald-300 flex items-center gap-1 shadow-2xs">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-700" /> Balanced
               </span>
             ) : (
-              <span className="text-emerald-700 font-mono font-bold flex items-center gap-1 text-[10px] sm:text-[11px] bg-emerald-50 px-2 py-0.5 rounded border border-emerald-300 shrink-0">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                <span>Balanced</span>
+              <span className="px-2.5 py-1 rounded-md bg-rose-100 text-rose-800 font-mono text-[11px] font-bold border border-rose-300 flex items-center gap-1 shadow-2xs">
+                <AlertTriangle className="w-3.5 h-3.5 text-rose-700" /> Capital Mismatch
               </span>
             )}
-            <span className="font-mono text-slate-600 font-bold text-[10px] sm:text-[11px] shrink-0">
-              {rows.length} Rows
-            </span>
+            <span className="text-[11px] font-mono text-slate-500 font-bold">{rows.length} Rows</span>
           </div>
         </div>
 
-        {/* ─── Excel Spreadsheet Grid: Authentic Grid Sheet with Full Company Names ─── */}
-        <div className="flex-1 overflow-auto bg-white relative">
-          <table className="w-full border-collapse text-xs select-none border border-slate-300 min-w-[2300px]">
-            {/* Header Row */}
-            <thead className="bg-[#EBE5DC] text-slate-800 sticky top-0 z-20 border-b border-slate-400 font-mono text-[11px] shadow-2xs">
+        {/* ─── Excel Main Data Grid Table ─── */}
+        <div className="flex-1 overflow-auto bg-white">
+          <table className="w-full text-xs text-left border-collapse min-w-[1500px]">
+            {/* Table Header */}
+            <thead className="bg-[#EBE5DC] text-slate-800 font-mono text-[11px] uppercase tracking-wider font-bold border-b-2 border-slate-400 sticky top-0 z-20 shadow-2xs">
               <tr className="divide-x divide-slate-300">
-                <th className="p-2.5 w-12 min-w-[48px] text-center sticky left-0 z-30 bg-[#E5DFC7] font-bold border-r border-slate-400">
-                  #
-                </th>
-                <th className="p-2.5 w-36 min-w-[140px] text-left font-bold">Due Date</th>
-                <th className="p-2.5 w-24 min-w-[90px] text-left font-bold">Place</th>
-                <th className="p-2.5 w-28 min-w-[100px] text-left font-bold">Dep Name</th>
-                <th className="p-2.5 w-24 min-w-[90px] text-left font-bold">Chq No</th>
-                <th className="p-2.5 w-36 min-w-[135px] text-right bg-amber-200/80 font-extrabold text-amber-950 border-x border-slate-400">
-                  Amount Due (₹)
-                </th>
-                <th className="p-2.5 w-28 min-w-[105px] text-center font-bold">Status</th>
-                <th className="p-2.5 w-36 min-w-[140px] text-left font-bold">Recd Date</th>
+                <th className="p-2.5 w-10 text-center sticky left-0 bg-[#E5DFC7] z-30 border-r border-slate-400">#</th>
+                <th className="p-2.5 w-36">Due Date</th>
+                <th className="p-2.5 w-28">Place</th>
+                <th className="p-2.5 w-24">Dep Name</th>
+                <th className="p-2.5 w-24">Chq No</th>
+                <th className="p-2.5 w-36 text-right font-bold text-amber-950 bg-amber-100/80">Amount Due (₹)</th>
+                <th className="p-2.5 w-28 text-center">Status</th>
+                <th className="p-2.5 w-36">Recd Date</th>
 
-                {/* ASR Group Companies (10): Full Names */}
-                {showAsr && (
-                  <>
-                    <th className="p-2.5 w-36 min-w-[130px] text-right bg-[#701A35]/15 text-[#701A35] font-bold">
-                      PASS ENTERPRISES
+                {/* Dynamic Funding Company Headers */}
+                {visibleCompanyColumns.map((col) => {
+                  const isSelected = activeCompanyKeys.has(col.key);
+                  return (
+                    <th
+                      key={col.key}
+                      className={`p-2.5 text-right w-28 transition-colors ${
+                        !isSelected
+                          ? 'bg-slate-200/50 text-slate-400 font-medium opacity-60 select-none'
+                          : col.isOutside
+                          ? 'bg-purple-100 text-purple-950 font-bold'
+                          : 'bg-[#701A35]/10 text-[#701A35] font-bold'
+                      }`}
+                    >
+                      <div className="flex items-center justify-end gap-1">
+                        <span>{col.label}</span>
+                        {!isSelected && <span className="text-[9px] text-slate-400 font-mono font-normal">(off)</span>}
+                      </div>
                     </th>
-                    <th className="p-2.5 w-36 min-w-[130px] text-right bg-[#701A35]/15 text-[#701A35] font-bold">
-                      KARS ENTERPRISES
-                    </th>
-                    <th className="p-2.5 w-32 min-w-[115px] text-right bg-[#701A35]/15 text-[#701A35] font-bold">
-                      INFIN GROUP
-                    </th>
-                    <th className="p-2.5 w-36 min-w-[130px] text-right bg-[#701A35]/15 text-[#701A35] font-bold">
-                      INFINITY ENTERPRISES
-                    </th>
-                    <th className="p-2.5 w-36 min-w-[130px] text-right bg-[#701A35]/15 text-[#701A35] font-bold">
-                      INNOVATIVE SOLUTIONS
-                    </th>
-                    <th className="p-2.5 w-36 min-w-[130px] text-right bg-[#701A35]/15 text-[#701A35] font-bold">
-                      MARS SOLUTION
-                    </th>
-                    <th className="p-2.5 w-36 min-w-[130px] text-right bg-[#701A35]/15 text-[#701A35] font-bold">
-                      MM ASSOCIATES
-                    </th>
-                    <th className="p-2.5 w-32 min-w-[115px] text-right bg-[#701A35]/15 text-[#701A35] font-bold">
-                      TRIVENI GROUP
-                    </th>
-                    <th className="p-2.5 w-36 min-w-[130px] text-right bg-[#701A35]/15 text-[#701A35] font-bold">
-                      GLOBAL SOLITAIRE
-                    </th>
-                    <th className="p-2.5 w-32 min-w-[110px] text-right bg-[#701A35]/15 text-[#701A35] font-bold">
-                      ALAGESH
-                    </th>
-                  </>
-                )}
+                  );
+                })}
 
-                {/* Outside Parties Companies (6): Full Names */}
-                {showOutside && (
-                  <>
-                    <th className="p-2.5 w-36 min-w-[130px] text-right bg-purple-100 text-purple-950 font-bold">
-                      FINCUBE VENTURES
-                    </th>
-                    <th className="p-2.5 w-36 min-w-[130px] text-right bg-purple-100 text-purple-950 font-bold">
-                      CS ASSOCIATES
-                    </th>
-                    <th className="p-2.5 w-28 min-w-[100px] text-right bg-purple-100 text-purple-950 font-bold">
-                      M CHINNIAH
-                    </th>
-                    <th className="p-2.5 w-36 min-w-[130px] text-right bg-purple-200 text-purple-950 font-extrabold">
-                      TATVA ENTERPRISES
-                    </th>
-                    <th className="p-2.5 w-36 min-w-[130px] text-right bg-purple-200 text-purple-950 font-extrabold">
-                      BHAVANA CORP
-                    </th>
-                    <th className="p-2.5 w-44 min-w-[160px] text-right bg-purple-100 text-purple-950 font-bold">
-                      THIRUCHENDURAON ASSOCIATE
-                    </th>
-                  </>
-                )}
-
-                <th className="p-2.5 w-48 min-w-[160px] text-left font-bold">Remarks</th>
-                <th className="p-2.5 w-16 min-w-[60px] text-center font-bold">Act</th>
+                <th className="p-2.5 w-36">Remarks</th>
+                <th className="p-2.5 w-20 text-center">Action</th>
               </tr>
             </thead>
 
-            {/* Grid Cells */}
+            {/* Table Body */}
             <tbody className="divide-y divide-slate-300 font-mono text-xs">
               {rows.map((row, idx) => {
-                const validation = rowMismatches[idx];
+                const validation = rowMismatches[idx] || { isMismatch: false };
+                const isRowPaid = isStatusPaid(row.status);
+                const isOverCapital = (Number(row.amountDue) || 0) > capitalAmount;
 
                 return (
                   <tr
-                    key={row.id || idx}
+                    key={row.id || row.seqNo}
                     className={`divide-x divide-slate-300 transition-colors ${
-                      validation.isMismatch ? 'bg-rose-50/60' : idx % 2 === 0 ? 'bg-white' : 'bg-[#FAF9F6]'
+                      isOverCapital
+                        ? 'bg-rose-100/90'
+                        : isRowPaid
+                        ? 'bg-emerald-100/90 hover:bg-emerald-200/80 font-bold'
+                        : validation.isMismatch
+                        ? 'bg-rose-50/60'
+                        : idx % 2 === 0
+                        ? 'bg-white'
+                        : 'bg-[#FAF9F6]'
                     } hover:bg-amber-50/40`}
                   >
                     {/* S.No */}
-                    <td className="p-0 text-center font-bold text-slate-500 sticky left-0 bg-[#F4F1EA] z-10 border-r border-slate-300">
+                    <td className={`p-0 text-center font-bold sticky left-0 z-10 border-r border-slate-300 ${
+                      isRowPaid ? 'bg-emerald-200/90 text-emerald-950 font-black' : 'bg-[#F4F1EA] text-slate-500'
+                    }`}>
                       <div className="py-2">{row.seqNo}</div>
                     </td>
 
-                    {/* Due Date: Clean Excel Date Cell with Calendar Selector */}
-                    <td className="p-0">
-                      <input
-                        type="date"
-                        value={formatToIso(row.dueDate)}
-                        onChange={(e) => handleCellChange(idx, 'dueDate', e.target.value)}
-                        onClick={(e) => {
-                          try {
-                            (e.target as any).showPicker?.();
-                          } catch {}
-                        }}
-                        className="w-full h-full px-2.5 py-2 bg-transparent focus:bg-white focus:outline-2 focus:outline-[#701A35] font-mono text-xs font-semibold text-slate-900 cursor-pointer [appearance:textfield] [&::-webkit-inner-spin-button]:hidden [&::-webkit-calendar-picker-indicator]:cursor-pointer"
+                    {/* Due Date with Custom DatePicker */}
+                    <td className={`p-1 ${isRowPaid ? 'bg-emerald-100/90' : ''}`}>
+                      <DatePicker
+                        value={row.dueDate}
+                        onChange={(d) => handleCellChange(idx, 'dueDate', d)}
+                        theme="light"
+                        size="sm"
+                        compact={true}
+                        buttonClassName={`w-full text-xs ${isRowPaid ? 'bg-emerald-50/90 text-emerald-950 font-bold border-emerald-300' : ''}`}
                       />
                     </td>
 
                     {/* Place */}
-                    <td className="p-0">
+                    <td className={`p-0 ${isRowPaid ? 'bg-emerald-100/90' : ''}`}>
                       <input
                         type="text"
                         value={row.place}
                         onChange={(e) => handleCellChange(idx, 'place', e.target.value)}
-                        className="w-full h-full px-2.5 py-2 bg-transparent focus:bg-white focus:outline-2 focus:outline-[#701A35] text-slate-800"
+                        className={`w-full h-full px-2.5 py-2 bg-transparent focus:bg-white focus:outline-2 focus:outline-[#701A35] ${
+                          isRowPaid ? 'text-emerald-950 font-bold' : 'text-slate-800'
+                        }`}
                       />
                     </td>
 
                     {/* Dep Name */}
-                    <td className="p-0">
+                    <td className={`p-0 ${isRowPaid ? 'bg-emerald-100/90' : ''}`}>
                       <input
                         type="text"
                         value={row.depName}
                         onChange={(e) => handleCellChange(idx, 'depName', e.target.value)}
                         placeholder="DEP"
-                        className="w-full h-full px-2.5 py-2 bg-transparent focus:bg-white focus:outline-2 focus:outline-[#701A35] font-bold text-slate-800 uppercase"
+                        className={`w-full h-full px-2.5 py-2 bg-transparent focus:bg-white focus:outline-2 focus:outline-[#701A35] uppercase ${
+                          isRowPaid ? 'text-emerald-950 font-black' : 'font-bold text-slate-800'
+                        }`}
                       />
                     </td>
 
                     {/* Chq No */}
-                    <td className="p-0">
+                    <td className={`p-0 ${isRowPaid ? 'bg-emerald-100/90' : ''}`}>
                       <input
                         type="text"
                         value={row.chqNo}
                         onChange={(e) => handleCellChange(idx, 'chqNo', e.target.value)}
                         placeholder="CHQ"
-                        className="w-full h-full px-2.5 py-2 bg-transparent focus:bg-white focus:outline-2 focus:outline-[#701A35] text-slate-700 font-mono"
+                        className={`w-full h-full px-2.5 py-2 bg-transparent focus:bg-white focus:outline-2 focus:outline-[#701A35] font-mono ${
+                          isRowPaid ? 'text-emerald-950 font-bold' : 'text-slate-700'
+                        }`}
                       />
                     </td>
 
-                    {/* Amount Due (Highlighted green for confirmed paid installments) */}
-                    {(() => {
-                      const isRowPaid = ['PASS', 'NEFT', 'CASH', 'PAID', 'CLOSED', 'SETTLED', 'Paid'].includes(row.status?.trim().toUpperCase());
+                    {/* Amount Due (With capital restriction & paid green highlight) */}
+                    <td className={`p-0 transition-colors ${
+                      isOverCapital
+                        ? 'bg-rose-200 text-rose-950 font-black'
+                        : isRowPaid
+                        ? 'bg-emerald-200/90 text-emerald-950 font-black border-x border-emerald-300'
+                        : 'bg-amber-50/50'
+                    }`}>
+                      <input
+                        type="number"
+                        min="0"
+                        max={capitalAmount}
+                        value={row.amountDue || ''}
+                        onChange={(e) => handleCellChange(idx, 'amountDue', Number(e.target.value) || 0)}
+                        className={`w-full h-full px-2.5 py-2 text-right bg-transparent focus:bg-white focus:outline-2 ${
+                          isOverCapital
+                            ? 'text-rose-900 font-black focus:outline-rose-600'
+                            : isRowPaid
+                            ? 'text-emerald-950 font-black focus:outline-emerald-600'
+                            : 'text-slate-900 font-bold focus:outline-amber-600'
+                        } [appearance:textfield] [&::-webkit-inner-spin-button]:hidden`}
+                      />
+                    </td>
+
+                    {/* Status Dropdown - Allowed: Pending, Cleared, NEFT, RTGS, Cash */}
+                    <td className={`p-0.5 text-center ${isRowPaid ? 'bg-emerald-100/90' : ''}`}>
+                      <CustomSelect
+                        value={normalizeStatus(row.status)}
+                        options={ROW_STATUS_OPTIONS}
+                        onChange={(val) => handleCellChange(idx, 'status', val)}
+                        size="sm"
+                        buttonClassName={`border-none bg-transparent hover:bg-white/80 focus:bg-white text-xs ${
+                          isRowPaid ? 'text-emerald-950 font-black' : 'text-amber-900 font-bold'
+                        }`}
+                        menuClassName="w-32"
+                      />
+                    </td>
+
+                    {/* Recd Date with Custom DatePicker */}
+                    <td className={`p-1 ${isRowPaid ? 'bg-emerald-100/90' : ''}`}>
+                      <DatePicker
+                        value={row.recdDate}
+                        onChange={(d) => handleCellChange(idx, 'recdDate', d)}
+                        theme="light"
+                        size="sm"
+                        compact={true}
+                        placeholder="—"
+                        buttonClassName={`w-full text-xs ${isRowPaid ? 'bg-emerald-50/90 text-emerald-950 font-bold border-emerald-300' : ''}`}
+                      />
+                    </td>
+
+                    {/* Dynamic Funding Company Cells */}
+                    {visibleCompanyColumns.map((col) => {
+                      const isSelected = activeCompanyKeys.has(col.key);
+                      const val = Number(row[col.key]) || 0;
+
+                      if (!isSelected) {
+                        return (
+                          <td
+                            key={col.key}
+                            className={`p-0 border-slate-200 select-none ${
+                              isRowPaid ? 'bg-emerald-50/40 text-emerald-800/40' : 'bg-slate-100/70 text-slate-300'
+                            }`}
+                            title={`${col.label} is not a funding company for this loan (non-editable)`}
+                          >
+                            <div className="w-full h-full px-2.5 py-2 text-right font-mono select-none cursor-not-allowed">
+                              —
+                            </div>
+                          </td>
+                        );
+                      }
+
                       return (
-                        <td className={`p-0 transition-colors ${isRowPaid ? 'bg-emerald-100/70 border-emerald-300' : 'bg-amber-50/50'}`}>
+                        <td
+                          key={col.key}
+                          className={`p-0 ${
+                            isRowPaid
+                              ? 'bg-emerald-100/90 text-emerald-950 font-bold'
+                              : col.isOutside
+                              ? 'bg-purple-50/30'
+                              : 'bg-[#701A35]/5'
+                          }`}
+                        >
                           <input
                             type="number"
-                            value={row.amountDue || ''}
-                            onChange={(e) => handleCellChange(idx, 'amountDue', Number(e.target.value) || 0)}
+                            value={val || ''}
+                            placeholder="0"
+                            onChange={(e) => handleCellChange(idx, col.key, Number(e.target.value) || 0)}
                             className={`w-full h-full px-2.5 py-2 text-right bg-transparent focus:bg-white focus:outline-2 ${
-                              isRowPaid
-                                ? 'text-emerald-900 font-black focus:outline-emerald-600'
-                                : 'text-slate-900 font-bold focus:outline-amber-600'
+                              col.isOutside
+                                ? 'focus:outline-purple-700'
+                                : 'focus:outline-[#701A35]'
+                            } ${
+                              isRowPaid ? 'text-emerald-950 font-bold' : 'text-slate-900 font-semibold'
                             } [appearance:textfield] [&::-webkit-inner-spin-button]:hidden`}
                           />
                         </td>
                       );
-                    })()}
-
-                    {/* Status Dropdown */}
-                    <td className="p-0 text-center">
-                      <select
-                        value={row.status}
-                        onChange={(e) => handleCellChange(idx, 'status', e.target.value)}
-                        className="w-full h-full px-1.5 py-2 bg-transparent focus:bg-white focus:outline-2 focus:outline-[#701A35] text-xs font-bold text-slate-800 cursor-pointer"
-                      >
-                        <option value="PASS">PASS</option>
-                        <option value="NEFT">NEFT</option>
-                        <option value="CASH">CASH</option>
-                        <option value="CLS">CLS</option>
-                        <option value="CS">CS</option>
-                        <option value="RET">RET</option>
-                        <option value="RET NEFT">RET NEFT</option>
-                        <option value="RET PASS">RET PASS</option>
-                        <option value="PENDING">PENDING</option>
-                      </select>
-                    </td>
-
-                    {/* Recd Date */}
-                    <td className="p-0">
-                      <input
-                        type="date"
-                        value={formatToIso(row.recdDate)}
-                        onChange={(e) => handleCellChange(idx, 'recdDate', e.target.value)}
-                        onClick={(e) => {
-                          try {
-                            (e.target as any).showPicker?.();
-                          } catch {}
-                        }}
-                        className="w-full h-full px-2.5 py-2 bg-transparent focus:bg-white focus:outline-2 focus:outline-[#701A35] font-mono text-xs text-slate-800 cursor-pointer [appearance:textfield] [&::-webkit-inner-spin-button]:hidden [&::-webkit-calendar-picker-indicator]:cursor-pointer"
-                      />
-                    </td>
-
-                    {/* ASR Group Company Splits (10) */}
-                    {showAsr && (
-                      <>
-                        <td className="p-0 bg-[#701A35]/5">
-                          <input
-                            type="number"
-                            value={row.pass || ''}
-                            onChange={(e) => handleCellChange(idx, 'pass', Number(e.target.value) || 0)}
-                            className="w-full h-full px-2.5 py-2 text-right bg-transparent focus:bg-white focus:outline-2 focus:outline-[#701A35] text-slate-900 font-semibold [appearance:textfield] [&::-webkit-inner-spin-button]:hidden"
-                          />
-                        </td>
-                        <td className="p-0 bg-[#701A35]/5">
-                          <input
-                            type="number"
-                            value={row.kars || ''}
-                            onChange={(e) => handleCellChange(idx, 'kars', Number(e.target.value) || 0)}
-                            className="w-full h-full px-2.5 py-2 text-right bg-transparent focus:bg-white focus:outline-2 focus:outline-[#701A35] text-slate-900 font-semibold [appearance:textfield] [&::-webkit-inner-spin-button]:hidden"
-                          />
-                        </td>
-                        <td className="p-0 bg-[#701A35]/5">
-                          <input
-                            type="number"
-                            value={row.ig || ''}
-                            onChange={(e) => handleCellChange(idx, 'ig', Number(e.target.value) || 0)}
-                            className="w-full h-full px-2.5 py-2 text-right bg-transparent focus:bg-white focus:outline-2 focus:outline-[#701A35] text-slate-900 font-semibold [appearance:textfield] [&::-webkit-inner-spin-button]:hidden"
-                          />
-                        </td>
-                        <td className="p-0 bg-[#701A35]/5">
-                          <input
-                            type="number"
-                            value={row.ine || ''}
-                            onChange={(e) => handleCellChange(idx, 'ine', Number(e.target.value) || 0)}
-                            className="w-full h-full px-2.5 py-2 text-right bg-transparent focus:bg-white focus:outline-2 focus:outline-[#701A35] text-slate-900 font-semibold [appearance:textfield] [&::-webkit-inner-spin-button]:hidden"
-                          />
-                        </td>
-                        <td className="p-0 bg-[#701A35]/5">
-                          <input
-                            type="number"
-                            value={row.ins || ''}
-                            onChange={(e) => handleCellChange(idx, 'ins', Number(e.target.value) || 0)}
-                            className="w-full h-full px-2.5 py-2 text-right bg-transparent focus:bg-white focus:outline-2 focus:outline-[#701A35] text-slate-900 font-semibold [appearance:textfield] [&::-webkit-inner-spin-button]:hidden"
-                          />
-                        </td>
-                        <td className="p-0 bg-[#701A35]/5">
-                          <input
-                            type="number"
-                            value={row.mars || ''}
-                            onChange={(e) => handleCellChange(idx, 'mars', Number(e.target.value) || 0)}
-                            className="w-full h-full px-2.5 py-2 text-right bg-transparent focus:bg-white focus:outline-2 focus:outline-[#701A35] text-slate-900 font-semibold [appearance:textfield] [&::-webkit-inner-spin-button]:hidden"
-                          />
-                        </td>
-                        <td className="p-0 bg-[#701A35]/5">
-                          <input
-                            type="number"
-                            value={row.mm || ''}
-                            onChange={(e) => handleCellChange(idx, 'mm', Number(e.target.value) || 0)}
-                            className="w-full h-full px-2.5 py-2 text-right bg-transparent focus:bg-white focus:outline-2 focus:outline-[#701A35] text-slate-900 font-semibold [appearance:textfield] [&::-webkit-inner-spin-button]:hidden"
-                          />
-                        </td>
-                        <td className="p-0 bg-[#701A35]/5">
-                          <input
-                            type="number"
-                            value={row.tg || ''}
-                            onChange={(e) => handleCellChange(idx, 'tg', Number(e.target.value) || 0)}
-                            className="w-full h-full px-2.5 py-2 text-right bg-transparent focus:bg-white focus:outline-2 focus:outline-[#701A35] text-slate-900 font-semibold [appearance:textfield] [&::-webkit-inner-spin-button]:hidden"
-                          />
-                        </td>
-                        <td className="p-0 bg-[#701A35]/5">
-                          <input
-                            type="number"
-                            value={row.gs || ''}
-                            onChange={(e) => handleCellChange(idx, 'gs', Number(e.target.value) || 0)}
-                            className="w-full h-full px-2.5 py-2 text-right bg-transparent focus:bg-white focus:outline-2 focus:outline-[#701A35] text-slate-900 font-semibold [appearance:textfield] [&::-webkit-inner-spin-button]:hidden"
-                          />
-                        </td>
-                        <td className="p-0 bg-[#701A35]/5">
-                          <input
-                            type="number"
-                            value={row.ala || ''}
-                            onChange={(e) => handleCellChange(idx, 'ala', Number(e.target.value) || 0)}
-                            className="w-full h-full px-2.5 py-2 text-right bg-transparent focus:bg-white focus:outline-2 focus:outline-[#701A35] text-slate-900 font-semibold [appearance:textfield] [&::-webkit-inner-spin-button]:hidden"
-                          />
-                        </td>
-                      </>
-                    )}
-
-                    {/* Outside Parties Company Splits (6) */}
-                    {showOutside && (
-                      <>
-                        <td className="p-0 bg-purple-50/30">
-                          <input
-                            type="number"
-                            value={row.fin || ''}
-                            onChange={(e) => handleCellChange(idx, 'fin', Number(e.target.value) || 0)}
-                            className="w-full h-full px-2.5 py-2 text-right bg-transparent focus:bg-white focus:outline-2 focus:outline-purple-700 text-slate-900 font-semibold [appearance:textfield] [&::-webkit-inner-spin-button]:hidden"
-                          />
-                        </td>
-                        <td className="p-0 bg-purple-50/30">
-                          <input
-                            type="number"
-                            value={row.cs || ''}
-                            onChange={(e) => handleCellChange(idx, 'cs', Number(e.target.value) || 0)}
-                            className="w-full h-full px-2.5 py-2 text-right bg-transparent focus:bg-white focus:outline-2 focus:outline-purple-700 text-slate-900 font-semibold [appearance:textfield] [&::-webkit-inner-spin-button]:hidden"
-                          />
-                        </td>
-                        <td className="p-0 bg-purple-50/30">
-                          <input
-                            type="number"
-                            value={row.mc || ''}
-                            onChange={(e) => handleCellChange(idx, 'mc', Number(e.target.value) || 0)}
-                            className="w-full h-full px-2.5 py-2 text-right bg-transparent focus:bg-white focus:outline-2 focus:outline-purple-700 text-slate-900 font-semibold [appearance:textfield] [&::-webkit-inner-spin-button]:hidden"
-                          />
-                        </td>
-                        <td className="p-0 bg-purple-50/40">
-                          <input
-                            type="number"
-                            value={row.tatva || ''}
-                            onChange={(e) => handleCellChange(idx, 'tatva', Number(e.target.value) || 0)}
-                            className="w-full h-full px-2.5 py-2 text-right bg-transparent focus:bg-white focus:outline-2 focus:outline-purple-800 text-purple-950 font-bold [appearance:textfield] [&::-webkit-inner-spin-button]:hidden"
-                          />
-                        </td>
-                        <td className="p-0 bg-purple-50/40">
-                          <input
-                            type="number"
-                            value={row.bhavna || ''}
-                            onChange={(e) => handleCellChange(idx, 'bhavna', Number(e.target.value) || 0)}
-                            className="w-full h-full px-2.5 py-2 text-right bg-transparent focus:bg-white focus:outline-2 focus:outline-purple-800 text-purple-950 font-bold [appearance:textfield] [&::-webkit-inner-spin-button]:hidden"
-                          />
-                        </td>
-                        <td className="p-0 bg-purple-50/30">
-                          <input
-                            type="number"
-                            value={row.taSS || ''}
-                            onChange={(e) => handleCellChange(idx, 'taSS', Number(e.target.value) || 0)}
-                            className="w-full h-full px-2.5 py-2 text-right bg-transparent focus:bg-white focus:outline-2 focus:outline-purple-700 text-slate-900 font-semibold [appearance:textfield] [&::-webkit-inner-spin-button]:hidden"
-                          />
-                        </td>
-                      </>
-                    )}
+                    })}
 
                     {/* Remarks */}
-                    <td className="p-0">
+                    <td className={`p-0 ${isRowPaid ? 'bg-emerald-100/90' : ''}`}>
                       <input
                         type="text"
                         value={row.remarks}
                         onChange={(e) => handleCellChange(idx, 'remarks', e.target.value)}
                         placeholder="Remarks"
-                        className="w-full h-full px-2.5 py-2 bg-transparent focus:bg-white focus:outline-2 focus:outline-[#701A35] text-slate-700 font-sans text-xs"
+                        className={`w-full h-full px-2.5 py-2 bg-transparent focus:bg-white focus:outline-2 focus:outline-[#701A35] text-xs ${
+                          isRowPaid ? 'text-emerald-950 font-bold placeholder:text-emerald-800/50' : 'text-slate-700 font-sans'
+                        }`}
                       />
                     </td>
 
                     {/* Actions: Re-balance & Delete */}
-                    <td className="p-0 text-center">
+                    <td className={`p-0 text-center ${isRowPaid ? 'bg-emerald-100/90' : ''}`}>
                       <div className="flex items-center justify-center gap-1 py-1">
                         <button
                           type="button"
                           onClick={() => handleAutoBalanceRow(idx)}
-                          className="p-1 rounded text-slate-400 hover:text-[#701A35] hover:bg-slate-200 cursor-pointer"
+                          className={`p-1 rounded cursor-pointer ${
+                            isRowPaid
+                              ? 'text-emerald-900 hover:text-emerald-950 hover:bg-emerald-200/90'
+                              : 'text-slate-400 hover:text-[#701A35] hover:bg-slate-200'
+                          }`}
                           title="Auto-balance row"
                         >
                           <RotateCcw className="w-3.5 h-3.5" />
@@ -1185,73 +1293,35 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
                 <td className="p-2.5" />
                 <td className="p-2.5" />
                 <td className="p-2.5" />
-                <td className="p-2.5 text-right bg-amber-200 text-amber-950 font-extrabold border-x border-slate-400">
+                <td className={`p-2.5 text-right font-extrabold border-x border-slate-400 ${
+                  isTotalEqualCapital ? 'bg-amber-200 text-amber-950' : 'bg-rose-200 text-rose-950'
+                }`}>
                   ₹{totalLoanAmount.toLocaleString('en-IN')}
                 </td>
                 <td className="p-2.5 text-center text-emerald-800 font-bold bg-emerald-50/60">
-                  {rows.filter((r) => ['PASS', 'NEFT', 'CASH', 'PAID', 'CLOSED', 'SETTLED', 'Paid'].includes(r.status?.trim().toUpperCase())).length} Paid
+                  {paidRowsCount} Paid
                 </td>
                 <td className="p-2.5" />
 
-                {/* ASR Group Totals (10) */}
-                {showAsr && (
-                  <>
-                    <td className="p-2.5 text-right text-[#701A35] bg-[#701A35]/15 font-bold">
-                      ₹{companySums.pass.toLocaleString('en-IN')}
+                {/* Dynamic Funding Company Column Totals */}
+                {visibleCompanyColumns.map((col) => {
+                  const isSelected = activeCompanyKeys.has(col.key);
+                  const sum = companySums[col.key as keyof typeof companySums] || 0;
+                  return (
+                    <td
+                      key={col.key}
+                      className={`p-2.5 text-right font-bold transition-colors ${
+                        !isSelected
+                          ? 'bg-slate-200/50 text-slate-400 opacity-60'
+                          : col.isOutside
+                          ? 'text-purple-950 bg-purple-100'
+                          : 'text-[#701A35] bg-[#701A35]/15'
+                      }`}
+                    >
+                      {isSelected ? `₹${sum.toLocaleString('en-IN')}` : '—'}
                     </td>
-                    <td className="p-2.5 text-right text-[#701A35] bg-[#701A35]/15 font-bold">
-                      ₹{companySums.kars.toLocaleString('en-IN')}
-                    </td>
-                    <td className="p-2.5 text-right text-[#701A35] bg-[#701A35]/15 font-bold">
-                      ₹{companySums.ig.toLocaleString('en-IN')}
-                    </td>
-                    <td className="p-2.5 text-right text-[#701A35] bg-[#701A35]/15 font-bold">
-                      ₹{companySums.ine.toLocaleString('en-IN')}
-                    </td>
-                    <td className="p-2.5 text-right text-[#701A35] bg-[#701A35]/15 font-bold">
-                      ₹{companySums.ins.toLocaleString('en-IN')}
-                    </td>
-                    <td className="p-2.5 text-right text-[#701A35] bg-[#701A35]/15 font-bold">
-                      ₹{companySums.mars.toLocaleString('en-IN')}
-                    </td>
-                    <td className="p-2.5 text-right text-[#701A35] bg-[#701A35]/15 font-bold">
-                      ₹{companySums.mm.toLocaleString('en-IN')}
-                    </td>
-                    <td className="p-2.5 text-right text-[#701A35] bg-[#701A35]/15 font-bold">
-                      ₹{companySums.tg.toLocaleString('en-IN')}
-                    </td>
-                    <td className="p-2.5 text-right text-[#701A35] bg-[#701A35]/15 font-bold">
-                      ₹{companySums.gs.toLocaleString('en-IN')}
-                    </td>
-                    <td className="p-2.5 text-right text-[#701A35] bg-[#701A35]/15 font-bold">
-                      ₹{companySums.ala.toLocaleString('en-IN')}
-                    </td>
-                  </>
-                )}
-
-                {/* Outside Parties Totals (6) */}
-                {showOutside && (
-                  <>
-                    <td className="p-2.5 text-right text-purple-950 bg-purple-100 font-bold">
-                      ₹{companySums.fin.toLocaleString('en-IN')}
-                    </td>
-                    <td className="p-2.5 text-right text-purple-950 bg-purple-100 font-bold">
-                      ₹{companySums.cs.toLocaleString('en-IN')}
-                    </td>
-                    <td className="p-2.5 text-right text-purple-950 bg-purple-100 font-bold">
-                      ₹{companySums.mc.toLocaleString('en-IN')}
-                    </td>
-                    <td className="p-2.5 text-right text-purple-950 bg-purple-200 font-extrabold">
-                      ₹{companySums.tatva.toLocaleString('en-IN')}
-                    </td>
-                    <td className="p-2.5 text-right text-purple-950 bg-purple-200 font-extrabold">
-                      ₹{companySums.bhavna.toLocaleString('en-IN')}
-                    </td>
-                    <td className="p-2.5 text-right text-purple-950 bg-purple-100 font-bold">
-                      ₹{companySums.taSS.toLocaleString('en-IN')}
-                    </td>
-                  </>
-                )}
+                  );
+                })}
 
                 <td className="p-2.5" />
                 <td className="p-2.5 text-center text-slate-500 font-normal">Sync</td>

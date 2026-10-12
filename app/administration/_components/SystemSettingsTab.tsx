@@ -213,13 +213,13 @@ export const SystemSettingsTab: React.FC = () => {
 
           {/* Logo preview */}
           <div className="flex items-center gap-5 p-4 rounded-xl border border-slate-200 bg-slate-50">
-            <div className="w-16 h-16 rounded-2xl border border-[#C5A059]/50 overflow-hidden relative shadow-xs shrink-0">
+            <div className="w-16 h-16 rounded-full overflow-hidden relative shadow-xs shrink-0">
               <Image
                 src="/groups-finalized.png"
                 alt="ASR Groups Logo"
                 fill
                 sizes="64px"
-                className="object-cover scale-105"
+                className="object-cover"
               />
             </div>
             <div className="space-y-1">
