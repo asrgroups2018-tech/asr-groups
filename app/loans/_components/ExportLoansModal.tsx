@@ -16,6 +16,8 @@ import {
   exportLoansToPDF,
   flattenLoansForExport,
 } from '@/lib/utils/exportLoansLedger';
+import { useApp } from '@/lib/store';
+import { getAuthorizedLoansForExport, requestLoanExportAccess } from '@/lib/exportAuthorization';
 
 interface ExportLoansModalProps {
   isOpen: boolean;
@@ -32,6 +34,7 @@ export const ExportLoansModal: React.FC<ExportLoansModalProps> = ({
   dateRangeLabel,
   onSuccess,
 }) => {
+  const { hasModulePermission, showToast } = useApp();
   const flattenedRows = useMemo(() => flattenLoansForExport(loans), [loans]);
   const totalAmount = useMemo(
     () => flattenedRows.reduce((sum, r) => sum + r.amountDue, 0),
@@ -40,16 +43,40 @@ export const ExportLoansModal: React.FC<ExportLoansModalProps> = ({
 
   if (!isOpen) return null;
 
+  const requestExportAccess = async () => {
+    const result = await requestLoanExportAccess();
+    showToast(
+      result.success ? 'Access Request Submitted' : 'Access Request Failed',
+      result.success ? 'Loan export access was sent to the Super Admin for approval.' : result.error,
+      result.success ? 'info' : 'error',
+    );
+  };
+
   const handleExportExcel = async () => {
-    await exportLoansToExcel(loans, dateRangeLabel);
+    if (!hasModulePermission('loans', 'export')) {
+      await requestExportAccess();
+      return;
+    }
+    const authorizedLoans = await getAuthorizedLoansForExport();
+    if (!authorizedLoans) return;
+    const visibleIds = new Set(loans.map((loan) => loan.id));
+    await exportLoansToExcel(authorizedLoans.filter((loan) => visibleIds.has(loan.id)), dateRangeLabel);
     onSuccess('excel');
     onClose();
   };
 
   const handleExportPdf = () => {
-    exportLoansToPDF(loans, dateRangeLabel);
-    onSuccess('pdf');
-    onClose();
+    if (!hasModulePermission('loans', 'export')) {
+      void requestExportAccess();
+      return;
+    }
+    void getAuthorizedLoansForExport().then((authorizedLoans) => {
+      if (!authorizedLoans) return;
+      const visibleIds = new Set(loans.map((loan) => loan.id));
+      exportLoansToPDF(authorizedLoans.filter((loan) => visibleIds.has(loan.id)), dateRangeLabel);
+      onSuccess('pdf');
+      onClose();
+    });
   };
 
   return (

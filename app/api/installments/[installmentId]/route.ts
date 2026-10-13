@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { updateLoanInstallment } from '@/lib/server/loans';
+import { authorizeRouteRequest } from '@/lib/server/authorization';
+import { queueMutationForApproval } from '@/lib/server/approvalWorkflow';
 
 export async function PATCH(
   req: NextRequest,
   context: { params: Promise<{ installmentId: string }> }
 ) {
+  const auth = await authorizeRouteRequest(req);
+  if (!auth.ok) return auth.response;
   try {
     const { installmentId } = await context.params;
     const body = await req.json();
@@ -17,6 +21,17 @@ export async function PATCH(
       );
     }
 
+    const queued = await queueMutationForApproval({
+      actor: auth.user,
+      changeType: 'Collection Correction',
+      title: `Update installment: ${installmentId}`,
+      entityType: 'historical_receipt',
+      entityId: installmentId,
+      beforePayload: null,
+      proposedPayload: { installmentId, updates: { status, recdDate, amountDue, dueDate, chqNo, depName, place, remarks, companySplits } },
+    });
+    if (queued) return queued;
+
     const updated = await updateLoanInstallment(installmentId, {
       status,
       recdDate,
@@ -27,7 +42,7 @@ export async function PATCH(
       place,
       remarks,
       companySplits,
-    });
+    }, auth.user);
 
     if (!updated) {
       return NextResponse.json(

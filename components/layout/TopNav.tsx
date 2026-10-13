@@ -42,7 +42,7 @@ export const TopNav: React.FC<TopNavProps> = ({ onOpenMobileMenu }) => {
   const handleSignOut = async () => {
     setIsSigningOut(true);
     try {
-      await fetch('/api/auth/logout', { method: 'POST' });
+      await fetch('/api/auth/logout', { method: 'POST', cache: 'no-store' });
     } catch (error) {
       console.error('Sign out request failed:', error);
     } finally {

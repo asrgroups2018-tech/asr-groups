@@ -2,8 +2,10 @@ import { getTursoClient } from './turso';
 import { initializeSchema } from './schema';
 import { ApprovalRequest, ApprovalRequestStatus, ChangeType, EntityType, RoleId } from '@/lib/types';
 import { logAudit, updateUser } from './administration';
-import { splitLoan, mergeLoans, updateFullLoan, updateLoanInstallment } from './loans';
-import { updateCustomer } from './customers';
+import { splitLoan, mergeLoans, updateFullLoan, updateLoanInstallment, createLoan, deleteLoan, commitReviewedImport } from './loans';
+import { createCustomer, updateCustomer, deleteCustomer } from './customers';
+import { createCompany, deleteCompany } from './companies';
+import { createCheque, markChequeDeposited, deleteCheque } from './cheques';
 
 let schemaInitialized = false;
 
@@ -29,8 +31,8 @@ export function mapApprovalRequestRow(row: any): ApprovalRequest {
     entityId: String(row.entity_id),
     requesterId: String(row.requester_id),
     requesterName: String(row.requester_name),
-    requesterRoleId: Number(row.requester_role_id || 2) as RoleId,
-    approverRoleId: Number(row.approver_role_id || 1) as RoleId,
+    requesterRoleId: Number(row.requester_role_id ?? 2) as RoleId,
+    approverRoleId: Number(row.approver_role_id ?? 1) as RoleId,
     amount: Number(row.amount || 0),
     status: row.status as ApprovalRequestStatus,
     beforePayload: row.before_payload ? String(row.before_payload) : undefined,
@@ -47,12 +49,22 @@ export async function getApprovalRequests(filters?: {
   status?: string;
   changeType?: string;
   query?: string;
+  requesterId?: string;
+  approverRoleIds?: RoleId[];
 }): Promise<ApprovalRequest[]> {
   await ensureDbInitialized();
   const client = getTursoClient();
 
   let sql = 'SELECT * FROM approval_requests WHERE 1=1';
   const args: any[] = [];
+
+  if (filters?.requesterId && filters.approverRoleIds?.length) {
+    sql += ` AND (requester_id = ? OR approver_role_id IN (${filters.approverRoleIds.map(() => '?').join(', ')}))`;
+    args.push(filters.requesterId, ...filters.approverRoleIds);
+  } else if (filters?.requesterId) {
+    sql += ' AND requester_id = ?';
+    args.push(filters.requesterId);
+  }
 
   if (filters?.status && filters.status !== 'ALL') {
     sql += ' AND status = ?';
@@ -108,8 +120,9 @@ export async function createApprovalRequest(data: {
 
   const countRes = await client.execute('SELECT COUNT(*) as count FROM approval_requests');
   const count = Number(countRes.rows[0].count);
-  const now = new Date().toISOString().slice(0, 16).replace('T', ' ');
-  const reqId = `REQ-2026-${String(1000 + count + 1).padStart(4, '0')}`;
+  const nowDate = new Date();
+  const now = nowDate.toISOString().slice(0, 16).replace('T', ' ');
+  const reqId = `REQ-${nowDate.getUTCFullYear()}-${String(1000 + count + 1).padStart(4, '0')}`;
 
   const status = data.status || 'Pending';
   const beforeStr = data.beforePayload ? (typeof data.beforePayload === 'string' ? data.beforePayload : JSON.stringify(data.beforePayload)) : null;
@@ -146,8 +159,8 @@ export async function createApprovalRequest(data: {
     actorId: data.requesterId,
     actorName: data.requesterName,
     actorRoleId: data.requesterRoleId,
-    action: status === 'Auto-Approved' ? 'Approved Request' : 'Created Loan', // generic action mapped
-    target: `Approval Request ${reqId}: ${data.title}`,
+    action: status === 'Auto-Approved' ? 'Approved Request' : 'Created Request',
+    target: `Approval Request ${reqId}: ${data.title} for ${data.requesterName} (${data.requesterId})`,
     beforeVal: '-',
     afterVal: `Status: ${status}, Amount: ₹${(data.amount || 0).toLocaleString('en-IN')}`,
     isSensitive: data.changeType === 'Role Change' || (data.amount || 0) > 500000,
@@ -180,6 +193,11 @@ export async function approveApprovalRequest(
   }
 
   const now = new Date().toISOString().slice(0, 16).replace('T', ' ');
+  const requesterActor = {
+    id: req.requesterId,
+    name: req.requesterName,
+    primaryRoleId: req.requesterRoleId,
+  };
   let payload: any = {};
   try {
     payload = JSON.parse(req.proposedPayload);
@@ -190,48 +208,88 @@ export async function approveApprovalRequest(
   try {
     // Execute business change based on changeType
     switch (req.changeType) {
+      case 'Spreadsheet Import': {
+        if (!Array.isArray(payload.planRows) || payload.planRows.length === 0) throw new Error('Spreadsheet import payload is incomplete.');
+        await commitReviewedImport(payload.planRows, requesterActor);
+        break;
+      }
+      case 'Loan Creation': {
+        if (!payload.loanData) throw new Error('Loan creation payload is incomplete.');
+        await createLoan(payload.loanData, requesterActor);
+        break;
+      }
+      case 'Loan Deletion': {
+        if (!payload.loanId) throw new Error('Loan deletion payload is incomplete.');
+        if (!(await deleteLoan(payload.loanId, requesterActor))) throw new Error('Loan could not be deleted.');
+        break;
+      }
       case 'Loan Split': {
-        if (payload.parentLoanId && payload.installmentIdsToExtract) {
-          await splitLoan(payload.parentLoanId, payload.installmentIdsToExtract);
-        }
+        if (!payload.parentLoanId || !payload.installmentIdsToExtract) throw new Error('Loan split payload is incomplete.');
+        await splitLoan(payload.parentLoanId, payload.installmentIdsToExtract, requesterActor);
         break;
       }
       case 'Loan Merge': {
-        if (payload.targetLoanId && payload.sourceLoanId) {
-          await mergeLoans(payload.targetLoanId, payload.sourceLoanId);
-        }
+        if (!payload.targetLoanId || !payload.sourceLoanId) throw new Error('Loan merge payload is incomplete.');
+        await mergeLoans(payload.targetLoanId, payload.sourceLoanId, requesterActor);
         break;
       }
       case 'Loan Update': {
-        if (payload.loanId && payload.updateData) {
-          await updateFullLoan(payload.loanId, payload.updateData);
-        }
+        if (!payload.loanId || !payload.updateData) throw new Error('Loan update payload is incomplete.');
+        if (!(await updateFullLoan(payload.loanId, payload.updateData, requesterActor))) throw new Error('Loan could not be updated.');
         break;
       }
       case 'Role Change': {
-        if (payload.userId && payload.assignedRoleIds) {
-          await updateUser(payload.userId, {
-            assignedRoleIds: payload.assignedRoleIds,
-            primaryRoleId: payload.primaryRoleId || payload.assignedRoleIds[0],
-          });
-        }
+        if (!payload.userId || !payload.assignedRoleIds) throw new Error('Role change payload is incomplete.');
+        await updateUser(payload.userId, {
+          assignedRoleIds: payload.assignedRoleIds,
+          primaryRoleId: payload.primaryRoleId ?? payload.assignedRoleIds[0],
+        });
         break;
       }
       case 'Customer Update': {
-        if (payload.customerId && payload.updates) {
-          await updateCustomer(payload.customerId, payload.updates);
-        }
+        if (!payload.customerId || !payload.updates) throw new Error('Customer update payload is incomplete.');
+        if (!(await updateCustomer(payload.customerId, payload.updates, requesterActor))) throw new Error('Customer could not be updated.');
+        break;
+      }
+      case 'Customer Creation': {
+        if (!payload.name) throw new Error('Customer creation payload is incomplete.');
+        await createCustomer(payload, requesterActor);
+        break;
+      }
+      case 'Customer Deletion': {
+        if (!payload.customerId || !(await deleteCustomer(payload.customerId, requesterActor))) throw new Error('Customer could not be deleted.');
+        break;
+      }
+      case 'Company Creation': {
+        if (!payload.name || !payload.shortCode) throw new Error('Company creation payload is incomplete.');
+        await createCompany(payload, requesterActor);
+        break;
+      }
+      case 'Company Deletion': {
+        if (!payload.companyId || !(await deleteCompany(payload.companyId, requesterActor))) throw new Error('Company could not be deleted.');
+        break;
+      }
+      case 'Cheque Creation': {
+        if (!payload.chequeNumber || !payload.customerName) throw new Error('Cheque creation payload is incomplete.');
+        await createCheque(payload, requesterActor);
+        break;
+      }
+      case 'Cheque Deposit': {
+        if (!payload.chequeId || !(await markChequeDeposited(payload.chequeId, payload.depositedAt, requesterActor))) throw new Error('Cheque could not be deposited.');
+        break;
+      }
+      case 'Cheque Deletion': {
+        if (!payload.chequeId || !(await deleteCheque(payload.chequeId, requesterActor))) throw new Error('Cheque could not be deleted.');
         break;
       }
       case 'Collection Correction':
       case 'Historical Correction': {
-        if (payload.installmentId && payload.updates) {
-          await updateLoanInstallment(payload.installmentId, payload.updates);
-        }
+        if (!payload.installmentId || !payload.updates) throw new Error('Installment correction payload is incomplete.');
+        if (!(await updateLoanInstallment(payload.installmentId, payload.updates, requesterActor))) throw new Error('Installment could not be updated.');
         break;
       }
       default:
-        console.log(`Generic approval processed for ${req.changeType}`);
+        throw new Error(`No execution handler is registered for ${req.changeType}.`);
     }
 
     // Update Request status
@@ -251,7 +309,7 @@ export async function approveApprovalRequest(
       actorName: reviewer.name,
       actorRoleId: reviewer.roleId,
       action: 'Approved Request',
-      target: `Request ${req.id} (${req.title})`,
+      target: `Request ${req.id} (${req.title}) for ${req.requesterName} (${req.requesterId})`,
       beforeVal: 'Status: Pending Review',
       afterVal: `Status: Approved by ${reviewer.name}. Notes: ${reviewer.notes || 'None'}`,
       isSensitive: req.changeType === 'Role Change' || req.amount > 500000,
@@ -300,8 +358,8 @@ export async function rejectApprovalRequest(
     actorId: reviewer.id,
     actorName: reviewer.name,
     actorRoleId: reviewer.roleId,
-    action: 'Approved Request', // audit type
-    target: `Request ${req.id} (${req.title})`,
+    action: 'Rejected Request',
+    target: `Request ${req.id} (${req.title}) for ${req.requesterName} (${req.requesterId})`,
     beforeVal: 'Status: Pending Review',
     afterVal: `Status: Rejected by ${reviewer.name}. Reason: ${reviewer.notes}`,
     isSensitive: false,

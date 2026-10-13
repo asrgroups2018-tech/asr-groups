@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/server/db';
+import { authorizeRequest } from '@/lib/server/authorization';
 
 // GET /api/admin/roles
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const auth = await authorizeRequest(request, 'admin', 'view');
+  if (!auth.ok) return auth.response;
   try {
     const roles = await db.getRoles();
     return NextResponse.json({ success: true, data: roles });
@@ -13,6 +16,8 @@ export async function GET() {
 
 // POST /api/admin/roles
 export async function POST(request: NextRequest) {
+  const auth = await authorizeRequest(request, 'admin', 'create');
+  if (!auth.ok) return auth.response;
   try {
     const body = await request.json();
     if (!body.name || !body.code) {
@@ -34,6 +39,15 @@ export async function POST(request: NextRequest) {
       isSystemProtected: false,
       hierarchyLevel: body.hierarchyLevel || 7,
     });
+    await db.logAudit({
+      actorId: auth.user.id,
+      actorName: auth.user.name,
+      actorRoleId: auth.user.primaryRoleId,
+      action: 'Assigned Role',
+      target: `Role ${newRole.name} (${newRole.id})`,
+      afterVal: JSON.stringify(newRole),
+      isSensitive: true,
+    });
 
     return NextResponse.json({ success: true, data: newRole }, { status: 201 });
   } catch (error: any) {
@@ -43,6 +57,8 @@ export async function POST(request: NextRequest) {
 
 // PUT /api/admin/roles
 export async function PUT(request: NextRequest) {
+  const auth = await authorizeRequest(request, 'admin', 'edit');
+  if (!auth.ok) return auth.response;
   try {
     const body = await request.json();
     if (body.id === undefined) {
@@ -56,6 +72,15 @@ export async function PUT(request: NextRequest) {
     if (!updated) {
       return NextResponse.json({ success: false, error: 'Role not found.' }, { status: 404 });
     }
+    await db.logAudit({
+      actorId: auth.user.id,
+      actorName: auth.user.name,
+      actorRoleId: auth.user.primaryRoleId,
+      action: 'Updated Access',
+      target: `Role ${updated.name} (${updated.id})`,
+      afterVal: JSON.stringify(body),
+      isSensitive: true,
+    });
 
     return NextResponse.json({ success: true, data: updated });
   } catch (error: any) {
@@ -64,10 +89,23 @@ export async function PUT(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
+  const auth = await authorizeRequest(request, 'admin', 'delete');
+  if (!auth.ok) return auth.response;
   try {
     const id = Number(new URL(request.url).searchParams.get('id'));
     if (!Number.isInteger(id)) return NextResponse.json({ success: false, error: 'Role id is required.' }, { status: 400 });
     const deleted = await db.deleteRole(id);
+    if (deleted) {
+      await db.logAudit({
+        actorId: auth.user.id,
+        actorName: auth.user.name,
+        actorRoleId: auth.user.primaryRoleId,
+        action: 'Updated Access',
+        target: `Role ${id}`,
+        afterVal: 'Deleted',
+        isSensitive: true,
+      });
+    }
     return NextResponse.json({ success: deleted }, { status: deleted ? 200 : 404 });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 409 });

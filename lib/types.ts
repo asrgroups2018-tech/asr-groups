@@ -58,6 +58,8 @@ export interface User {
   customerId?: string;
 }
 
+export type AuditActor = Pick<User, 'id' | 'name' | 'primaryRoleId'>;
+
 export type ModuleAction = 'view' | 'create' | 'edit' | 'delete' | 'approve' | 'export';
 
 export interface ModulePermissionConfig {
@@ -77,10 +79,20 @@ export type PermissionMatrixState = {
 };
 
 export type ChangeType =
+  | 'Loan Creation'
+  | 'Spreadsheet Import'
   | 'Loan Update'
+  | 'Loan Deletion'
   | 'Loan Split'
   | 'Loan Merge'
   | 'Collection Correction'
+  | 'Cheque Creation'
+  | 'Cheque Deposit'
+  | 'Cheque Deletion'
+  | 'Company Creation'
+  | 'Company Deletion'
+  | 'Customer Creation'
+  | 'Customer Deletion'
   | 'Expense Edit'
   | 'Salary Change'
   | 'Customer Update'
@@ -120,7 +132,7 @@ export interface AccessRequest {
   resolvedAt?: string;
 }
 
-export type EntityType = 'loan' | 'customer' | 'company' | 'historical_receipt' | 'user';
+export type EntityType = 'loan' | 'customer' | 'company' | 'cheque' | 'historical_receipt' | 'user';
 
 export interface ApprovalRequest {
   id: string; // e.g. "REQ-2026-1001"
@@ -152,6 +164,8 @@ export type AuditActionType =
   | 'Updated Access'
   | 'Edited Permission'
   | 'Approved Request'
+  | 'Created Request'
+  | 'Rejected Request'
   | 'Login'
   | 'Suspended User'
   | 'Activated User'
@@ -172,7 +186,8 @@ export type AuditActionType =
   | 'Spreadsheet Import Committed'
   | 'Logged Cheque'
   | 'Deposited Cheque'
-  | 'Deleted Cheque';
+  | 'Deleted Cheque'
+  | 'Updated Company';
 
 export interface AuditLogEntry {
   id: string; // e.g. "AUD-9402"

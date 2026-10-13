@@ -108,6 +108,7 @@ interface AppContextType {
   simulatedRoleId: RoleId;
   setSimulatedRoleId: (roleId: RoleId) => void;
   currentActor: User;
+  hasModulePermission: (moduleId: string, action?: ModuleAction) => boolean;
   authReady: boolean;
   isAuthenticated: boolean;
 
@@ -284,7 +285,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
   const [selectedLoanId, setSelectedLoanId] = useState<string | null>(null);
   const [userDetailsTab, setUserDetailsTab] = useState<UserDetailsTab>('profile');
-  const [simulatedRoleId, setSimulatedRoleId] = useState<RoleId>(0);
+  const [simulatedRoleId, setSimulatedRoleIdState] = useState<RoleId>(0);
+  const [simulationEnabled, setSimulationEnabled] = useState(false);
+
+  const setSimulatedRoleId = useCallback((roleId: RoleId) => {
+    setSimulatedRoleIdState(roleId);
+    setSimulationEnabled(true);
+  }, []);
 
   // Entities
   const [users, setUsers] = useState<User[]>([ROOT_ADMIN_FALLBACK]);
@@ -304,7 +311,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isSavingReceipt, setIsSavingReceipt] = useState<boolean>(false);
   const hasLoadedDataRef = React.useRef(false);
-  const isFetchingAuthRef = React.useRef(false);
 
   const resetSessionData = useCallback(() => {
     // These collections are session-scoped. Never allow records loaded for a
@@ -328,6 +334,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (pathname === '/login') {
       resetSessionData();
       setAuthenticatedUser(null);
+      setSimulationEnabled(false);
       // Protected layouts are not mounted on the login page. Keep authReady
       // false so the next protected route must complete a fresh session check
       // before AppShell can redirect or load application data.
@@ -344,11 +351,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // completes. Keep the shell in its loading state during that window so
     // it cannot redirect a valid session back to the login page.
     setAuthReady(false);
-    if (isFetchingAuthRef.current) return;
-
-    isFetchingAuthRef.current = true;
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), 12000);
     let cancelled = false;
-    fetch('/api/auth/me')
+    fetch('/api/auth/me', { cache: 'no-store', signal: controller.signal })
       .then((response) => (response.ok ? response.json() : { success: false }))
       .then((json) => {
         if (cancelled) return;
@@ -356,6 +362,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           const sessionUser = json.data as User;
           resetSessionData();
           setAuthenticatedUser(sessionUser);
+          setSimulatedRoleIdState(sessionUser.primaryRoleId);
+          setSimulationEnabled(false);
           if (json.permissionMatrix) setPermissionMatrix(json.permissionMatrix);
           if (json.roles) setRoles(json.roles);
         } else {
@@ -372,13 +380,45 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
       })
       .finally(() => {
-        isFetchingAuthRef.current = false;
+      window.clearTimeout(timeoutId);
       });
 
     return () => {
       cancelled = true;
+      controller.abort();
+      window.clearTimeout(timeoutId);
     };
   }, [pathname, authenticatedUser, resetSessionData]);
+
+  // Re-read the persisted session permissions on navigation. This makes an
+  // access approval effective for an already logged-in employee without
+  // requiring a logout, browser restart, or cached page reload.
+  useEffect(() => {
+    if (!authenticatedUser || pathname === '/login') return;
+    const controller = new AbortController();
+    let cancelled = false;
+    fetch('/api/auth/me', { cache: 'no-store', signal: controller.signal })
+      .then((response) => (response.ok ? response.json() : { success: false }))
+      .then((json) => {
+        if (cancelled) return;
+        if (!json.success) {
+          setAuthenticatedUser(null);
+          setAuthReady(false);
+          return;
+        }
+        if (json.permissionMatrix) setPermissionMatrix(json.permissionMatrix);
+        if (json.roles) setRoles(json.roles);
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setAuthReady(true);
+      });
+
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+  }, [pathname, authenticatedUser?.id]);
 
   const hasModulePermission = useCallback(
     (moduleId: string, action: ModuleAction = 'view') => {
@@ -406,7 +446,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Fetch Receipts for Excel Grid
   const fetchReceipts = useCallback(async (category?: 'ALL' | 'ASR_ONLY' | 'OUTSIDE_ONLY', query?: string) => {
-    if (!authenticatedUser || authenticatedUser.isCustomer || !hasModulePermission('loans')) {
+    if (!authenticatedUser || authenticatedUser.isCustomer || !hasModulePermission('historical-sheet')) {
       setReceipts([]);
       return;
     }
@@ -419,7 +459,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const queryString = params.toString();
       if (queryString) url += `?${queryString}`;
 
-      const res = await fetch(url);
+      const res = await fetch(url, { cache: 'no-store' });
       const json = await res.json();
       if (json.success) {
         setReceipts(json.rows || []);
@@ -446,7 +486,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       isSuperAdminSession || (isCustomerSession && moduleId === 'admin' ? false : hasModulePermission(moduleId));
     const requestJson = (url: string, allowed: boolean) =>
       allowed
-        ? fetch(url).then((response) => (response.ok ? response.json() : { success: false })).catch(() => ({ success: false }))
+        ? fetch(url, { cache: 'no-store' }).then((response) => (response.ok ? response.json() : { success: false })).catch(() => ({ success: false }))
         : Promise.resolve({ success: false });
 
     try {
@@ -473,7 +513,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         requestJson('/api/customers', canView('customers')),
         requestJson('/api/companies', canView('companies')),
         requestJson('/api/loans', canView('loans')),
-        requestJson('/api/cheques', true),
+        requestJson('/api/cheques', canView('cheques')),
         requestJson('/api/dashboard', canView('dashboard')),
         requestJson('/api/requests', canView('requests')),
       ]);
@@ -513,9 +553,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [authReady, authenticatedUser, pathname, refreshAll]);
 
   // Current Actor
-  const effectiveRoleId = authenticatedUser && !authenticatedUser.assignedRoleIds.includes(simulatedRoleId)
-    ? authenticatedUser.primaryRoleId
-    : simulatedRoleId;
+  const effectiveRoleId = authenticatedUser
+    ? simulationEnabled && authenticatedUser.assignedRoleIds.includes(simulatedRoleId)
+      ? simulatedRoleId
+      : authenticatedUser.primaryRoleId
+    : 0;
   const currentActor = authenticatedUser || users[0] || ROOT_ADMIN_FALLBACK;
 
   const fetchApprovalRequests = useCallback(async (status?: string, changeType?: string, query?: string) => {
@@ -649,6 +691,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         showToast('Loan Creation Failed', json.error || 'Server error', 'error');
         return null;
       }
+      if (json.queued) {
+        showToast(
+          json.accessRequestSubmitted ? 'Access Request Submitted' : 'Approval Request Submitted',
+          json.message || 'The loan will be created after an authorized approval.',
+          'info',
+        );
+        refreshAll(false);
+        return null;
+      }
 
       showToast(
         'Loan Created & Propagated',
@@ -688,6 +739,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const json = await res.json();
       if (!json.success) {
         showToast('Update Failed', json.error || 'Server error', 'error');
+        return null;
+      }
+      if (json.queued) {
+        showToast(
+          json.accessRequestSubmitted ? 'Access Request Submitted' : 'Approval Request Submitted',
+          json.message || 'The installment change will be applied after an authorized approval.',
+          'info',
+        );
+        refreshAll(false);
         return null;
       }
 
@@ -732,8 +792,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         body: JSON.stringify(data),
       });
       const json = await res.json();
-      if (!res.ok || json.error) {
+      if ((!res.ok || json.error) && !json.accessRequestSubmitted) {
         showToast('Loan Update Failed', json.error || 'Server error', 'error');
+        return null;
+      }
+      if (json.queued) {
+        showToast(
+          json.accessRequestSubmitted ? 'Access Request Submitted' : 'Approval Request Submitted',
+          json.message || 'The loan change will be applied after an authorized approval.',
+          'info',
+        );
+        refreshAll(false);
         return null;
       }
       showToast('Loan Updated', `Loan ${loanId} and all ${data.installments.length} EMIs successfully updated.`, 'success');
@@ -747,9 +816,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const deleteLoan = async (id: string): Promise<boolean> => {
     try {
-      setLoans((prev) => prev.filter((l) => l.id !== id));
       const res = await fetch(`/api/loans?id=${id}`, { method: 'DELETE' });
       const json = await res.json();
+      if (json.queued) {
+        showToast(
+          json.accessRequestSubmitted ? 'Access Request Submitted' : 'Approval Request Submitted',
+          json.message || 'The loan will be deleted after an authorized approval.',
+          'info',
+        );
+        refreshAll(false);
+        return false;
+      }
       if (json.success) {
         showToast('Loan Removed', `Loan ${id} was deleted.`, 'info');
         refreshAll(false);
@@ -778,13 +855,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         body: JSON.stringify({ installmentId, ...updates }),
       });
       const json = await res.json();
+      if (json.queued) {
+        showToast(
+          json.accessRequestSubmitted ? 'Access Request Submitted' : 'Approval Request Submitted',
+          json.message || 'The correction will be applied after an authorized approval.',
+          'info',
+        );
+        refreshAll(false);
+        return false;
+      }
       if (json.success) {
         // Update local receipts array instantly
         setReceipts((prev) =>
           prev.map((r) => (r.installmentId === installmentId ? { ...r, ...updates } : r))
         );
         // Refresh dashboard and loans in background
-        fetch('/api/dashboard')
+        fetch('/api/dashboard', { cache: 'no-store' })
           .then((r) => r.json())
           .then((d) => d.success && setDashboardData(d.data))
           .catch(() => {});
@@ -813,6 +899,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       });
       const json = await res.json();
       if (json.success) {
+        if (json.queued) {
+          showToast(
+            json.accessRequestSubmitted ? 'Access Request Submitted' : 'Approval Request Submitted',
+            json.message || 'The customer will be created after an authorized approval.',
+            'info',
+          );
+          refreshAll(false);
+          return null;
+        }
         showToast('Customer Created', `Borrower ${data.name} added.`, 'success');
         if (json.data) {
           setCustomers((prev) => [json.data, ...prev]);
@@ -827,7 +922,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateCustomer = async (id: string, updates: Partial<Customer>) => {
-    setCustomers((prev) => prev.map((c) => (c.id === id ? { ...c, ...updates } : c)));
     try {
       const res = await fetch('/api/customers', {
         method: 'PUT',
@@ -835,6 +929,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         body: JSON.stringify({ id, updates }),
       });
       const json = await res.json();
+      if (json.queued) {
+        showToast(
+          json.accessRequestSubmitted ? 'Access Request Submitted' : 'Approval Request Submitted',
+          json.message || 'The customer change will be applied after an authorized approval.',
+          'info',
+        );
+        refreshAll(false);
+        return null;
+      }
       if (json.success) {
         showToast('Customer Updated', `Borrower ${updates.name || id} modified.`, 'success');
         refreshAll(false);
@@ -849,10 +952,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteCustomer = async (id: string) => {
-    setCustomers((prev) => prev.filter((c) => c.id !== id));
     try {
       const res = await fetch(`/api/customers?id=${id}`, { method: 'DELETE' });
       const json = await res.json();
+      if (json.queued) {
+        showToast(
+          json.accessRequestSubmitted ? 'Access Request Submitted' : 'Approval Request Submitted',
+          json.message || 'The customer will be deleted after an authorized approval.',
+          'info',
+        );
+        refreshAll(false);
+        return false;
+      }
       if (json.success) {
         showToast('Customer Removed', 'Borrower deleted.', 'info');
         refreshAll(false);
@@ -884,6 +995,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       });
       const json = await res.json();
       if (json.success) {
+        if (json.queued) {
+          showToast(
+            json.accessRequestSubmitted ? 'Access Request Submitted' : 'Approval Request Submitted',
+            json.message || 'The cheque will be logged after an authorized approval.',
+            'info',
+          );
+          refreshAll(false);
+          return null;
+        }
         showToast('Cheque Logged', `Cheque #${data.chequeNumber} for ₹${data.amount.toLocaleString('en-IN')} added.`, 'success');
         if (json.data) {
           setCheques((prev) => [json.data, ...prev]);
@@ -908,6 +1028,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         body: JSON.stringify({ depositedAt }),
       });
       const json = await res.json();
+      if (json.queued) {
+        showToast(
+          json.accessRequestSubmitted ? 'Access Request Submitted' : 'Approval Request Submitted',
+          json.message || 'The cheque deposit will be applied after an authorized approval.',
+          'info',
+        );
+        refreshAll(false);
+        return false;
+      }
       if (json.success) {
         showToast('Cheque Deposited', `Cheque marked as Deposited.`, 'success');
         setCheques((prev) =>
@@ -926,10 +1055,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteCheque = async (id: string): Promise<boolean> => {
-    setCheques((prev) => prev.filter((c) => c.id !== id));
     try {
       const res = await fetch(`/api/cheques/${encodeURIComponent(id)}`, { method: 'DELETE' });
       const json = await res.json();
+      if (json.queued) {
+        showToast(
+          json.accessRequestSubmitted ? 'Access Request Submitted' : 'Approval Request Submitted',
+          json.message || 'The cheque will be deleted after an authorized approval.',
+          'info',
+        );
+        refreshAll(false);
+        return false;
+      }
       if (json.success) {
         showToast('Cheque Removed', 'Cheque record deleted.', 'info');
         refreshAll(false);
@@ -955,6 +1092,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       });
       const json = await res.json();
       if (json.success) {
+        if (json.queued) {
+          showToast(
+            json.accessRequestSubmitted ? 'Access Request Submitted' : 'Approval Request Submitted',
+            json.message || 'The company will be created after an authorized approval.',
+            'info',
+          );
+          refreshAll(false);
+          return null;
+        }
         showToast('Company Added', `Funding entity ${data.shortCode} added.`, 'success');
         if (json.data) {
           setCompanies((prev) => [...prev, json.data]);
@@ -969,10 +1115,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteCompany = async (id: string) => {
-    setCompanies((prev) => prev.filter((c) => c.id !== id));
     try {
       const res = await fetch(`/api/companies?id=${id}`, { method: 'DELETE' });
       const json = await res.json();
+      if (json.queued) {
+        showToast(
+          json.accessRequestSubmitted ? 'Access Request Submitted' : 'Approval Request Submitted',
+          json.message || 'The company will be deleted after an authorized approval.',
+          'info',
+        );
+        refreshAll(false);
+        return false;
+      }
       if (json.success) {
         showToast('Company Removed', 'Funding entity deleted.', 'info');
         refreshAll(false);
@@ -1350,6 +1504,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       simulatedRoleId: effectiveRoleId,
       setSimulatedRoleId,
       currentActor,
+      hasModulePermission,
       authReady,
       isAuthenticated: Boolean(authenticatedUser),
 
@@ -1428,6 +1583,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       userDetailsTab,
       effectiveRoleId,
       currentActor,
+      hasModulePermission,
       authReady,
       authenticatedUser,
       users,

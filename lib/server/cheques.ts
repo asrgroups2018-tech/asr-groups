@@ -1,6 +1,6 @@
 import { getTursoClient } from './turso';
 import { initializeSchema } from './schema';
-import { Cheque, ChequeStatus } from '@/lib/types';
+import { AuditActor, Cheque, ChequeStatus } from '@/lib/types';
 import { logAudit } from './administration';
 
 let schemaInitialized = false;
@@ -86,7 +86,7 @@ export async function createCheque(data: {
   customerName: string;
   amount: number;
   depositDate: string;
-}): Promise<Cheque> {
+}, actor?: AuditActor): Promise<Cheque> {
   await ensureDbInitialized();
   const client = getTursoClient();
 
@@ -121,9 +121,9 @@ export async function createCheque(data: {
   });
 
   await logAudit({
-    actorId: 'ADM-1001',
-    actorName: 'System Administrator',
-    actorRoleId: 0,
+    actorId: actor?.id || 'SYSTEM',
+    actorName: actor?.name || 'System',
+    actorRoleId: actor?.primaryRoleId ?? 0,
     action: 'Logged Cheque',
     target: `Cheque ${chequeNum} (${custName})`,
     beforeVal: '-',
@@ -134,7 +134,7 @@ export async function createCheque(data: {
   return (await getChequeById(id))!;
 }
 
-export async function markChequeDeposited(id: string, depositedAt?: string): Promise<Cheque | null> {
+export async function markChequeDeposited(id: string, depositedAt?: string, actor?: AuditActor): Promise<Cheque | null> {
   await ensureDbInitialized();
   const client = getTursoClient();
 
@@ -149,9 +149,9 @@ export async function markChequeDeposited(id: string, depositedAt?: string): Pro
   });
 
   await logAudit({
-    actorId: 'ADM-1001',
-    actorName: 'System Administrator',
-    actorRoleId: 0,
+    actorId: actor?.id || 'SYSTEM',
+    actorName: actor?.name || 'System',
+    actorRoleId: actor?.primaryRoleId ?? 0,
     action: 'Deposited Cheque',
     target: `Cheque ${existing.chequeNumber} (${existing.customerName})`,
     beforeVal: 'Status: Pending',
@@ -162,7 +162,7 @@ export async function markChequeDeposited(id: string, depositedAt?: string): Pro
   return await getChequeById(id);
 }
 
-export async function deleteCheque(id: string): Promise<boolean> {
+export async function deleteCheque(id: string, actor?: AuditActor): Promise<boolean> {
   await ensureDbInitialized();
   const client = getTursoClient();
 
@@ -175,9 +175,9 @@ export async function deleteCheque(id: string): Promise<boolean> {
   });
 
   await logAudit({
-    actorId: 'ADM-1001',
-    actorName: 'System Administrator',
-    actorRoleId: 0,
+    actorId: actor?.id || 'SYSTEM',
+    actorName: actor?.name || 'System',
+    actorRoleId: actor?.primaryRoleId ?? 0,
     action: 'Deleted Cheque',
     target: `Cheque ${existing.chequeNumber} (${existing.customerName})`,
     beforeVal: `Amount: ₹${existing.amount.toLocaleString('en-IN')}, Status: ${existing.status}`,

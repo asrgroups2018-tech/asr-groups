@@ -1,0 +1,98 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { ModuleAction, User } from '@/lib/types';
+import { resolveRoutePermission } from '@/lib/permissions';
+import { db } from './db';
+
+export const SUPER_ADMIN_ROLE_ID = 0;
+
+export type AuthorizationResult =
+  | { ok: true; user: User }
+  | { ok: false; response: NextResponse };
+
+export async function getRequestUser(request: NextRequest): Promise<User | null> {
+  return db.getUserBySessionToken(request.cookies.get('asr_session')?.value);
+}
+
+export async function authorizeRequest(
+  request: NextRequest,
+  module?: string,
+  action?: ModuleAction,
+): Promise<AuthorizationResult> {
+  const user = await getRequestUser(request);
+  if (!user) {
+    return {
+      ok: false,
+      response: NextResponse.json({ success: false, error: 'Authentication required.' }, { status: 401 }),
+    };
+  }
+
+  if (!module || !action) return { ok: true, user };
+
+  if (module === 'admin' && !isSuperAdmin(user)) {
+    return {
+      ok: false,
+      response: NextResponse.json({ success: false, error: 'Super Admin access required.' }, { status: 403 }),
+    };
+  }
+
+  if (!isSuperAdmin(user)) {
+    const matrix = await db.getPermissionMatrix();
+    const allowed = user.assignedRoleIds.some((roleId) => Boolean(matrix[module]?.[action]?.[roleId]));
+    if (!allowed) {
+      let accessRequestSubmitted = false;
+      try {
+        await db.createAccessRequest({
+          userId: user.id,
+          userName: user.name,
+          roleId: user.primaryRoleId,
+          moduleId: module,
+          action,
+          reason: `Requested ${action} access for ${module} through ${request.method} ${request.nextUrl.pathname}.`,
+        });
+        accessRequestSubmitted = true;
+      } catch (error) {
+        console.error('Failed to record access request:', error);
+      }
+      if (accessRequestSubmitted) {
+        return {
+          ok: false,
+          response: NextResponse.json(
+            {
+              success: true,
+              queued: true,
+              accessRequestSubmitted: true,
+              message: `Your ${action} access request for ${module} was submitted for approval.`,
+            },
+            { status: 202 },
+          ),
+        };
+      }
+      return {
+        ok: false,
+        response: NextResponse.json(
+          {
+            success: false,
+            error: `Permission required: ${action} ${module}.`,
+            accessRequestSubmitted,
+          },
+          { status: 403 },
+        ),
+      };
+    }
+  }
+
+  return { ok: true, user };
+}
+
+export async function authorizeRouteRequest(request: NextRequest): Promise<AuthorizationResult> {
+  const permission = resolveRoutePermission(request.nextUrl.pathname, request.method, request.nextUrl.searchParams);
+  return authorizeRequest(request, permission?.module, permission?.action);
+}
+
+export function isSuperAdmin(user: User): boolean {
+  return user.assignedRoleIds.includes(SUPER_ADMIN_ROLE_ID);
+}
+
+export function apiAuthError(result: AuthorizationResult): NextResponse | null {
+  return result.ok ? null : result.response;
+}

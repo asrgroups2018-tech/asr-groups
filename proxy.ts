@@ -2,31 +2,20 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { db } from '@/lib/server/db';
 import { CUSTOMER_ROLE_ID } from '@/lib/types';
-
-const SESSION_CACHE_TTL_MS = 5_000;
-const sessionCache = new Map<string, { expiresAt: number; user: Awaited<ReturnType<typeof db.getUserBySessionToken>> }>();
-
-async function getCachedSessionUser(token: string | undefined) {
-  if (!token) return null;
-  const cached = sessionCache.get(token);
-  if (cached && cached.expiresAt > Date.now()) return cached.user;
-  if (cached) sessionCache.delete(token);
-
-  const user = await db.getUserBySessionToken(token);
-  sessionCache.set(token, { user, expiresAt: Date.now() + SESSION_CACHE_TTL_MS });
-  return user;
-}
+import { getFirstPermittedPage, resolveRoutePermission } from '@/lib/permissions';
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Leave Next internals, public assets, and all API endpoints untouched.
+  // Leave Next internals, public assets, and the authentication endpoints untouched.
   if (
     pathname.startsWith('/_next') ||
     isPublicAsset(pathname) ||
     pathname === '/' ||
     pathname === '/login' ||
-    pathname.startsWith('/api/')
+    pathname === '/api/auth/login' ||
+    pathname === '/api/auth/logout' ||
+    pathname === '/api/auth/me'
   ) {
     return NextResponse.next();
   }
@@ -39,7 +28,7 @@ export async function proxy(request: NextRequest) {
 
   let user;
   try {
-    user = await getCachedSessionUser(request.cookies.get('asr_session')?.value);
+    user = await db.getUserBySessionToken(request.cookies.get('asr_session')?.value);
   } catch (error) {
     console.error('Session validation failed:', error);
     if (pathname.startsWith('/api/')) {
@@ -85,7 +74,7 @@ export async function proxy(request: NextRequest) {
     const isDefaultCustomerPage =
       pathname === '/dashboard' || pathname.startsWith('/dashboard/') ||
       pathname === '/loans' || pathname.startsWith('/loans/');
-    const permission = routePermission(pathname, request.method, request.nextUrl.searchParams);
+    const permission = resolveRoutePermission(pathname, request.method, request.nextUrl.searchParams);
     let hasSavedPageAccess = false;
     if (!isDefaultCustomerPage && permission && permission.module !== 'admin') {
       const matrix = await db.getPermissionMatrix();
@@ -94,23 +83,36 @@ export async function proxy(request: NextRequest) {
 
     if (!isDefaultCustomerPage && !hasSavedPageAccess) {
       if (pathname.startsWith('/api/')) {
+        if (permission) {
+          await createAutomaticAccessRequest(user, permission.module, permission.action, request);
+          return accessRequestQueuedResponse(permission.module, permission.action);
+        }
         return NextResponse.json({ success: false, error: 'This page is not enabled for the customer account.' }, { status: 403 });
       }
+      if (permission) await createAutomaticAccessRequest(user, permission.module, permission.action, request);
       return NextResponse.redirect(new URL('/dashboard', request.url));
     }
 
     return NextResponse.next();
   }
 
-  const permission = routePermission(pathname, request.method, request.nextUrl.searchParams);
+  const permission = resolveRoutePermission(pathname, request.method, request.nextUrl.searchParams);
   if (permission && !user.assignedRoleIds.includes(0)) {
     const matrix = await db.getPermissionMatrix();
     const allowed = user.assignedRoleIds.some((roleId) => Boolean(matrix[permission.module]?.[permission.action]?.[roleId]));
     if (!allowed) {
       if (pathname.startsWith('/api/')) {
-        return NextResponse.json({ success: false, error: `Permission required: ${permission.action} ${permission.module}.` }, { status: 403 });
+        await createAutomaticAccessRequest(user, permission.module, permission.action, request);
+        return accessRequestQueuedResponse(permission.module, permission.action);
       }
       const deniedUrl = new URL('/access-denied', request.url);
+      if (permission.action === 'view') {
+        await createAutomaticAccessRequest(user, permission.module, permission.action, request);
+        const permittedPage = getFirstPermittedPage(matrix, user.assignedRoleIds);
+        if (permittedPage && permittedPage !== pathname) {
+          return NextResponse.redirect(new URL(permittedPage, request.url));
+        }
+      }
       deniedUrl.searchParams.set('resource', permission.module);
       deniedUrl.searchParams.set('action', permission.action);
       deniedUrl.searchParams.set('from', pathname);
@@ -121,39 +123,43 @@ export async function proxy(request: NextRequest) {
   return NextResponse.next();
 }
 
-function routePermission(pathname: string, method: string, searchParams: URLSearchParams): { module: string; action: 'view' | 'create' | 'edit' | 'delete' | 'approve' | 'export' } | null {
-  if (pathname === '/api/access-requests' || pathname === '/access-denied') return null;
-  const module = pathname === '/dashboard' || pathname.startsWith('/api/dashboard') ? 'dashboard'
-    : pathname === '/loans' || pathname.startsWith('/loans/') || pathname.startsWith('/api/loans') || pathname.startsWith('/api/receipts') || pathname.startsWith('/api/installments') ? 'loans'
-      : pathname === '/customers' || pathname.startsWith('/customers/') || pathname.startsWith('/api/customers') ? 'customers'
-        : pathname === '/companies' || pathname.startsWith('/companies/') || pathname.startsWith('/api/companies') ? 'companies'
-          : pathname === '/schedule' || pathname.startsWith('/schedule/') ? 'schedule'
-            : pathname === '/reports' || pathname.startsWith('/reports/') ? 'reports'
-              : pathname === '/requests' || pathname.startsWith('/requests/') || pathname.startsWith('/api/requests') ? 'requests'
-                : pathname === '/administration' || pathname.startsWith('/administration/') || pathname.startsWith('/api/admin/') ? 'admin'
-                  : null;
-  if (!module) return null;
-  if (searchParams.has('export') || searchParams.get('format') === 'csv' || searchParams.get('download') === '1') return { module, action: 'export' };
-  if (method === 'POST') return { module, action: 'create' };
-  if (method === 'PUT' || method === 'PATCH') return { module, action: 'edit' };
-  if (method === 'DELETE') return { module, action: 'delete' };
-  return { module, action: 'view' };
-}
-
-function normalizePath(request: NextRequest) {
-  const { pathname } = request.nextUrl;
-  if (pathname !== pathname.toLowerCase()) {
-    const url = request.nextUrl.clone();
-    url.pathname = pathname.toLowerCase();
-    return NextResponse.redirect(url, 308);
-  }
-  return NextResponse.next();
-}
-
 export const config = {
   matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
 };
 
 function isPublicAsset(pathname: string) {
   return !pathname.startsWith('/api/') && /\.[a-z0-9]{2,8}$/i.test(pathname);
+}
+
+async function createAutomaticAccessRequest(
+  user: Awaited<ReturnType<typeof db.getUserBySessionToken>>,
+  moduleId: string,
+  action: NonNullable<ReturnType<typeof resolveRoutePermission>>['action'],
+  request: NextRequest,
+) {
+  if (!user || moduleId === 'admin' || user.assignedRoleIds.includes(0)) return;
+  try {
+    await db.createAccessRequest({
+      userId: user.id,
+      userName: user.name,
+      roleId: user.primaryRoleId,
+      moduleId,
+      action,
+      reason: `Requested ${action} access for ${moduleId} through ${request.method} ${request.nextUrl.pathname}.`,
+    });
+  } catch (error) {
+    console.error('Failed to record automatic access request:', error);
+  }
+}
+
+function accessRequestQueuedResponse(moduleId: string, action: string) {
+  return NextResponse.json(
+    {
+      success: true,
+      queued: true,
+      accessRequestSubmitted: true,
+      message: `Your ${action} access request for ${moduleId} was submitted for approval.`,
+    },
+    { status: 202 },
+  );
 }

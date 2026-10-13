@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { RequestsQueueTable } from './_components/RequestsQueueTable';
 import { CreateManualRequestModal } from './_components/CreateManualRequestModal';
+import { AccessRequestsTab } from '@/app/administration/_components/AccessRequestsTab';
 import Link from 'next/link';
 
 export default function RequestsPage() {
@@ -115,6 +116,8 @@ export default function RequestsPage() {
             </span>
           </div>
         </div>
+
+        <AccessRequestsTab />
 
         {/* Requests Queue Table */}
         <RequestsQueueTable />

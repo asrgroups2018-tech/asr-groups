@@ -2,6 +2,8 @@ import { randomUUID } from 'node:crypto';
 import { AccessRequest, AccessRequestStatus, ModuleAction, RoleId } from '@/lib/types';
 import { getTursoClient } from './turso';
 import { initializeSchema } from './schema';
+import { getPermissionMatrix, logAudit, updatePermissionMatrix } from './administration';
+import { MODULES_DATA } from '@/lib/seedData';
 
 let initialized = false;
 
@@ -39,14 +41,67 @@ export async function createAccessRequest(data: { userId: string; userName: stri
   if (pending.rows.length > 0) return mapRow(pending.rows[0]);
   const request: AccessRequest = { ...data, id: `AR-${randomUUID()}`, reason: data.reason.trim(), status: 'Pending', createdAt: new Date().toISOString() };
   await client.execute({ sql: `INSERT INTO access_requests (id, user_id, user_name, role_id, module_id, action, reason, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`, args: [request.id, request.userId, request.userName, request.roleId, request.moduleId, request.action, request.reason, request.status, request.createdAt] });
+  await logAudit({
+    actorId: request.userId,
+    actorName: request.userName,
+    actorRoleId: request.roleId,
+    action: 'Created Request',
+    target: `Access Request ${request.id}: ${request.moduleId} ${request.action}`,
+    beforeVal: '-',
+    afterVal: `Status: Pending. Reason: ${request.reason}`,
+    isSensitive: false,
+  });
   return request;
 }
 
-export async function reviewAccessRequest(id: string, status: Exclude<AccessRequestStatus, 'Pending'>, reviewerId: string, reviewerName: string, reviewerNotes?: string): Promise<AccessRequest | null> {
+export async function reviewAccessRequest(id: string, status: Exclude<AccessRequestStatus, 'Pending'>, reviewerId: string, reviewerName: string, reviewerRoleId: RoleId, reviewerNotes?: string): Promise<AccessRequest | null> {
   await ensureInitialized();
   const client = getTursoClient();
+  const result = await client.execute({ sql: 'SELECT * FROM access_requests WHERE id = ? AND status = \'Pending\' LIMIT 1', args: [id] });
+  if (result.rows.length === 0) return null;
+
+  const request = mapRow(result.rows[0]);
+  if (status === 'Approved') {
+    const moduleConfig = MODULES_DATA.find((module) => module.id === request.moduleId);
+    if (!moduleConfig || !moduleConfig.actions.includes(request.action)) {
+      throw new Error('The requested page permission is no longer available.');
+    }
+    if (request.moduleId === 'admin' || request.roleId === 0) {
+      throw new Error('Administration access is reserved for Super Admin.');
+    }
+
+    const matrix = await getPermissionMatrix();
+    const modulePermissions = matrix[request.moduleId] || {};
+    const actionPermissions = modulePermissions[request.action] || {};
+    await updatePermissionMatrix({
+      ...matrix,
+      [request.moduleId]: {
+        ...modulePermissions,
+        [request.action]: {
+          ...actionPermissions,
+          [request.roleId]: true,
+        },
+      },
+    });
+  }
+
   const resolvedAt = new Date().toISOString();
-  await client.execute({ sql: 'UPDATE access_requests SET status = ?, reviewer_id = ?, reviewer_name = ?, reviewer_notes = ?, resolved_at = ? WHERE id = ? AND status = \'Pending\'', args: [status, reviewerId, reviewerName, reviewerNotes?.trim() || null, resolvedAt, id] });
-  const result = await client.execute({ sql: 'SELECT * FROM access_requests WHERE id = ? LIMIT 1', args: [id] });
-  return result.rows.length > 0 ? mapRow(result.rows[0]) : null;
+  await client.execute({
+    sql: 'UPDATE access_requests SET status = ?, reviewer_id = ?, reviewer_name = ?, reviewer_notes = ?, resolved_at = ? WHERE id = ? AND status = \'Pending\'',
+    args: [status, reviewerId, reviewerName, reviewerNotes?.trim() || null, resolvedAt, id],
+  });
+
+  await logAudit({
+    actorId: reviewerId,
+    actorName: reviewerName,
+    actorRoleId: reviewerRoleId,
+    action: status === 'Approved' ? 'Approved Request' : 'Rejected Request',
+    target: `Access Request ${request.id}: ${request.moduleId} ${request.action} for ${request.userName} (${request.userId})`,
+    beforeVal: 'Status: Pending',
+    afterVal: `Status: ${status}`,
+    isSensitive: request.moduleId === 'admin',
+  });
+
+  const updated = await client.execute({ sql: 'SELECT * FROM access_requests WHERE id = ? LIMIT 1', args: [id] });
+  return updated.rows.length > 0 ? mapRow(updated.rows[0]) : null;
 }

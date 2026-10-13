@@ -72,6 +72,16 @@ export const MergeLoansModal: React.FC<MergeLoansModalProps> = ({ isOpen, onClos
       if (!resJson.success) {
         throw new Error(resJson.error || 'Failed to merge loans.');
       }
+      if (resJson.queued) {
+        showToast(
+          resJson.accessRequestSubmitted ? 'Access Request Submitted' : 'Approval Request Submitted',
+          resJson.message || 'The merge will be applied after an authorized approval.',
+          'info',
+        );
+        await refreshAll();
+        onClose();
+        return;
+      }
 
       if (evaluation.action === 'AUTO_APPROVE_QUEUE') {
         await createApprovalRequest({

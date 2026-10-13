@@ -1,6 +1,6 @@
 import { getTursoClient } from './turso';
 import { initializeSchema } from './schema';
-import { Customer } from '@/lib/types';
+import { AuditActor, Customer } from '@/lib/types';
 import { logAudit } from './administration';
 
 let schemaInitialized = false;
@@ -109,7 +109,7 @@ export async function getCustomerById(id: string): Promise<Customer | null> {
   );
 }
 
-export async function createCustomer(data: { name: string; place?: string; codeNo?: string; phone?: string }): Promise<Customer> {
+export async function createCustomer(data: { name: string; place?: string; codeNo?: string; phone?: string }, actor?: AuditActor): Promise<Customer> {
   await ensureDbInitialized();
   const client = getTursoClient();
 
@@ -140,9 +140,9 @@ export async function createCustomer(data: { name: string; place?: string; codeN
   });
 
   await logAudit({
-    actorId: 'ADM-1001',
-    actorName: 'System Administrator',
-    actorRoleId: 0,
+    actorId: actor?.id || 'SYSTEM',
+    actorName: actor?.name || 'System',
+    actorRoleId: actor?.primaryRoleId ?? 0,
     action: 'Created User',
     target: `Customer: ${newCustomer.name} (${newCustomer.id})`,
     beforeVal: '-',
@@ -153,7 +153,7 @@ export async function createCustomer(data: { name: string; place?: string; codeN
   return newCustomer;
 }
 
-export async function updateCustomer(id: string, updates: Partial<Customer>): Promise<Customer | null> {
+export async function updateCustomer(id: string, updates: Partial<Customer>, actor?: AuditActor): Promise<Customer | null> {
   await ensureDbInitialized();
   const client = getTursoClient();
 
@@ -167,10 +167,21 @@ export async function updateCustomer(id: string, updates: Partial<Customer>): Pr
     args: [updated.name, updated.place, updated.codeNo || null, updated.phone || null, id],
   });
 
+  await logAudit({
+    actorId: actor?.id || 'SYSTEM',
+    actorName: actor?.name || 'System',
+    actorRoleId: actor?.primaryRoleId ?? 0,
+    action: 'Updated User',
+    target: `Customer: ${updated.name} (${id})`,
+    beforeVal: JSON.stringify(existing),
+    afterVal: JSON.stringify(updated),
+    isSensitive: true,
+  });
+
   return updated;
 }
 
-export async function deleteCustomer(id: string): Promise<boolean> {
+export async function deleteCustomer(id: string, actor?: AuditActor): Promise<boolean> {
   await ensureDbInitialized();
   const client = getTursoClient();
 
@@ -181,9 +192,9 @@ export async function deleteCustomer(id: string): Promise<boolean> {
   });
 
   await logAudit({
-    actorId: 'ADM-1001',
-    actorName: 'System Administrator',
-    actorRoleId: 0,
+    actorId: actor?.id || 'SYSTEM',
+    actorName: actor?.name || 'System',
+    actorRoleId: actor?.primaryRoleId ?? 0,
     action: 'Deleted User',
     target: `Customer ID: ${id}`,
     beforeVal: 'Active',

@@ -140,6 +140,20 @@ export const MODULES_DATA: ModulePermissionConfig[] = [
     actions: ['view', 'create', 'edit', 'delete', 'export'],
   },
   {
+    id: 'cheques',
+    name: 'Cheque Register',
+    category: 'Operations',
+    description: 'Customer cheque intake, deposit tracking, and reconciliation status',
+    actions: ['view', 'create', 'edit', 'delete', 'export'],
+  },
+  {
+    id: 'collections',
+    name: 'Collections',
+    category: 'Operations',
+    description: 'Daily collection sheets, income registers, expense registers, and summaries',
+    actions: ['view', 'create', 'edit', 'export'],
+  },
+  {
     id: 'reports',
     name: 'Financial Reports',
     category: 'Finance',
@@ -151,6 +165,13 @@ export const MODULES_DATA: ModulePermissionConfig[] = [
     name: 'EMI Schedules',
     category: 'Operations',
     description: 'Repayment calendar, holiday adjustment, and collection planner',
+    actions: ['view', 'edit', 'export'],
+  },
+  {
+    id: 'historical-sheet',
+    name: 'Historical Sheet',
+    category: 'Operations',
+    description: 'Historical receipt review and controlled ledger corrections',
     actions: ['view', 'edit', 'export'],
   },
   {
@@ -227,6 +248,13 @@ export const INITIAL_PERMISSION_MATRIX: PermissionMatrixState = {
     delete: { 0: true, 1: true, 2: false, 3: false, 4: false, 5: false, 6: false },
     export: { 0: true, 1: true, 2: true, 3: false, 4: false, 5: false, 6: false },
   },
+  cheques: {
+    view: { 0: true, 1: true, 2: true, 3: true, 4: true, 5: false, 6: false },
+    create: { 0: true, 1: true, 2: true, 3: true, 4: true, 5: false, 6: false },
+    edit: { 0: true, 1: true, 2: true, 3: true, 4: false, 5: false, 6: false },
+    delete: { 0: true, 1: true, 2: false, 3: false, 4: false, 5: false, 6: false },
+    export: { 0: true, 1: true, 2: true, 3: true, 4: true, 5: false, 6: false },
+  },
   reports: {
     view: { 0: true, 1: true, 2: true, 3: true, 4: false, 5: false, 6: false },
     export: { 0: true, 1: true, 2: true, 3: true, 4: false, 5: false, 6: false },
@@ -243,6 +271,11 @@ export const INITIAL_PERMISSION_MATRIX: PermissionMatrixState = {
     view: { 0: true, 1: true, 2: true, 3: true, 4: true, 5: false, 6: false },
     edit: { 0: true, 1: true, 2: true, 3: false, 4: false, 5: false, 6: false },
     export: { 0: true, 1: true, 2: true, 3: true, 4: true, 5: false, 6: false },
+  },
+  'historical-sheet': {
+    view: { 0: true, 1: true, 2: true, 3: true, 4: false, 5: false, 6: false },
+    edit: { 0: true, 1: true, 2: true, 3: false, 4: false, 5: false, 6: false },
+    export: { 0: true, 1: true, 2: true, 3: true, 4: false, 5: false, 6: false },
   },
   requests: {
     view: { 0: true, 1: true, 2: true, 3: true, 4: true, 5: true, 6: false },

@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCheques, createCheque } from '@/lib/server/cheques';
+import { authorizeRouteRequest } from '@/lib/server/authorization';
+import { queueMutationForApproval } from '@/lib/server/approvalWorkflow';
 
 export async function GET(req: NextRequest) {
+  const auth = await authorizeRouteRequest(req);
+  if (!auth.ok) return auth.response;
   try {
     const { searchParams } = new URL(req.url);
     const status = searchParams.get('status') || undefined;
@@ -24,6 +28,8 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const auth = await authorizeRouteRequest(req);
+  if (!auth.ok) return auth.response;
   try {
     const body = await req.json();
 
@@ -34,13 +40,32 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const proposedPayload = {
+      chequeNumber: body.chequeNumber,
+      customerId: body.customerId || null,
+      customerName: body.customerName,
+      amount: Number(body.amount),
+      depositDate: body.depositDate,
+    };
+    const queued = await queueMutationForApproval({
+      actor: auth.user,
+      changeType: 'Cheque Creation',
+      title: `Log cheque: ${body.chequeNumber}`,
+      entityType: 'cheque',
+      entityId: 'PENDING',
+      amount: Number(body.amount),
+      beforePayload: null,
+      proposedPayload,
+    });
+    if (queued) return queued;
+
     const created = await createCheque({
       chequeNumber: body.chequeNumber,
       customerId: body.customerId || null,
       customerName: body.customerName,
       amount: Number(body.amount),
       depositDate: body.depositDate,
-    });
+    }, auth.user);
 
     return NextResponse.json({ success: true, data: created });
   } catch (err: any) {

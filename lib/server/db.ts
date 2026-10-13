@@ -7,6 +7,7 @@ import * as loanOps from './loans';
 import * as adminOps from './administration';
 import * as accessRequestOps from './accessRequests';
 import * as chequeOps from './cheques';
+import * as requestOps from './requests';
 
 export * from './customers';
 export * from './companies';
@@ -14,6 +15,7 @@ export * from './loans';
 export * from './administration';
 export * from './accessRequests';
 export * from './cheques';
+export * from './requests';
 
 /**
  * Unified `db` facade object preserving full backward compatibility.
@@ -91,4 +93,11 @@ export const db = {
   markChequeDeposited: chequeOps.markChequeDeposited,
   deleteCheque: chequeOps.deleteCheque,
   getChequeStats: chequeOps.getChequeStats,
+
+  // Approval requests
+  getApprovalRequests: requestOps.getApprovalRequests,
+  getApprovalRequestById: requestOps.getApprovalRequestById,
+  createApprovalRequest: requestOps.createApprovalRequest,
+  approveApprovalRequest: requestOps.approveApprovalRequest,
+  rejectApprovalRequest: requestOps.rejectApprovalRequest,
 };

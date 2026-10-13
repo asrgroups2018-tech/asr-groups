@@ -1,17 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { approveApprovalRequest } from '@/lib/server/requests';
+import { authorizeRequest, isSuperAdmin } from '@/lib/server/authorization';
 
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const auth = await authorizeRequest(req, 'requests', 'approve');
+  if (!auth.ok) return auth.response;
   try {
     const { id } = await params;
     const body = await req.json();
     const result = await approveApprovalRequest(id, {
-      id: body.reviewerId,
-      name: body.reviewerName,
-      roleId: body.reviewerRoleId,
+      id: auth.user.id,
+      name: auth.user.name,
+      roleId: isSuperAdmin(auth.user) ? 0 : auth.user.primaryRoleId,
       notes: body.notes,
     });
 

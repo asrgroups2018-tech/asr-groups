@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/server/db';
+import { authorizeRouteRequest } from '@/lib/server/authorization';
 
 export async function GET(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
+  const auth = await authorizeRouteRequest(request);
+  if (!auth.ok) return auth.response;
   try {
     const { id } = await context.params;
     const customer = await db.getCustomerById(id);

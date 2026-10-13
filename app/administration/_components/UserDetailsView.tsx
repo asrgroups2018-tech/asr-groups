@@ -72,9 +72,13 @@ export const UserDetailsView: React.FC = () => {
   const hasRoleChanges = JSON.stringify([...draftRoleIds].sort()) !== JSON.stringify([...user.assignedRoleIds].sort()) || draftPrimaryRole !== user.primaryRoleId;
   const hasMatrixChanges = JSON.stringify(draftMatrix) !== JSON.stringify(permissionMatrix);
   const activeRole = roles.find((role) => role.id === accessRoleId);
-  const userLogTokens = [user.id, user.name, user.email, user.username].filter(Boolean).map((value) => String(value).toLowerCase());
+  const accountCreatedAt = (user.createdAt || '').replace('T', ' ').slice(0, 16);
+  const accountMarker = `(${user.id})`.toLowerCase();
   const userLogs = auditLogs
-    .filter((log) => log.actorId === user.id || userLogTokens.some((token) => [log.target, log.beforeVal, log.afterVal].filter(Boolean).some((value) => String(value).toLowerCase().includes(token))))
+    .filter((log) => log.timestamp >= accountCreatedAt)
+    .filter((log) =>
+      log.actorId === user.id || log.target.toLowerCase().includes(accountMarker),
+    )
     .filter((log) => !activityQuery.trim() || [log.action, log.target, log.actorName, log.timestamp].some((value) => value.toLowerCase().includes(activityQuery.trim().toLowerCase())))
     .sort((a, b) => b.timestamp.localeCompare(a.timestamp));
 

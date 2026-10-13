@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/server/db';
+import { authorizeRequest } from '@/lib/server/authorization';
 
 // GET /api/admin/audit
 export async function GET(request: NextRequest) {
+  const auth = await authorizeRequest(request, 'admin', 'view');
+  if (!auth.ok) return auth.response;
   try {
     const { searchParams } = new URL(request.url);
     const actorId = searchParams.get('actorId');
@@ -12,7 +15,7 @@ export async function GET(request: NextRequest) {
     let logs = await db.getAuditLogs();
 
     if (actorId) {
-      logs = logs.filter((l) => l.actorId === actorId || l.actorName.includes(actorId));
+      logs = logs.filter((l) => l.actorId === actorId);
     }
     if (action) {
       logs = logs.filter((l) => l.action === action);
@@ -29,6 +32,8 @@ export async function GET(request: NextRequest) {
 
 // POST /api/admin/audit
 export async function POST(request: NextRequest) {
+  const auth = await authorizeRequest(request, 'admin', 'create');
+  if (!auth.ok) return auth.response;
   try {
     const body = await request.json();
     if (!body.action || !body.target) {
@@ -42,9 +47,9 @@ export async function POST(request: NextRequest) {
     const userAgent = request.headers.get('user-agent') || 'Browser Client';
 
     const newLog = await db.logAudit({
-      actorId: body.actorId || 'ADM-1001',
-      actorName: body.actorName || 'System Administrator',
-      actorRoleId: body.actorRoleId !== undefined ? body.actorRoleId : 0,
+      actorId: auth.user.id,
+      actorName: auth.user.name,
+      actorRoleId: auth.user.primaryRoleId,
       action: body.action,
       target: body.target,
       beforeVal: body.beforeVal,

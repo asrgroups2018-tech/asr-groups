@@ -1,6 +1,7 @@
 import { getTursoClient } from './turso';
 import { initializeSchema } from './schema';
-import { Company } from '@/lib/types';
+import { AuditActor, Company } from '@/lib/types';
+import { logAudit } from './administration';
 
 let schemaInitialized = false;
 
@@ -193,7 +194,7 @@ export function resolveCompany(key: string, companies: Company[]): Company | nul
   return null;
 }
 
-export async function createCompany(data: { name: string; shortCode: string; isOutsideParty?: boolean }): Promise<Company> {
+export async function createCompany(data: { name: string; shortCode: string; isOutsideParty?: boolean }, actor?: AuditActor): Promise<Company> {
   await ensureDbInitialized();
   const client = getTursoClient();
 
@@ -218,16 +219,37 @@ export async function createCompany(data: { name: string; shortCode: string; isO
     args: [newCompany.id, newCompany.name, newCompany.shortCode, newCompany.isOutsideParty ? 1 : 0, now],
   });
 
+  await logAudit({
+    actorId: actor?.id || 'SYSTEM',
+    actorName: actor?.name || 'System',
+    actorRoleId: actor?.primaryRoleId ?? 0,
+    action: 'Updated Company',
+    target: `Company: ${newCompany.name} (${newCompany.id})`,
+    beforeVal: '-',
+    afterVal: JSON.stringify(newCompany),
+    isSensitive: false,
+  });
+
   return newCompany;
 }
 
-export async function deleteCompany(id: string): Promise<boolean> {
+export async function deleteCompany(id: string, actor?: AuditActor): Promise<boolean> {
   await ensureDbInitialized();
   const client = getTursoClient();
   // Soft-delete company from active directory so loan splits and history are never broken
   await client.execute({
     sql: 'UPDATE companies SET is_active = 0 WHERE id = ?',
     args: [id],
+  });
+  await logAudit({
+    actorId: actor?.id || 'SYSTEM',
+    actorName: actor?.name || 'System',
+    actorRoleId: actor?.primaryRoleId ?? 0,
+    action: 'Updated Company',
+    target: `Company: ${id}`,
+    beforeVal: 'Active',
+    afterVal: 'Deactivated',
+    isSensitive: false,
   });
   return true;
 }

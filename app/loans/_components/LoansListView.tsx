@@ -36,6 +36,7 @@ import { exportLoansToExcel, exportLoansToPDF } from '@/lib/utils/exportLoansLed
 import { DateRangePicker, DateRangeValue, getCurrentMonthRange } from '@/components/ui/DateRangePicker';
 import { MoneyDisplay } from '@/components/ui/MoneyDisplay';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
+import { getAuthorizedLoansForExport, requestLoanExportAccess } from '@/lib/exportAuthorization';
 
 function parseToDate(dStr: string | null | undefined): Date | null {
   if (!dStr) return null;
@@ -109,7 +110,9 @@ export const LoansListView: React.FC = () => {
     updateLoanInstallment,
     showToast,
     isLoading,
+    hasModulePermission,
   } = useApp();
+  const canExportLoans = hasModulePermission('loans', 'export');
 
   // Modals state
   const [isWizardOpen, setIsWizardOpen] = useState(false);
@@ -444,7 +447,18 @@ export const LoansListView: React.FC = () => {
                 {/* Option 1: Excel */}
                 <button
                   onClick={async () => {
-                    await exportLoansToExcel(filteredAndSortedLoans, formattedDateRangeLabel);
+                    if (!canExportLoans) {
+                      const result = await requestLoanExportAccess();
+                      showToast(result.success ? 'Access Request Submitted' : 'Access Request Failed', result.success ? 'Loan export access was sent to the Super Admin for approval.' : result.error, result.success ? 'info' : 'error');
+                      return;
+                    }
+                    const authorizedLoans = await getAuthorizedLoansForExport();
+                    if (!authorizedLoans) {
+                      showToast('Export not permitted', 'The server denied loan export access.', 'warning');
+                      return;
+                    }
+                    const visibleIds = new Set(filteredAndSortedLoans.map((loan) => loan.id));
+                    await exportLoansToExcel(authorizedLoans.filter((loan) => visibleIds.has(loan.id)), formattedDateRangeLabel);
                     showToast('Excel Exported', 'Full loan structure spreadsheet downloaded successfully.', 'success');
                     setIsExportMenuOpen(false);
                   }}
@@ -456,8 +470,19 @@ export const LoansListView: React.FC = () => {
 
                 {/* Option 2: PDF */}
                 <button
-                  onClick={() => {
-                    exportLoansToPDF(filteredAndSortedLoans, formattedDateRangeLabel);
+                  onClick={async () => {
+                    if (!canExportLoans) {
+                      const result = await requestLoanExportAccess();
+                      showToast(result.success ? 'Access Request Submitted' : 'Access Request Failed', result.success ? 'Loan export access was sent to the Super Admin for approval.' : result.error, result.success ? 'info' : 'error');
+                      return;
+                    }
+                    const authorizedLoans = await getAuthorizedLoansForExport().catch(() => null);
+                    if (!authorizedLoans) {
+                      showToast('Export failed', 'The export service could not prepare the report.', 'error');
+                      return;
+                    }
+                    const visibleIds = new Set(filteredAndSortedLoans.map((loan) => loan.id));
+                    exportLoansToPDF(authorizedLoans.filter((loan) => visibleIds.has(loan.id)), formattedDateRangeLabel);
                     showToast('PDF Exported', 'Executive PDF report downloaded successfully.', 'success');
                     setIsExportMenuOpen(false);
                   }}

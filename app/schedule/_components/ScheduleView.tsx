@@ -24,6 +24,7 @@ import { MoneyDisplay } from '@/components/ui/MoneyDisplay';
 import { DateRangePicker, DateRangeValue, getCurrentMonthRange } from '@/components/ui/DateRangePicker';
 import { exportLoansToExcel, exportLoansToPDF } from '@/lib/utils/exportLoansLedger';
 import { getDerivedLoanStatus } from '@/app/loans/_components/LoansListView';
+import { getAuthorizedLoansForExport, requestLoanExportAccess } from '@/lib/exportAuthorization';
 
 function parseToDate(dStr: string | null | undefined): Date | null {
   if (!dStr) return null;
@@ -56,7 +57,9 @@ export const ScheduleView: React.FC = () => {
     updateLoanInstallment,
     showToast,
     isLoading,
+    hasModulePermission,
   } = useApp();
+  const canExportSchedule = hasModulePermission('loans', 'export');
 
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'Pending' | 'Cleared' | 'NEFT' | 'RTGS' | 'Cash'>('ALL');
@@ -246,7 +249,18 @@ export const ScheduleView: React.FC = () => {
               <div className="absolute right-0 mt-2 w-52 bg-white rounded-xl border border-slate-200 shadow-xl p-1.5 z-40 motion-popover">
                 <button
                   onClick={async () => {
-                    await exportLoansToExcel(filteredLoans, formattedDateRangeLabel);
+                    if (!canExportSchedule) {
+                      const result = await requestLoanExportAccess();
+                      showToast(result.success ? 'Access Request Submitted' : 'Access Request Failed', result.success ? 'Schedule export access was sent to the Super Admin for approval.' : result.error, result.success ? 'info' : 'error');
+                      return;
+                    }
+                    const authorizedLoans = await getAuthorizedLoansForExport();
+                    if (!authorizedLoans) {
+                      showToast('Export failed', 'The server denied schedule export access.', 'warning');
+                      return;
+                    }
+                    const visibleIds = new Set(filteredLoans.map((loan) => loan.id));
+                    await exportLoansToExcel(authorizedLoans.filter((loan) => visibleIds.has(loan.id)), formattedDateRangeLabel);
                     showToast('Excel Exported', 'Schedule spreadsheet downloaded successfully.', 'success');
                     setIsExportMenuOpen(false);
                   }}
@@ -257,8 +271,19 @@ export const ScheduleView: React.FC = () => {
                 </button>
 
                 <button
-                  onClick={() => {
-                    exportLoansToPDF(filteredLoans, formattedDateRangeLabel);
+                  onClick={async () => {
+                    if (!canExportSchedule) {
+                      const result = await requestLoanExportAccess();
+                      showToast(result.success ? 'Access Request Submitted' : 'Access Request Failed', result.success ? 'Schedule export access was sent to the Super Admin for approval.' : result.error, result.success ? 'info' : 'error');
+                      return;
+                    }
+                    const authorizedLoans = await getAuthorizedLoansForExport().catch(() => null);
+                    if (!authorizedLoans) {
+                      showToast('Export failed', 'The server could not prepare the schedule report.', 'error');
+                      return;
+                    }
+                    const visibleIds = new Set(filteredLoans.map((loan) => loan.id));
+                    exportLoansToPDF(authorizedLoans.filter((loan) => visibleIds.has(loan.id)), formattedDateRangeLabel);
                     showToast('PDF Exported', 'Schedule PDF report downloaded successfully.', 'success');
                     setIsExportMenuOpen(false);
                   }}

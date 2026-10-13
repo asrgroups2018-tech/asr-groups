@@ -5,11 +5,20 @@ import {
   LoanCompanySplit,
   Installment,
   HistoricalReceiptRow,
+  AuditActor,
 } from '@/lib/types';
 import { getCompanies, createCompany, resolveCompany } from './companies';
 import { logAudit } from './administration';
 
 let schemaInitialized = false;
+
+function auditActor(actor?: AuditActor) {
+  return {
+    actorId: actor?.id || 'SYSTEM',
+    actorName: actor?.name || 'System',
+    actorRoleId: actor?.primaryRoleId ?? 0,
+  };
+}
 
 async function ensureDbInitialized() {
   if (schemaInitialized) return;
@@ -231,7 +240,7 @@ export async function createLoan(data: {
     companySplits: Record<string, number>;
     remarks?: string;
   }[];
-}): Promise<Loan> {
+}, actor?: AuditActor): Promise<Loan> {
   await ensureDbInitialized();
   const client = getTursoClient();
 
@@ -317,9 +326,7 @@ export async function createLoan(data: {
   const createdLoan = await getLoanById(loanId);
 
   await logAudit({
-    actorId: 'ADM-1001',
-    actorName: 'System Administrator',
-    actorRoleId: 0,
+    ...auditActor(actor),
     action: 'Created Loan',
     target: `New Loan: ${createdLoan?.customerName} (${loanId})`,
     beforeVal: '-',
@@ -342,7 +349,8 @@ export async function updateLoanInstallment(
     place?: string;
     remarks?: string;
     companySplits?: Record<string, number>;
-  }
+  },
+  actor?: AuditActor
 ): Promise<Installment | null> {
   await ensureDbInitialized();
   const client = getTursoClient();
@@ -456,9 +464,7 @@ export async function updateLoanInstallment(
   });
 
   await logAudit({
-    actorId: 'ADM-1001',
-    actorName: 'System Administrator',
-    actorRoleId: 0,
+    ...auditActor(actor),
     action: 'Updated Installment',
     target: `Installment ${installmentId} on ${loanId}`,
     beforeVal: `Status: ${current.status}, Amount: ₹${current.amount_due}`,
@@ -497,7 +503,8 @@ export async function updateFullLoan(
       companySplits: Record<string, number>;
       othersName?: string | null;
     }[];
-  }
+  },
+  actor?: AuditActor
 ): Promise<Loan | null> {
   await ensureDbInitialized();
   const client = getTursoClient();
@@ -708,9 +715,7 @@ export async function updateFullLoan(
   await client.batch(statements, 'write');
 
   await logAudit({
-    actorId: 'ADM-1001',
-    actorName: 'System Administrator (Super User)',
-    actorRoleId: 0,
+    ...auditActor(actor),
     action: 'Updated Loan',
     target: `Loan: ${data.customerName || currentLoan.customerName} (${canonicalLoanId})`,
     beforeVal: `Amount: ₹${currentLoan.totalAmount.toLocaleString('en-IN')}, EMIs: ${currentLoan.installmentCount}`,
@@ -721,7 +726,7 @@ export async function updateFullLoan(
   return await getLoanById(canonicalLoanId);
 }
 
-export async function deleteLoan(id: string): Promise<boolean> {
+export async function deleteLoan(id: string, actor?: AuditActor): Promise<boolean> {
   await ensureDbInitialized();
   const client = getTursoClient();
 
@@ -741,7 +746,7 @@ export async function deleteLoan(id: string): Promise<boolean> {
 /**
  * Merges sourceLoanId into targetLoanId, reassigning all installments and updating totals.
  */
-export async function mergeLoans(targetLoanId: string, sourceLoanId: string): Promise<Loan | null> {
+export async function mergeLoans(targetLoanId: string, sourceLoanId: string, actor?: AuditActor): Promise<Loan | null> {
   await ensureDbInitialized();
   const client = getTursoClient();
 
@@ -825,9 +830,7 @@ export async function mergeLoans(targetLoanId: string, sourceLoanId: string): Pr
   await client.batch(recomputeStatements, 'write');
 
   await logAudit({
-    actorId: 'ADM-1001',
-    actorName: 'System Administrator',
-    actorRoleId: 0,
+    ...auditActor(actor),
     action: 'Merged Loans',
     target: `Merged ${sourceLoanId} into ${targetLoanId} (${targetLoan.customerName})`,
     beforeVal: `Target: ₹${targetLoan.totalAmount.toLocaleString('en-IN')}, Source: ₹${sourceLoan.totalAmount.toLocaleString('en-IN')}`,
@@ -843,7 +846,8 @@ export async function mergeLoans(targetLoanId: string, sourceLoanId: string): Pr
  */
 export async function splitLoan(
   loanId: string,
-  installmentIdsToExtract: string[]
+  installmentIdsToExtract: string[],
+  actor?: AuditActor
 ): Promise<{ parentLoan: Loan; newLoan: Loan }> {
   await ensureDbInitialized();
   const client = getTursoClient();
@@ -967,9 +971,7 @@ export async function splitLoan(
   await client.batch(recomputeStatements, 'write');
 
   await logAudit({
-    actorId: 'ADM-1001',
-    actorName: 'System Administrator',
-    actorRoleId: 0,
+    ...auditActor(actor),
     action: 'Split Loan',
     target: `Split Loan ${loanId} into ${newLoanId} (${parentLoan.customerName})`,
     beforeVal: `Original: ₹${parentLoan.totalAmount.toLocaleString('en-IN')}, EMIs: ${parentInsts.length}`,
@@ -1002,7 +1004,8 @@ export async function commitReviewedImport(
       splits: Record<string, number>;
       remarks?: string;
     };
-  }[]
+  }[],
+  actor?: AuditActor
 ): Promise<{ success: boolean; continuationsCount: number; newLoansCount: number; totalCommitted: number }> {
   await ensureDbInitialized();
   const client = getTursoClient();
@@ -1174,9 +1177,7 @@ export async function commitReviewedImport(
   }
 
   await logAudit({
-    actorId: 'ADM-1001',
-    actorName: 'System Administrator',
-    actorRoleId: 0,
+    ...auditActor(actor),
     action: 'Spreadsheet Import Committed',
     target: `Imported ${planRows.length} Rows`,
     beforeVal: '-',

@@ -96,6 +96,16 @@ export const SplitLoanModal: React.FC<SplitLoanModalProps> = ({ isOpen, onClose,
       if (!resJson.success) {
         throw new Error(resJson.error || 'Failed to split loan.');
       }
+      if (resJson.queued) {
+        showToast(
+          resJson.accessRequestSubmitted ? 'Access Request Submitted' : 'Approval Request Submitted',
+          resJson.message || 'The split will be applied after an authorized approval.',
+          'info',
+        );
+        await refreshAll();
+        onClose();
+        return;
+      }
 
       if (evaluation.action === 'AUTO_APPROVE_QUEUE') {
         await createApprovalRequest({

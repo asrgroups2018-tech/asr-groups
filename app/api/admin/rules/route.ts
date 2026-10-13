@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/server/db';
+import { authorizeRequest } from '@/lib/server/authorization';
 
 // GET /api/admin/rules
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const auth = await authorizeRequest(request, 'admin', 'view');
+  if (!auth.ok) return auth.response;
   try {
     const rules = await db.getApprovalRules();
     return NextResponse.json({ success: true, data: rules });
@@ -13,6 +16,8 @@ export async function GET() {
 
 // POST /api/admin/rules
 export async function POST(request: NextRequest) {
+  const auth = await authorizeRequest(request, 'admin', 'create');
+  if (!auth.ok) return auth.response;
   try {
     const body = await request.json();
     if (!body.changeType || !body.whoCanRaise?.length || body.whoMustApprove === undefined) {
@@ -31,6 +36,15 @@ export async function POST(request: NextRequest) {
       autoApproveBelow: !!body.autoApproveBelow,
       isActive: body.isActive !== undefined ? !!body.isActive : true,
     });
+    await db.logAudit({
+      actorId: auth.user.id,
+      actorName: auth.user.name,
+      actorRoleId: auth.user.primaryRoleId,
+      action: 'Updated Approval Rule',
+      target: `Approval rule ${newRule.id}`,
+      afterVal: JSON.stringify(newRule),
+      isSensitive: true,
+    });
 
     return NextResponse.json({ success: true, data: newRule }, { status: 201 });
   } catch (error: any) {
@@ -40,6 +54,8 @@ export async function POST(request: NextRequest) {
 
 // PUT /api/admin/rules
 export async function PUT(request: NextRequest) {
+  const auth = await authorizeRequest(request, 'admin', 'edit');
+  if (!auth.ok) return auth.response;
   try {
     const body = await request.json();
     if (!body.id) {
@@ -50,6 +66,15 @@ export async function PUT(request: NextRequest) {
     if (!updated) {
       return NextResponse.json({ success: false, error: 'Rule not found.' }, { status: 404 });
     }
+    await db.logAudit({
+      actorId: auth.user.id,
+      actorName: auth.user.name,
+      actorRoleId: auth.user.primaryRoleId,
+      action: 'Updated Approval Rule',
+      target: `Approval rule ${updated.id}`,
+      afterVal: JSON.stringify(body),
+      isSensitive: true,
+    });
 
     return NextResponse.json({ success: true, data: updated });
   } catch (error: any) {
@@ -59,6 +84,8 @@ export async function PUT(request: NextRequest) {
 
 // DELETE /api/admin/rules
 export async function DELETE(request: NextRequest) {
+  const auth = await authorizeRequest(request, 'admin', 'delete');
+  if (!auth.ok) return auth.response;
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
@@ -71,6 +98,15 @@ export async function DELETE(request: NextRequest) {
     if (!deleted) {
       return NextResponse.json({ success: false, error: 'Rule not found.' }, { status: 404 });
     }
+    await db.logAudit({
+      actorId: auth.user.id,
+      actorName: auth.user.name,
+      actorRoleId: auth.user.primaryRoleId,
+      action: 'Updated Approval Rule',
+      target: `Approval rule ${id}`,
+      afterVal: 'Deleted',
+      isSensitive: true,
+    });
 
     return NextResponse.json({ success: true, message: 'Rule deleted successfully.' });
   } catch (error: any) {

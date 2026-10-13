@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getHistoricalReceipts, updateLoanInstallment } from '@/lib/server/loans';
+import { authorizeRouteRequest } from '@/lib/server/authorization';
+import { queueMutationForApproval } from '@/lib/server/approvalWorkflow';
 
 // GET /api/receipts
 export async function GET(req: NextRequest) {
+  const auth = await authorizeRouteRequest(req);
+  if (!auth.ok) return auth.response;
   try {
     const { searchParams } = new URL(req.url);
     const category = (searchParams.get('category') as any) || 'ALL';
@@ -21,6 +25,8 @@ export async function GET(req: NextRequest) {
 
 // PUT /api/receipts — inline cell edit commit
 export async function PUT(req: NextRequest) {
+  const auth = await authorizeRouteRequest(req);
+  if (!auth.ok) return auth.response;
   try {
     const body = await req.json();
     const { installmentId, ...updates } = body;
@@ -49,6 +55,28 @@ export async function PUT(req: NextRequest) {
     if (updates.bhavna !== undefined) companySplits['BHAVNA'] = Number(updates.bhavna) || 0;
     if (updates.taSS !== undefined) companySplits['TA (SS)'] = Number(updates.taSS) || 0;
 
+    const normalizedUpdates = {
+      status: updates.status,
+      recdDate: updates.recdDate !== undefined ? updates.recdDate : undefined,
+      amountDue: updates.amount !== undefined ? Number(updates.amount) : undefined,
+      dueDate: updates.date,
+      chqNo: updates.chqNo,
+      depName: updates.depName,
+      place: updates.place,
+      remarks: updates.remarks,
+      companySplits: Object.keys(companySplits).length > 0 ? companySplits : undefined,
+    };
+    const queued = await queueMutationForApproval({
+      actor: auth.user,
+      changeType: 'Historical Correction',
+      title: `Correct historical receipt: ${installmentId}`,
+      entityType: 'historical_receipt',
+      entityId: installmentId,
+      beforePayload: null,
+      proposedPayload: { installmentId, updates: normalizedUpdates },
+    });
+    if (queued) return queued;
+
     const updated = await updateLoanInstallment(installmentId, {
       status: updates.status,
       recdDate: updates.recdDate !== undefined ? updates.recdDate : undefined,
@@ -59,7 +87,7 @@ export async function PUT(req: NextRequest) {
       place: updates.place,
       remarks: updates.remarks,
       companySplits: Object.keys(companySplits).length > 0 ? companySplits : undefined,
-    });
+    }, auth.user);
 
     if (!updated) {
       return NextResponse.json({ success: false, error: 'Installment not found' }, { status: 404 });

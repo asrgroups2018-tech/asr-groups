@@ -2,9 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/server/db';
 import { toPublicUser } from '@/lib/server/administration';
 import { CUSTOMER_ROLE_ID } from '@/lib/types';
+import { authorizeRequest } from '@/lib/server/authorization';
 
 // GET /api/admin/users
 export async function GET(request: NextRequest) {
+  const auth = await authorizeRequest(request, 'admin', 'view');
+  if (!auth.ok) return auth.response;
   try {
     const { searchParams } = new URL(request.url);
     const roleIdParam = searchParams.get('roleId');
@@ -25,6 +28,8 @@ export async function GET(request: NextRequest) {
 
 // POST /api/admin/users
 export async function POST(request: NextRequest) {
+  const auth = await authorizeRequest(request, 'admin', 'create');
+  if (!auth.ok) return auth.response;
   try {
     const body = await request.json();
     const isCustomerAccount = Array.isArray(body.assignedRoleIds) && body.assignedRoleIds.length === 1 && Number(body.assignedRoleIds[0]) === CUSTOMER_ROLE_ID;
@@ -42,11 +47,10 @@ export async function POST(request: NextRequest) {
       department: typeof body.department === 'string' ? body.department : '',
       designation: typeof body.designation === 'string' ? body.designation : '',
     });
-    const actor = await db.getUserBySessionToken(request.cookies.get('asr_session')?.value);
     await db.logAudit({
-      actorId: actor?.id || 'ADM-1001',
-      actorName: actor?.name || 'System Administrator',
-      actorRoleId: actor?.primaryRoleId || 0,
+      actorId: auth.user.id,
+      actorName: auth.user.name,
+      actorRoleId: auth.user.primaryRoleId,
       action: 'Created User',
       target: `${newUser.name} (${newUser.id})`,
       afterVal: JSON.stringify({ email: newUser.email, roles: newUser.assignedRoleIds }),
@@ -63,6 +67,8 @@ export async function POST(request: NextRequest) {
 
 // PUT /api/admin/users
 export async function PUT(request: NextRequest) {
+  const auth = await authorizeRequest(request, 'admin', 'edit');
+  if (!auth.ok) return auth.response;
   try {
     const body = await request.json();
     if (!body.id) {
@@ -75,14 +81,13 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'User not found.' }, { status: 404 });
     }
 
-    const actor = await db.getUserBySessionToken(request.cookies.get('asr_session')?.value);
     const passwordChanged = typeof body.tempPassword === 'string' && body.tempPassword.trim().length > 0;
     const roleChanged = Array.isArray(body.assignedRoleIds) || body.primaryRoleId !== undefined;
     const statusChanged = body.status && body.status !== before?.status;
     await db.logAudit({
-      actorId: actor?.id || 'ADM-1001',
-      actorName: actor?.name || 'System Administrator',
-      actorRoleId: actor?.primaryRoleId || 0,
+      actorId: auth.user.id,
+      actorName: auth.user.name,
+      actorRoleId: auth.user.primaryRoleId,
       action: passwordChanged
         ? 'Changed Password'
         : statusChanged
@@ -113,6 +118,8 @@ export async function PUT(request: NextRequest) {
 
 // DELETE /api/admin/users
 export async function DELETE(request: NextRequest) {
+  const auth = await authorizeRequest(request, 'admin', 'delete');
+  if (!auth.ok) return auth.response;
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
@@ -137,16 +144,15 @@ export async function DELETE(request: NextRequest) {
       }
     }
 
-    const actor = await db.getUserBySessionToken(request.cookies.get('asr_session')?.value);
     const deleted = await db.deleteUser(id);
     if (!deleted) {
       return NextResponse.json({ success: false, error: 'User not found.' }, { status: 404 });
     }
 
     await db.logAudit({
-      actorId: actor?.id || 'ADM-1001',
-      actorName: actor?.name || 'System Administrator',
-      actorRoleId: actor?.primaryRoleId || 0,
+      actorId: auth.user.id,
+      actorName: auth.user.name,
+      actorRoleId: auth.user.primaryRoleId,
       action: 'Deleted User',
       target: `${targetUser?.name || id} (${id})`,
       beforeVal: JSON.stringify({ email: targetUser?.email, roles: targetUser?.assignedRoleIds }),

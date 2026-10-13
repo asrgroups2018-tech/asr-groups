@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { matchIncomingRows, RawIncomingRow } from '@/lib/server/continuationMatcher';
+import { authorizeRouteRequest } from '@/lib/server/authorization';
 
 export async function POST(req: NextRequest) {
+  const auth = await authorizeRouteRequest(req);
+  if (!auth.ok) return auth.response;
   try {
     const body = await req.json();
     const rows: RawIncomingRow[] = body.rows || [];

@@ -38,13 +38,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpenMobile, onCloseMobile })
   const pathname = usePathname();
   const { 
     setActiveMainTab, 
-    simulatedRoleId, 
     setSelectedUserId, 
     setSelectedCustomerId,
     setSelectedCompanyId,
     setSelectedLoanId,
-    permissionMatrix,
     currentActor,
+    hasModulePermission,
   } = useApp();
 
   const allNavItems: NavItem[] = [
@@ -74,8 +73,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpenMobile, onCloseMobile })
   // for its effective role. The database seed provides the default customer
   // pages; any additional saved page access is picked up here automatically.
   const navItems = allNavItems.filter((item) => {
-    if (simulatedRoleId === 0) return true; // Super admin sees all
-    return Boolean(permissionMatrix?.[item.id]?.view?.[simulatedRoleId]);
+    if (currentActor.assignedRoleIds.includes(0)) return true;
+    return hasModulePermission(item.id, 'view');
   });
 
   const handleNavClick = (tabId: string, href: string) => {

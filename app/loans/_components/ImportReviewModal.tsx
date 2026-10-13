@@ -192,6 +192,16 @@ export const ImportReviewModal: React.FC<ImportReviewModalProps> = ({ isOpen, on
       if (!resJson.success) {
         throw new Error(resJson.error || 'Failed to commit import.');
       }
+      if (resJson.queued) {
+        await refreshAll();
+        showToast(
+          resJson.accessRequestSubmitted ? 'Access Request Submitted' : 'Approval Request Submitted',
+          resJson.message || 'The spreadsheet import will be committed after an authorized approval.',
+          'info',
+        );
+        onClose();
+        return;
+      }
 
       setCommitSummary({
         continuations: resJson.data.continuationsCount,

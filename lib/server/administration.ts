@@ -388,6 +388,11 @@ export async function updateUser(id: string, updates: Partial<User>): Promise<Us
     && updates.tempPassword.trim().length > 0
     && updates.tempPassword !== existing.tempPassword;
   const statusChanged = updates.status !== undefined && updates.status !== existing.status;
+  const accessChanged =
+    updates.primaryRoleId !== undefined ||
+    updates.assignedRoleIds !== undefined ||
+    updates.isCustomer !== undefined ||
+    updates.customerId !== undefined;
   const passwordToStore = updated.tempPassword
     ? updated.tempPassword.startsWith('scrypt$')
       ? updated.tempPassword
@@ -430,7 +435,11 @@ export async function updateUser(id: string, updates: Partial<User>): Promise<Us
   // A suspended account and an account with a changed password must not keep
   // previously issued sessions alive. Login will create a fresh session after
   // the account is active again.
-  if ((statusChanged && (updated.status === 'Suspended' || updated.status === 'Inactive')) || passwordChanged) {
+  if (
+    (statusChanged && (updated.status === 'Suspended' || updated.status === 'Inactive')) ||
+    passwordChanged ||
+    accessChanged
+  ) {
     await client.execute({
       sql: 'DELETE FROM auth_sessions WHERE user_id = ?',
       args: [id],
@@ -669,8 +678,8 @@ export async function logAudit(
   const newLog: AuditLogEntry = {
     id: `AUD-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`,
     timestamp: now,
-    actorId: entry.actorId || 'ADM-1001',
-    actorName: entry.actorName || 'System Administrator',
+    actorId: entry.actorId,
+    actorName: entry.actorName,
     actorRoleId: entry.actorRoleId ?? 0,
     action: entry.action,
     target: entry.target,
