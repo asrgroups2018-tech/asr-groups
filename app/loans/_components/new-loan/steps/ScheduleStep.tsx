@@ -4,6 +4,7 @@ import React from 'react';
 import { CheckCircle2, AlertCircle } from 'lucide-react';
 import { Company } from '@/lib/types';
 import { numberToIndianWords } from '@/lib/utils/numberToWords';
+import { formatIndianCommas, parseFormattedNumber } from '@/lib/utils/numberToWords';
 import { DatePicker } from '@/components/ui/DatePicker';
 
 export interface ScheduleStepRow {
@@ -65,22 +66,22 @@ export const ScheduleStep: React.FC<ScheduleStepProps> = ({
       </div>
 
       {/* Schedule Table */}
-      <div className="border border-[#3D1A2C] rounded-xl overflow-x-auto bg-[#160810]">
-        <table className="w-full text-left border-collapse text-xs">
+      <div className="border border-[#3D1A2C] rounded-xl overflow-hidden bg-[#160810]">
+        <table className="w-full table-fixed text-left border-collapse text-xs">
           <thead>
             <tr className="bg-[#240F1D] border-b border-[#3D1A2C] text-slate-300 font-mono">
-              <th className="p-3 w-12 text-center">#</th>
-              <th className="p-3 w-36">Due Date</th>
-              <th className="p-3 w-36 text-right font-bold text-[#EED8A1]">Installment (₹)</th>
+              <th className="p-2 w-[5%] text-center">#</th>
+              <th className="p-2 w-[17%]">Due Date</th>
+              <th className="p-2 w-[16%] text-right font-bold text-[#EED8A1]">Installment (₹)</th>
               {selectedCompanies.map((c) => (
-                <th key={c.id} className="p-3 font-bold text-[#EED8A1] min-w-[130px] text-right">
-                  <div className="text-xs font-bold text-white leading-tight">{c.name}</div>
-                  <div className={`text-[10px] font-mono font-semibold mt-0.5 ${c.isOutsideParty ? 'text-purple-300' : 'text-emerald-300'}`}>
+                <th key={c.id} className="p-2 font-bold text-[#EED8A1] text-right align-bottom">
+                  <div className="text-[10px] font-bold text-white leading-tight break-words">{c.name}</div>
+                  <div className={`text-[9px] font-mono font-semibold mt-0.5 ${c.isOutsideParty ? 'text-purple-300' : 'text-emerald-300'}`}>
                     {c.shortCode}
                   </div>
                 </th>
               ))}
-              <th className="p-3 w-20 text-center">Status</th>
+              <th className="p-2 w-[9%] text-center">Status</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[#2C1420]">
@@ -88,8 +89,8 @@ export const ScheduleStep: React.FC<ScheduleStepProps> = ({
               const bal = rowBalances[idx];
               return (
                 <tr key={row.seqNo} className="hover:bg-white/5 font-mono">
-                  <td className="p-2.5 text-center text-slate-500 font-bold">{row.seqNo}</td>
-                  <td className="p-2.5">
+                  <td className="p-1.5 text-center text-slate-500 font-bold">{row.seqNo}</td>
+                  <td className="p-1.5">
                     <DatePicker
                       value={row.dueDate}
                       onChange={(newDate) => {
@@ -102,41 +103,42 @@ export const ScheduleStep: React.FC<ScheduleStepProps> = ({
                       compact={true}
                     />
                   </td>
-                  <td className="p-2.5">
+                  <td className="p-1.5">
                     <input
-                      type="number"
-                      min="0"
-                      step="1000"
-                      value={row.amountDue || ''}
-                      onChange={(e) => handleRowAmountChange(row.seqNo, Number(e.target.value))}
-                      className="w-full bg-[#240F1D] border border-[#3D1A2C] rounded px-2.5 py-1 text-xs font-bold text-right text-[#EED8A1]"
+                      type="text"
+                      inputMode="numeric"
+                      value={row.amountDue ? formatIndianCommas(row.amountDue) : ''}
+                      onChange={(e) => handleRowAmountChange(row.seqNo, parseFormattedNumber(e.target.value))}
+                      className="w-full min-w-0 bg-[#240F1D] border border-[#3D1A2C] rounded px-1.5 py-1 text-[11px] font-bold text-right text-[#EED8A1]"
                     />
                   </td>
                   {selectedCompanies.map((c) => {
                     const val = row.companySplits[c.shortCode] || 0;
                     return (
-                      <td key={c.id} className="p-2.5">
+                      <td key={c.id} className="p-1.5">
                         <input
-                          type="number"
-                          min="0"
-                          value={val || ''}
-                          onChange={(e) => handleCellSplitChange(row.seqNo, c.shortCode, Number(e.target.value))}
-                          className="w-full bg-[#1F0B18] border border-[#3D1A2C] rounded px-2 py-1 text-xs text-right text-slate-200 font-semibold"
+                          type="text"
+                          inputMode="numeric"
+                          value={val ? formatIndianCommas(val) : ''}
+                          onChange={(e) => handleCellSplitChange(row.seqNo, c.shortCode, parseFormattedNumber(e.target.value))}
+                          className="w-full min-w-0 bg-[#1F0B18] border border-[#3D1A2C] rounded px-1.5 py-1 text-[11px] text-right text-slate-200 font-semibold"
                         />
                       </td>
                     );
                   })}
-                  <td className="p-2.5 text-center">
+                  <td className="p-1.5 text-center">
                     {bal?.isBalanced ? (
                       <span className="inline-block px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-500/30 text-[10px]">
                         OK
                       </span>
                     ) : (
                       <span
-                        title={`Row split mismatch: Diff ₹${bal?.diff}`}
+                        title={`Row split mismatch: Diff ₹${formatIndianCommas(bal?.diff)}`}
                         className="inline-block px-1.5 py-0.5 rounded bg-rose-950 text-rose-400 border border-rose-500/30 text-[10px]"
                       >
-                        {bal?.diff > 0 ? `+₹${bal?.diff}` : `-₹${Math.abs(bal?.diff)}`}
+                        {bal?.diff > 0
+                          ? `+₹${formatIndianCommas(bal?.diff)}`
+                          : `-₹${formatIndianCommas(Math.abs(bal?.diff))}`}
                       </span>
                     )}
                   </td>
@@ -148,9 +150,9 @@ export const ScheduleStep: React.FC<ScheduleStepProps> = ({
           {/* Schedule Column Totals Footer */}
           <tfoot className="bg-[#240F1D] border-t-2 border-[#C5A059]/40 font-mono text-xs font-bold text-slate-200">
             <tr>
-              <td className="p-2.5 text-center text-slate-400">TOTAL</td>
-              <td className="p-2.5 text-slate-400 font-normal">{scheduleRows.length} EMIs</td>
-              <td className="p-2.5 text-right font-extrabold text-[#EED8A1]">
+              <td className="p-1.5 text-center text-slate-400">TOTAL</td>
+              <td className="p-1.5 text-slate-400 font-normal">{scheduleRows.length} EMIs</td>
+              <td className="p-1.5 text-right font-extrabold text-[#EED8A1]">
                 ₹{scheduledTotal.toLocaleString('en-IN')}
               </td>
               {selectedCompanies.map((c) => {
@@ -159,12 +161,12 @@ export const ScheduleStep: React.FC<ScheduleStepProps> = ({
                   0
                 );
                 return (
-                  <td key={c.id} className="p-2.5 text-right font-bold text-amber-300">
+                  <td key={c.id} className="p-1.5 text-right font-bold text-amber-300">
                     ₹{compSum.toLocaleString('en-IN')}
                   </td>
                 );
               })}
-              <td className="p-2.5 text-center text-[10px] text-emerald-400">
+              <td className="p-1.5 text-center text-[10px] text-emerald-400">
                 {isStep4Valid ? '✓ BAL' : 'DIFF'}
               </td>
             </tr>
@@ -174,20 +176,20 @@ export const ScheduleStep: React.FC<ScheduleStepProps> = ({
 
       {/* Step 4 Live Running Totals Bar */}
       <div
-        className={`p-4 rounded-xl border flex items-center justify-between font-mono text-xs ${
+        className={`p-3 rounded-xl border flex flex-wrap items-center justify-between gap-2 font-mono text-xs ${
           isStep4Valid
             ? 'bg-emerald-950/25 border-emerald-500/40 text-emerald-400'
             : 'bg-rose-950/25 border-rose-500/40 text-rose-400'
         }`}
       >
-        <div className="flex items-center gap-2">
+        <div className="flex min-w-0 items-start gap-2">
           {isStep4Valid ? (
             <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
           ) : (
             <AlertCircle className="w-5 h-5 text-rose-400 shrink-0" />
           )}
-          <div>
-            <span className="font-bold block flex items-center gap-1.5">
+          <div className="min-w-0">
+            <span className="font-bold block flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
               <span>
                 Scheduled Total:{' '}
                 <strong

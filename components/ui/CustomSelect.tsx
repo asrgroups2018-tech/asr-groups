@@ -21,6 +21,7 @@ interface CustomSelectProps<T extends string = string> {
   menuClassName?: string;
   size?: 'sm' | 'md';
   disabled?: boolean;
+  noTruncate?: boolean;
 }
 
 export function CustomSelect<T extends string = string>({
@@ -33,6 +34,7 @@ export function CustomSelect<T extends string = string>({
   menuClassName = '',
   size = 'sm',
   disabled = false,
+  noTruncate = false,
 }: CustomSelectProps<T>) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -85,9 +87,9 @@ export function CustomSelect<T extends string = string>({
           size === 'sm' ? 'px-2.5 py-1.5 text-xs' : 'px-3 py-2 text-sm'
         } ${disabled ? 'opacity-50 cursor-not-allowed' : ''} ${buttonClassName}`}
       >
-        <div className="flex items-center gap-1.5 truncate">
+        <div className={`flex items-center gap-1.5 ${noTruncate ? 'min-w-0' : 'truncate'}`}>
           {selectedOption.icon}
-          <span className="truncate">{selectedOption.label}</span>
+          <span className={noTruncate ? 'whitespace-nowrap' : 'truncate'}>{selectedOption.label}</span>
           {selectedOption.badge}
         </div>
         <ChevronDown

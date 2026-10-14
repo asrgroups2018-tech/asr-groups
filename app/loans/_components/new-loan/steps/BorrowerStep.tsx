@@ -51,9 +51,9 @@ export const BorrowerStep: React.FC<BorrowerStepProps> = ({
   );
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Borrower Selection / Registration */}
-      <div className="bg-[#240F1D] p-5 rounded-xl border border-[#3D1A2C] space-y-4">
+      <div className="bg-[#240F1D] p-4 rounded-xl border border-[#3D1A2C] space-y-3">
         <div className="flex items-center justify-between">
           <label className="text-sm font-semibold text-[#EED8A1] flex items-center gap-2">
             <Users className="w-4 h-4 text-[#C5A059]" /> Borrower Name
@@ -118,7 +118,7 @@ export const BorrowerStep: React.FC<BorrowerStepProps> = ({
 
             {/* Quick dropdown matching */}
             {isDropdownOpen && !selectedCustomerId && (
-              <div className="max-h-48 overflow-y-auto rounded-lg border border-[#3D1A2C] bg-[#160810] divide-y divide-[#2C1420] shadow-2xl z-20">
+              <div className="max-h-48 overflow-y-auto rounded-lg border border-[#3D1A2C] bg-[#160810] divide-y divide-[#2C1420] shadow-2xl z-20 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 {filteredCustomers.length > 0 ? (
                   filteredCustomers.slice(0, 10).map((c) => (
                     <div
@@ -128,7 +128,7 @@ export const BorrowerStep: React.FC<BorrowerStepProps> = ({
                         setCustomerSearch(c.name);
                         setIsDropdownOpen(false);
                       }}
-                      className="p-3 text-xs flex items-center justify-between cursor-pointer transition-colors hover:bg-[#C5A059]/20 hover:text-[#EED8A1] text-slate-300"
+                      className="p-2.5 text-xs flex items-center justify-between gap-2 cursor-pointer transition-colors hover:bg-[#C5A059]/20 hover:text-[#EED8A1] text-slate-300"
                     >
                       <div>
                         <span className="font-bold">{c.name}</span>
@@ -184,7 +184,7 @@ export const BorrowerStep: React.FC<BorrowerStepProps> = ({
 
       {/* Total Loan Capital Amount for the Loan — Only shown when choosing existing borrower */}
       {!isCreatingNewCustomer && (
-        <div className="bg-[#240F1D] p-4 sm:p-5 rounded-xl border border-[#3D1A2C] space-y-3">
+          <div className="bg-[#240F1D] p-4 rounded-xl border border-[#3D1A2C] space-y-3">
           <label className="text-sm font-semibold text-[#EED8A1] flex items-center gap-2">
             <IndianRupee className="w-4 h-4 text-[#C5A059]" /> Total Loan Capital Amount (₹)
           </label>

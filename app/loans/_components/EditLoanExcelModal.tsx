@@ -1,12 +1,16 @@
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useApp } from '@/lib/store';
 import { Loan, Installment, Company, AppStatus, LoanStatus, RepaymentFrequency } from '@/lib/types';
 import { MoneyDisplay } from '@/components/ui/MoneyDisplay';
 import { DatePicker } from '@/components/ui/DatePicker';
 import { CustomSelect } from '@/components/ui/CustomSelect';
-import { numberToIndianWords } from '@/lib/utils/numberToWords';
+import {
+  numberToIndianWords,
+  formatIndianCommas,
+  parseFormattedNumber,
+} from '@/lib/utils/numberToWords';
 import {
   FileSpreadsheet,
   X,
@@ -116,6 +120,82 @@ export const ALL_COMPANY_COLUMNS: CompanyColumnDef[] = [
 
 const COMPANY_KEYS: (keyof EditableInstallmentRow)[] = ALL_COMPANY_COLUMNS.map((c) => c.key);
 
+interface FastGridCellInputProps {
+  value: string | number | null | undefined;
+  numeric?: boolean;
+  placeholder?: string;
+  className: string;
+  onCommit: (value: string | number) => void;
+  onEnter?: () => void;
+  registerRef?: (element: HTMLInputElement | null) => void;
+}
+
+/**
+ * Keeps typing independent from the full spreadsheet row. The row is saved
+ * when the cell is left or when Enter is pressed, like an Excel cell.
+ */
+const FastGridCellInput = React.memo<FastGridCellInputProps>(({
+  value,
+  numeric = false,
+  placeholder,
+  className,
+  onCommit,
+  onEnter,
+  registerRef,
+}) => {
+  const formatValue = (nextValue: string | number | null | undefined) => {
+    if (numeric) {
+      const parsed = parseFormattedNumber(nextValue);
+      return parsed > 0 ? formatIndianCommas(parsed) : '';
+    }
+    return String(nextValue ?? '');
+  };
+
+  const [draft, setDraft] = useState(() => formatValue(value));
+  const isFocused = useRef(false);
+
+  useEffect(() => {
+    if (!isFocused.current) {
+      setDraft(formatValue(value));
+    }
+  }, [value, numeric]);
+
+  const commit = () => {
+    isFocused.current = false;
+    const committedValue = numeric ? parseFormattedNumber(draft) : draft;
+    setDraft(formatValue(committedValue));
+    onCommit(committedValue);
+  };
+
+  return (
+    <input
+      ref={registerRef}
+      type="text"
+      inputMode={numeric ? 'numeric' : undefined}
+      value={draft}
+      placeholder={placeholder}
+      onFocus={() => {
+        isFocused.current = true;
+      }}
+      onChange={(event) => {
+        const nextValue = numeric
+          ? event.currentTarget.value.replace(/[^0-9.]/g, '')
+          : event.currentTarget.value;
+        setDraft(nextValue);
+      }}
+      onBlur={commit}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          commit();
+          onEnter?.();
+        }
+      }}
+      className={className}
+    />
+  );
+});
+
 function getFieldKeyForCompanyCode(code: string): keyof EditableInstallmentRow | null {
   const c = code.trim().toUpperCase();
   if (c === 'PASS' || c.includes('PASS')) return 'pass';
@@ -208,8 +288,9 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
   const [isSaving, setIsSaving] = useState(false);
 
   // Column View Filter
-  const [categoryFilter, setCategoryFilter] = useState<'ALL' | 'SELECTED_ONLY' | 'ASR_ONLY' | 'OUTSIDE_ONLY'>('ALL');
+  const [categoryFilter, setCategoryFilter] = useState<'ALL' | 'SELECTED_ONLY' | 'ASR_ONLY' | 'OUTSIDE_ONLY'>('SELECTED_ONLY');
   const [isPropsExpanded, setIsPropsExpanded] = useState(false);
+  const gridCellRefs = useRef(new Map<string, HTMLInputElement>());
 
   // Capital limit for the current loan
   const capitalAmount = useMemo(() => {
@@ -358,6 +439,41 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
       return true; // 'ALL'
     });
   }, [categoryFilter, activeCompanyKeys]);
+
+  const gridCellKeys = useMemo(() => {
+    const keys: string[] = [];
+    rows.forEach((_, rowIndex) => {
+      keys.push(`${rowIndex}:place`);
+      keys.push(`${rowIndex}:depName`);
+      keys.push(`${rowIndex}:chqNo`);
+      keys.push(`${rowIndex}:amountDue`);
+      visibleCompanyColumns.forEach((column) => {
+        if (activeCompanyKeys.has(column.key)) {
+          keys.push(`${rowIndex}:${String(column.key)}`);
+        }
+      });
+      keys.push(`${rowIndex}:remarks`);
+    });
+    return keys;
+  }, [rows.length, visibleCompanyColumns, activeCompanyKeys]);
+
+  const registerGridCell = (key: string) => (element: HTMLInputElement | null) => {
+    if (element) {
+      gridCellRefs.current.set(key, element);
+    } else {
+      gridCellRefs.current.delete(key);
+    }
+  };
+
+  const focusNextGridCell = (key: string) => {
+    const nextKey = gridCellKeys[gridCellKeys.indexOf(key) + 1];
+    if (!nextKey) return;
+    requestAnimationFrame(() => {
+      const nextCell = gridCellRefs.current.get(nextKey);
+      nextCell?.focus();
+      nextCell?.select();
+    });
+  };
 
   // Check row validation mismatches
   const rowMismatches = useMemo(() => {
@@ -795,10 +911,10 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5 sm:gap-2 self-end md:self-auto shrink-0">
+          <div className="flex flex-wrap items-center justify-end gap-1.5 sm:gap-2 self-end md:self-auto shrink-0">
             <button
               onClick={handleAddRow}
-              className="px-2.5 sm:px-3.5 py-1.5 sm:py-2 bg-white border border-[#D0C8B8] hover:bg-[#FAF8F5] text-slate-800 text-xs font-bold rounded-lg shadow-2xs flex items-center gap-1 transition-all cursor-pointer btn-press"
+              className="px-2.5 sm:px-3.5 py-1.5 sm:py-2 bg-white border border-[#D0C8B8] hover:bg-[#FAF8F5] text-slate-800 text-xs font-bold rounded-lg shadow-2xs flex items-center gap-1 transition-all cursor-pointer btn-press whitespace-nowrap"
             >
               <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#701A35]" />
               <span>Insert Row</span>
@@ -808,7 +924,7 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
               onClick={handleSave}
               disabled={isSaveDisabled}
               title={validationError || 'Save loan changes'}
-              className="px-3 sm:px-5 py-1.5 sm:py-2 bg-[#701A35] hover:bg-[#5C142B] text-white text-xs font-bold rounded-lg shadow-xs flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed btn-press"
+              className="px-3 sm:px-5 py-1.5 sm:py-2 bg-[#701A35] hover:bg-[#5C142B] text-white text-xs font-bold rounded-lg shadow-xs flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed btn-press whitespace-nowrap"
             >
               <Save className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-200" />
               <span>{isSaving ? 'Saving...' : 'Save & Sync'}</span>
@@ -914,15 +1030,15 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
             <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1 font-mono">
               Paid / Disbursed (₹)
             </label>
-            <input
-              type="number"
-              placeholder="e.g. 850000"
+            <FastGridCellInput
               value={disbursedAmount}
-              onChange={(e) => {
-                const val = e.target.value === '' ? '' : Number(e.target.value);
+              numeric
+              placeholder="e.g. 8,50,000"
+              onCommit={(value) => {
+                const val = Number(value) || 0;
                 setDisbursedAmount(val);
-                if (val !== '' && capitalAmount > 0 && Number(val) <= capitalAmount) {
-                  setInterestAmount(capitalAmount - Number(val));
+                if (capitalAmount > 0 && val <= capitalAmount) {
+                  setInterestAmount(capitalAmount - val);
                 }
               }}
               className="w-full px-2.5 py-1.5 rounded border border-slate-300 bg-white font-mono font-bold text-slate-900 focus:outline-2 focus:outline-[#701A35] text-xs"
@@ -934,15 +1050,15 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
               <span>Interest (₹)</span>
               <span className="text-[9px] text-[#701A35] font-bold">ASR Earning</span>
             </label>
-            <input
-              type="number"
-              placeholder="e.g. 150000"
+            <FastGridCellInput
               value={interestAmount}
-              onChange={(e) => {
-                const val = e.target.value === '' ? '' : Number(e.target.value);
+              numeric
+              placeholder="e.g. 1,50,000"
+              onCommit={(value) => {
+                const val = Number(value) || 0;
                 setInterestAmount(val);
-                if (val !== '' && capitalAmount > 0 && Number(val) <= capitalAmount) {
-                  setDisbursedAmount(capitalAmount - Number(val));
+                if (capitalAmount > 0 && val <= capitalAmount) {
+                  setDisbursedAmount(capitalAmount - val);
                 }
               }}
               className="w-full px-2.5 py-1.5 rounded border border-amber-300 bg-amber-50/70 font-mono font-bold text-amber-950 focus:outline-2 focus:outline-[#701A35] text-xs"
@@ -958,6 +1074,7 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
               options={FREQUENCY_OPTIONS}
               onChange={(val) => setFrequency(val as RepaymentFrequency)}
               size="sm"
+              noTruncate
               buttonClassName="bg-white border-slate-300 py-1.5"
             />
           </div>
@@ -977,15 +1094,15 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
         </div>
 
         {/* ─── Filter & Balance Status Bar ─── */}
-        <div className="px-3 sm:px-5 py-2 bg-[#F4F1EA] border-b border-[#D0C8B8] flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs shrink-0 overflow-x-auto">
-          <div className="flex items-center gap-2 shrink-0">
+        <div className="px-3 sm:px-5 py-2 bg-[#F4F1EA] border-b border-[#D0C8B8] flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs shrink-0">
+          <div className="flex flex-wrap items-center gap-2 min-w-0">
             <span className="text-[10px] sm:text-[11px] font-bold text-slate-600 font-mono uppercase shrink-0">View Columns:</span>
-            <div className="flex items-center bg-white rounded border border-[#D0C8B8] p-0.5 shrink-0">
+            <div className="flex flex-wrap items-center bg-white rounded border border-[#D0C8B8] p-0.5">
               {[
-                { id: 'ALL', label: 'All Companies (16)' },
+                { id: 'ALL', label: `All Companies (${ALL_COMPANY_COLUMNS.length})` },
                 { id: 'SELECTED_ONLY', label: `Selected Only (${activeCompanyKeys.size})` },
-                { id: 'ASR_ONLY', label: 'ASR Companies (10)' },
-                { id: 'OUTSIDE_ONLY', label: 'Outside Companies (6)' },
+                { id: 'ASR_ONLY', label: `ASR Companies (${ALL_COMPANY_COLUMNS.filter((column) => !column.isOutside).length})` },
+                { id: 'OUTSIDE_ONLY', label: `Outside Companies (${ALL_COMPANY_COLUMNS.filter((column) => column.isOutside).length})` },
               ].map((tab) => (
                 <button
                   key={tab.id}
@@ -1018,19 +1135,19 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
         </div>
 
         {/* ─── Excel Main Data Grid Table ─── */}
-        <div className="flex-1 overflow-auto bg-white">
-          <table className="w-full text-xs text-left border-collapse min-w-[1500px]">
+        <div className="flex-1 overflow-auto bg-white [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <table className="w-full text-xs text-left border-collapse min-w-[1080px]">
             {/* Table Header */}
             <thead className="bg-[#EBE5DC] text-slate-800 font-mono text-[11px] uppercase tracking-wider font-bold border-b-2 border-slate-400 sticky top-0 z-20 shadow-2xs">
               <tr className="divide-x divide-slate-300">
-                <th className="p-2.5 w-10 text-center sticky left-0 bg-[#E5DFC7] z-30 border-r border-slate-400">#</th>
-                <th className="p-2.5 w-36">Due Date</th>
-                <th className="p-2.5 w-28">Place</th>
-                <th className="p-2.5 w-24">Dep Name</th>
-                <th className="p-2.5 w-24">Chq No</th>
-                <th className="p-2.5 w-36 text-right font-bold text-amber-950 bg-amber-100/80">Amount Due (₹)</th>
-                <th className="p-2.5 w-28 text-center">Status</th>
-                <th className="p-2.5 w-36">Recd Date</th>
+                <th className="p-2 w-9 text-center sticky left-0 bg-[#E5DFC7] z-30 border-r border-slate-400">#</th>
+                <th className="p-2 w-28">Due Date</th>
+                <th className="p-2 w-20">Place</th>
+                <th className="p-2 w-20">Dep Name</th>
+                <th className="p-2 w-20">Chq No</th>
+                <th className="p-2 w-28 text-right font-bold text-amber-950 bg-amber-100/80">Amount Due (₹)</th>
+                <th className="p-2 w-24 text-center">Status</th>
+                <th className="p-2 w-28">Recd Date</th>
 
                 {/* Dynamic Funding Company Headers */}
                 {visibleCompanyColumns.map((col) => {
@@ -1038,7 +1155,7 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
                   return (
                     <th
                       key={col.key}
-                      className={`p-2.5 text-right w-28 transition-colors ${
+                      className={`p-2 text-right w-24 transition-colors ${
                         !isSelected
                           ? 'bg-slate-200/50 text-slate-400 font-medium opacity-60 select-none'
                           : col.isOutside
@@ -1046,16 +1163,16 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
                           : 'bg-[#701A35]/10 text-[#701A35] font-bold'
                       }`}
                     >
-                      <div className="flex items-center justify-end gap-1">
-                        <span>{col.label}</span>
+                      <div className="flex items-start justify-end gap-1 leading-tight">
+                        <span className="break-words">{col.label}</span>
                         {!isSelected && <span className="text-[9px] text-slate-400 font-mono font-normal">(off)</span>}
                       </div>
                     </th>
                   );
                 })}
 
-                <th className="p-2.5 w-36">Remarks</th>
-                <th className="p-2.5 w-20 text-center">Action</th>
+                <th className="p-2 w-24">Remarks</th>
+                <th className="p-2 w-16 text-center">Action</th>
               </tr>
             </thead>
 
@@ -1102,10 +1219,11 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
 
                     {/* Place */}
                     <td className={`p-0 ${isRowPaid ? 'bg-emerald-100/90' : ''}`}>
-                      <input
-                        type="text"
+                      <FastGridCellInput
                         value={row.place}
-                        onChange={(e) => handleCellChange(idx, 'place', e.target.value)}
+                        onCommit={(value) => handleCellChange(idx, 'place', String(value))}
+                        onEnter={() => focusNextGridCell(`${idx}:place`)}
+                        registerRef={registerGridCell(`${idx}:place`)}
                         className={`w-full h-full px-2.5 py-2 bg-transparent focus:bg-white focus:outline-2 focus:outline-[#701A35] ${
                           isRowPaid ? 'text-emerald-950 font-bold' : 'text-slate-800'
                         }`}
@@ -1114,10 +1232,11 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
 
                     {/* Dep Name */}
                     <td className={`p-0 ${isRowPaid ? 'bg-emerald-100/90' : ''}`}>
-                      <input
-                        type="text"
+                      <FastGridCellInput
                         value={row.depName}
-                        onChange={(e) => handleCellChange(idx, 'depName', e.target.value)}
+                        onCommit={(value) => handleCellChange(idx, 'depName', String(value))}
+                        onEnter={() => focusNextGridCell(`${idx}:depName`)}
+                        registerRef={registerGridCell(`${idx}:depName`)}
                         placeholder="DEP"
                         className={`w-full h-full px-2.5 py-2 bg-transparent focus:bg-white focus:outline-2 focus:outline-[#701A35] uppercase ${
                           isRowPaid ? 'text-emerald-950 font-black' : 'font-bold text-slate-800'
@@ -1127,10 +1246,11 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
 
                     {/* Chq No */}
                     <td className={`p-0 ${isRowPaid ? 'bg-emerald-100/90' : ''}`}>
-                      <input
-                        type="text"
+                      <FastGridCellInput
                         value={row.chqNo}
-                        onChange={(e) => handleCellChange(idx, 'chqNo', e.target.value)}
+                        onCommit={(value) => handleCellChange(idx, 'chqNo', String(value))}
+                        onEnter={() => focusNextGridCell(`${idx}:chqNo`)}
+                        registerRef={registerGridCell(`${idx}:chqNo`)}
                         placeholder="CHQ"
                         className={`w-full h-full px-2.5 py-2 bg-transparent focus:bg-white focus:outline-2 focus:outline-[#701A35] font-mono ${
                           isRowPaid ? 'text-emerald-950 font-bold' : 'text-slate-700'
@@ -1146,19 +1266,19 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
                         ? 'bg-emerald-200/90 text-emerald-950 font-black border-x border-emerald-300'
                         : 'bg-amber-50/50'
                     }`}>
-                      <input
-                        type="number"
-                        min="0"
-                        max={capitalAmount}
-                        value={row.amountDue || ''}
-                        onChange={(e) => handleCellChange(idx, 'amountDue', Number(e.target.value) || 0)}
+                      <FastGridCellInput
+                        value={row.amountDue}
+                        numeric
+                        onCommit={(value) => handleCellChange(idx, 'amountDue', Number(value) || 0)}
+                        onEnter={() => focusNextGridCell(`${idx}:amountDue`)}
+                        registerRef={registerGridCell(`${idx}:amountDue`)}
                         className={`w-full h-full px-2.5 py-2 text-right bg-transparent focus:bg-white focus:outline-2 ${
                           isOverCapital
                             ? 'text-rose-900 font-black focus:outline-rose-600'
                             : isRowPaid
                             ? 'text-emerald-950 font-black focus:outline-emerald-600'
                             : 'text-slate-900 font-bold focus:outline-amber-600'
-                        } [appearance:textfield] [&::-webkit-inner-spin-button]:hidden`}
+                        }`}
                       />
                     </td>
 
@@ -1221,18 +1341,20 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
                               : 'bg-[#701A35]/5'
                           }`}
                         >
-                          <input
-                            type="number"
-                            value={val || ''}
+                          <FastGridCellInput
+                            value={val}
+                            numeric
                             placeholder="0"
-                            onChange={(e) => handleCellChange(idx, col.key, Number(e.target.value) || 0)}
+                            onCommit={(value) => handleCellChange(idx, col.key, Number(value) || 0)}
+                            onEnter={() => focusNextGridCell(`${idx}:${String(col.key)}`)}
+                            registerRef={registerGridCell(`${idx}:${String(col.key)}`)}
                             className={`w-full h-full px-2.5 py-2 text-right bg-transparent focus:bg-white focus:outline-2 ${
                               col.isOutside
                                 ? 'focus:outline-purple-700'
                                 : 'focus:outline-[#701A35]'
                             } ${
                               isRowPaid ? 'text-emerald-950 font-bold' : 'text-slate-900 font-semibold'
-                            } [appearance:textfield] [&::-webkit-inner-spin-button]:hidden`}
+                            }`}
                           />
                         </td>
                       );
@@ -1240,10 +1362,11 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
 
                     {/* Remarks */}
                     <td className={`p-0 ${isRowPaid ? 'bg-emerald-100/90' : ''}`}>
-                      <input
-                        type="text"
+                      <FastGridCellInput
                         value={row.remarks}
-                        onChange={(e) => handleCellChange(idx, 'remarks', e.target.value)}
+                        onCommit={(value) => handleCellChange(idx, 'remarks', String(value))}
+                        onEnter={() => focusNextGridCell(`${idx}:remarks`)}
+                        registerRef={registerGridCell(`${idx}:remarks`)}
                         placeholder="Remarks"
                         className={`w-full h-full px-2.5 py-2 bg-transparent focus:bg-white focus:outline-2 focus:outline-[#701A35] text-xs ${
                           isRowPaid ? 'text-emerald-950 font-bold placeholder:text-emerald-800/50' : 'text-slate-700 font-sans'
