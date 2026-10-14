@@ -424,7 +424,7 @@ export const DashboardView: React.FC = () => {
                 Executive Financial Command
               </h1>
               <p className="text-xs text-slate-600 font-medium mt-0.5">
-                ASR Group Syndication & Collections Management · {portfolioMetrics.totalLoansCount} Active Client Loans · {portfolioMetrics.totalInstallments} Scheduled EMIs
+                ASR GROUP Syndication & Collections Management · {portfolioMetrics.totalLoansCount} Active Client Loans · {portfolioMetrics.totalInstallments} Scheduled EMIs
               </p>
             </div>
           </div>
@@ -788,7 +788,7 @@ export const DashboardView: React.FC = () => {
                 <Building2 className="w-4 h-4 text-[#701A35]" /> Company-Wise Capital Deployment
               </h3>
               <p className="text-xs text-slate-500 font-medium mt-0.5">
-                Capital funded by ASR Group Own Entities vs. Outside Parties
+                Capital funded by ASR GROUP Own Entities vs. Outside Parties
               </p>
             </div>
             <div className="text-right">

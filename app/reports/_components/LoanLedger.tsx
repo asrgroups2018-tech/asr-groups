@@ -178,7 +178,7 @@ export const LoanLedger: React.FC = () => {
     doc.setFillColor(112, 26, 53); doc.rect(0, 0, pw, 58, 'F');
     doc.setFillColor(197, 160, 89); doc.rect(0, 56, pw, 2, 'F');
     doc.setFont('helvetica', 'bold'); doc.setFontSize(15); doc.setTextColor(255, 255, 255);
-    doc.text('ASR GROUP · LOAN LEDGER', 32, 26);
+    doc.text('ASR GROUP · Loan Ledger', 32, 26);
     doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(238, 216, 161);
     doc.text(`${row.customerName} · ${row.loanId}${row.codeNo ? ` (${row.codeNo})` : ''} · ${row.place}`, 32, 42);
     doc.text(`${row.frequency} · ${entries.length} installments`, 32, 54);
@@ -205,7 +205,7 @@ export const LoanLedger: React.FC = () => {
       margin: { left: 32, right: 32, bottom: 34 },
       didDrawPage: (d) => {
         doc.setFontSize(8); doc.setTextColor(130, 130, 130);
-        doc.text(`ASR Group · Loan Ledger · Page ${d.pageNumber} · Confidential`, pw / 2, ph - 16, { align: 'center' });
+        doc.text(`ASR GROUP · Loan Ledger · Page ${d.pageNumber} · Confidential`, pw / 2, ph - 16, { align: 'center' });
       },
     });
     doc.save(`ASR_LoanLedger_${safeFileName(row.loanId)}.pdf`);

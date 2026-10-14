@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff, Lock, User, ArrowRight } from "lucide-react";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
 
 interface LoginCredentials {
   username: string;
@@ -142,7 +143,7 @@ export default function LoginPage() {
           <div className="asr-intro-badge">
             <Image
               src="/groups-finalized.png"
-              alt="ASR Group Logo"
+              alt="ASR GROUP Logo"
               width={160}
               height={160}
               className="asr-intro-logo-img"
@@ -156,6 +157,9 @@ export default function LoginPage() {
 
       {/* ── Step 2: Main Full View — 3-Image Slideshow, Top-Left Logo, Centered Compact Card ── */}
       <div className="asr-full-page">
+        <div className="asr-theme-toggle">
+          <ThemeToggle />
+        </div>
         {/* Full Screen 3-Image Rotating Background Slideshow */}
         <div className="asr-bg-container">
           {BG_IMAGES.map((imgSrc, idx) => (
@@ -173,7 +177,7 @@ export default function LoginPage() {
           <div className="asr-brand-badge">
             <Image
               src="/groups-finalized.png"
-              alt="ASR Group Logo"
+              alt="ASR GROUP Logo"
               width={70}
               height={70}
               className="asr-logo-img"
@@ -311,7 +315,7 @@ export default function LoginPage() {
 
         {/* Footer */}
         <footer className="asr-footer">
-          <span>© 2026 ASR Group. All Rights Reserved.</span>
+          <span>© 2026 ASR GROUP. All Rights Reserved.</span>
         </footer>
       </div>
     </div>

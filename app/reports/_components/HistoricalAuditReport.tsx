@@ -270,7 +270,7 @@ export const HistoricalAuditReport: React.FC = () => {
             { id: 'ALL', label: `All (${receipts.length})` },
             { id: 'MISMATCH_ONLY', label: `Discrepancies Only (${stats.mismatchCount})` },
             { id: 'OUTSIDE_ONLY', label: 'Outside-Party Splits' },
-            { id: 'ASR_ONLY', label: 'ASR Group Only' },
+            { id: 'ASR_ONLY', label: 'ASR GROUP Only' },
           ].map((tab) => (
             <button
               key={tab.id}

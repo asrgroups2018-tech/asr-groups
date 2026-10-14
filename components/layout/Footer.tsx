@@ -13,7 +13,7 @@ export const Footer: React.FC = () => {
           <div className="w-5 h-5 rounded-full overflow-hidden relative shrink-0">
             <Image
               src="/groups-finalized.png"
-              alt="ASR Group Logo"
+              alt="ASR GROUP Logo"
               fill
               sizes="20px"
               className="object-cover"
@@ -26,7 +26,7 @@ export const Footer: React.FC = () => {
 
         {/* Right: Copyright Text */}
         <div className="text-[11px] sm:text-xs text-slate-600 font-normal text-right">
-          Copyright {new Date().getFullYear()} ASR Group. All rights reserved.
+          Copyright {new Date().getFullYear()} ASR GROUP. All rights reserved.
         </div>
 
       </div>

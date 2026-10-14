@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState, useMemo, useRef, useEffect, useDeferredValue } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useApp } from '@/lib/store';
-import { Loan, Installment } from '@/lib/types';
+import { Loan } from '@/lib/types';
 import {
   CreditCard,
   Plus,
@@ -13,17 +13,13 @@ import {
   Eye,
   Trash2,
   Calendar,
-  CheckCircle2,
   FileSpreadsheet,
   Edit3,
   CalendarDays,
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
-  Check,
-  X,
   Filter,
-  Layers,
   Download,
   FileText,
 } from 'lucide-react';
@@ -56,8 +52,28 @@ function parseToDate(dStr: string | null | undefined): Date | null {
       }
     }
   }
+  const numericParts = /^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})$/.exec(trimmed);
+  if (numericParts) {
+    return new Date(Number(numericParts[3]), Number(numericParts[2]) - 1, Number(numericParts[1]));
+  }
   const parsed = new Date(trimmed);
   return isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function toDateKey(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const trimmed = value.trim();
+  const isoMatch = /^(\d{4})-(\d{2})-(\d{2})/.exec(trimmed);
+  if (isoMatch) return `${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}`;
+
+  const parsed = parseToDate(trimmed);
+  if (!parsed) return null;
+  return `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(2, '0')}-${String(parsed.getDate()).padStart(2, '0')}`;
+}
+
+function isDateInRange(value: string | null | undefined, startDate: string | null, endDate: string | null): boolean {
+  const dateKey = toDateKey(value);
+  return Boolean(dateKey && startDate && endDate && dateKey >= startDate && dateKey <= endDate);
 }
 
 type SortField = 'customerName' | 'id' | 'startDate' | 'totalCollected' | 'interestAmount' | 'totalAmount' | 'installmentCount' | 'fundedBy' | 'nextDueDate' | 'status';
@@ -219,17 +235,10 @@ export const LoansListView: React.FC = () => {
     }
   };
 
-  const deferredDateRange = useDeferredValue(dateRange);
-
-  const dateTimestamps = useMemo(() => {
-    const startTimestamp = deferredDateRange.startDate ? new Date(deferredDateRange.startDate).setHours(0, 0, 0, 0) : null;
-    const endTimestamp = deferredDateRange.endDate ? new Date(deferredDateRange.endDate).setHours(23, 59, 59, 999) : null;
-    return { startTimestamp, endTimestamp };
-  }, [deferredDateRange]);
-
   // Filtered and Sorted Loans (Strictly Flat: 1 Row = 1 Loan)
   const filteredAndSortedLoans = useMemo(() => {
-    const { startTimestamp, endTimestamp } = dateTimestamps;
+    const startDateKey = dateRange.startDate;
+    const endDateKey = dateRange.endDate;
 
     const filtered = loans.filter((loan) => {
       // 1. Status Filter (ALL, Active, Overdue, Closed)
@@ -257,26 +266,11 @@ export const LoansListView: React.FC = () => {
         if (!matchClient && !matchCode && !matchId && !matchPlace) return false;
       }
 
-      // 4. Date Range Filter (Evaluates against Loan Start Date or any Installment Due/Recd Date)
-      if (startTimestamp !== null && endTimestamp !== null) {
-        const loanStartDate = parseToDate(loan.startDate);
-        const loanStartMs = loanStartDate ? loanStartDate.getTime() : null;
-        const matchesLoanStart = loanStartMs !== null && loanStartMs >= startTimestamp && loanStartMs <= endTimestamp;
-
-        const matchesAnyInstallment = (loan.installments || []).some((inst) => {
-          const dueD = parseToDate(inst.dueDate);
-          const recdD = parseToDate(inst.recdDate);
-          const dueMs = dueD ? dueD.getTime() : null;
-          const recdMs = recdD ? recdD.getTime() : null;
-
-          const isDueInRange = dueMs !== null && dueMs >= startTimestamp && dueMs <= endTimestamp;
-          const isRecdInRange = recdMs !== null && recdMs >= startTimestamp && recdMs <= endTimestamp;
-          return isDueInRange || isRecdInRange;
-        });
-
-        if (!matchesLoanStart && !matchesAnyInstallment) {
-          return false;
-        }
+      // 4. Date Range Filter. A loan belongs to the range by its loan start date;
+      // installment dates must not make every recurring schedule match.
+      if (startDateKey && endDateKey) {
+        const loanDateKey = toDateKey(loan.startDate);
+        if (!loanDateKey || loanDateKey < startDateKey || loanDateKey > endDateKey) return false;
       }
 
       return true;
@@ -339,7 +333,7 @@ export const LoansListView: React.FC = () => {
       }
       return sortDirection === 'asc' ? comparison : -comparison;
     });
-  }, [loans, statusFilter, selectedClients, searchQuery, dateTimestamps, sortField, sortDirection]);
+  }, [loans, statusFilter, selectedClients, searchQuery, dateRange.startDate, dateRange.endDate, sortField, sortDirection]);
 
   // Aggregate Metrics based on filtered view
   const totalPortfolioAmount = useMemo(
@@ -601,7 +595,7 @@ export const LoansListView: React.FC = () => {
       </div>
 
       {/* Filters Bar: Multi-Select Client Dropdown, Text Search, Date Range Picker, Status Tabs */}
-      <div className="bg-white p-4.5 rounded-2xl border border-slate-200 shadow-sm flex flex-col xl:flex-row xl:items-end justify-between gap-3.5">
+      <div className="relative z-30 bg-white p-4.5 rounded-2xl border border-slate-200 shadow-sm flex flex-col xl:flex-row xl:items-end justify-between gap-3.5">
         <div className="flex flex-col sm:flex-row sm:items-end gap-3 flex-1 flex-wrap">
           {/* Multi-Select Client Filter Dropdown */}
           <div className="relative min-w-[220px]" ref={clientDropdownRef}>
@@ -664,7 +658,7 @@ export const LoansListView: React.FC = () => {
                 <div className="max-h-60 overflow-y-auto space-y-0.5 divide-y divide-slate-100">
                   {filteredClientStats.length === 0 ? (
                     <div className="py-4 text-center text-xs text-slate-400">
-                      No clients found matching "{clientSearchQuery}"
+                      No clients found matching &quot;{clientSearchQuery}&quot;
                     </div>
                   ) : (
                     filteredClientStats.map(({ name, count }) => {
@@ -801,7 +795,7 @@ export const LoansListView: React.FC = () => {
           {/* Search text pill */}
           {searchQuery && (
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 border border-slate-300 text-slate-800 font-mono text-[11px] font-bold shadow-2xs">
-              <span>Search: "{searchQuery}"</span>
+              <span>Search: &quot;{searchQuery}&quot;</span>
               <button
                 type="button"
                 onClick={() => setSearchQuery('')}
@@ -999,20 +993,13 @@ export const LoansListView: React.FC = () => {
             <div className="hidden lg:block divide-y divide-slate-200">
               {filteredAndSortedLoans.map((loan) => {
                 const isExpanded = expandedLoanIds.has(loan.id);
-                const { startTimestamp, endTimestamp } = dateTimestamps;
-                const hasDateFilter = startTimestamp !== null && endTimestamp !== null;
+                const hasDateFilter = Boolean(dateRange.startDate && dateRange.endDate);
 
                 // Check in-range installments count for this loan
                 const inRangeCount = hasDateFilter
                   ? (loan.installments || []).filter((inst) => {
-                      const dueD = parseToDate(inst.dueDate);
-                      const recdD = parseToDate(inst.recdDate);
-                      const dueMs = dueD ? dueD.getTime() : null;
-                      const recdMs = recdD ? recdD.getTime() : null;
-                      return (
-                        (dueMs !== null && dueMs >= startTimestamp && dueMs <= endTimestamp) ||
-                        (recdMs !== null && recdMs >= startTimestamp && recdMs <= endTimestamp)
-                      );
+                      return isDateInRange(inst.dueDate, dateRange.startDate, dateRange.endDate) ||
+                        isDateInRange(inst.recdDate, dateRange.startDate, dateRange.endDate);
                     }).length
                   : 0;
 
@@ -1146,7 +1133,7 @@ export const LoansListView: React.FC = () => {
                             <CompanySplitBadge key={sp.id} split={sp} size="sm" />
                           ))
                         ) : (
-                          <span className="text-[10px] text-slate-500 font-mono font-semibold">ASR Group</span>
+                          <span className="text-[10px] text-slate-500 font-mono font-semibold">ASR GROUP</span>
                         )}
                       </div>
 
@@ -1240,23 +1227,8 @@ export const LoansListView: React.FC = () => {
                               <tbody className="divide-y divide-slate-100">
                                 {loan.installments.map((inst) => {
                                   const isPaid = ['PASS', 'NEFT', 'RTGS', 'CASH', 'CLEARED', 'PAID', 'CLOSED', 'SETTLED', 'Paid'].includes(inst.status?.trim().toUpperCase());
-                                  const dueD = parseToDate(inst.dueDate);
-                                  const recdD = parseToDate(inst.recdDate);
-                                  const dueMs = dueD ? dueD.getTime() : null;
-                                  const recdMs = recdD ? recdD.getTime() : null;
-                                  const isDueInRange =
-                                    startTimestamp !== null &&
-                                    endTimestamp !== null &&
-                                    dueMs !== null &&
-                                    dueMs >= startTimestamp &&
-                                    dueMs <= endTimestamp;
-                                  const isRecdInRange =
-                                    startTimestamp !== null &&
-                                    endTimestamp !== null &&
-                                    recdMs !== null &&
-                                    recdMs >= startTimestamp &&
-                                    recdMs <= endTimestamp;
-                                  const isInRange = isDueInRange || isRecdInRange;
+                                  const isInRange = isDateInRange(inst.dueDate, dateRange.startDate, dateRange.endDate) ||
+                                    isDateInRange(inst.recdDate, dateRange.startDate, dateRange.endDate);
 
                                   return (
                                     <tr
@@ -1354,8 +1326,6 @@ export const LoansListView: React.FC = () => {
               const collected = loan.totalCollected || 0;
               const total = loan.totalAmount || 0;
               const progress = total > 0 ? Math.min(100, Math.round((collected / total) * 100)) : 0;
-              const { startTimestamp, endTimestamp } = dateTimestamps;
-              const hasDateFilter = startTimestamp !== null && endTimestamp !== null;
               const isLoanPaid =
                 ['CLEARED', 'NEFT', 'RTGS', 'CASH', 'PASS', 'PAID', 'CLOSED', 'SETTLED'].includes(String(loan.status || '').trim().toUpperCase()) ||
                 (loan.totalCollected || 0) >= loan.totalAmount;

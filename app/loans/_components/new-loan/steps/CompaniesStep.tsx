@@ -168,7 +168,7 @@ export const CompaniesStep: React.FC<CompaniesStepProps> = ({
             onClick={handleSelectAllAsr}
             className="px-2.5 py-1 bg-[#160810] hover:bg-[#C5A059]/20 hover:text-[#EED8A1] border border-[#3D1A2C] rounded text-[11px] font-mono cursor-pointer transition-colors"
           >
-            All ASR Group ({asrCompanies.length})
+            All ASR GROUP ({asrCompanies.length})
           </button>
           <button
             type="button"
@@ -219,7 +219,7 @@ export const CompaniesStep: React.FC<CompaniesStepProps> = ({
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
                       <div className="font-bold text-xs text-white truncate font-serif">{company.name}</div>
-                      {/* Short code only — no ASR Group text inside the box */}
+                      {/* Short code only — no ASR GROUP text inside the box */}
                       <div className="text-[10px] font-mono text-emerald-400 font-bold mt-0.5">
                         {company.shortCode}
                       </div>

@@ -3,10 +3,36 @@
 :root {
   --background: #F8F6F1;
   --foreground: #1E293B;
+  --surface: #FFFFFF;
+  --surface-muted: #FCFBF9;
+  --surface-subtle: #F1F5F9;
+  --surface-raised: #FFFFFF;
+  --border: #E2E8F0;
+  --border-strong: #CBD5E1;
+  --text-muted: #64748B;
+  --text-subtle: #94A3B8;
   --sidebar-bg: #1A0A13;
   --gold-primary: #C5A059;
   --gold-light: #EED8A1;
   --maroon-primary: #831843;
+}
+
+html[data-theme='dark'] {
+  color-scheme: dark;
+  --background: #0f131a;
+  --foreground: #F8FAFC;
+  --surface: #171D26;
+  --surface-muted: #1D2632;
+  --surface-subtle: #253140;
+  --surface-raised: #202A38;
+  --border: #334155;
+  --border-strong: #475569;
+  --text-muted: #C0CAD8;
+  --text-subtle: #94A3B8;
+  --sidebar-bg: #100b12;
+  --gold-primary: #d8b36a;
+  --gold-light: #f2d79b;
+  --maroon-primary: #E2A0BA;
 }
 
 html,
@@ -16,12 +42,212 @@ body {
 }
 
 body {
-  background: #F8F6F1;
-  color: #1E293B;
+  background: var(--background);
+  color: var(--foreground);
   font-family: var(--font-ubuntu), "Ubuntu", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-feature-settings: "cv02", "cv03", "cv04", "cv11", "tnum";
   font-variant-numeric: tabular-nums;
   -webkit-font-smoothing: antialiased;
+}
+
+html[data-theme='light'] body {
+  background: #F8F6F1;
+  color: #1E293B;
+}
+
+html[data-theme='dark'] ::-webkit-scrollbar-thumb { background: #475569; }
+html[data-theme='dark'] ::-webkit-scrollbar-thumb:hover { background: #64748B; }
+
+/* Shared dark palette for the existing Tailwind surface classes. */
+html[data-theme='dark'] [class~='bg-white'] { background-color: var(--surface) !important; }
+html[data-theme='dark'] [class~='bg-white/80'] { background-color: var(--surface-raised) !important; }
+html[data-theme='dark'] [class~='bg-white/60'] { background-color: var(--surface-muted) !important; }
+html[data-theme='dark'] [class~='bg-slate-50'],
+html[data-theme='dark'] [class~='bg-slate-100'] { background-color: var(--surface-muted) !important; }
+html[data-theme='dark'] [class~='bg-slate-200'] { background-color: var(--surface-subtle) !important; }
+html[data-theme='dark'] [class~='bg-slate-300'] { background-color: #334155 !important; }
+
+html[data-theme='dark'] [class*='bg-[#F'] { background-color: var(--surface-muted) !important; }
+
+html[data-theme='dark'] [class*='bg-[#F7F5F0]'],
+html[data-theme='dark'] [class*='bg-[#f9f6f1]'] { background-color: var(--background) !important; }
+
+html[data-theme='dark'] body[class*='bg-[#F8F6F1]'],
+html[data-theme='dark'] [class~='bg-[#F8F6F1]'] { background-color: var(--background) !important; }
+
+html[data-theme='dark'] [class*='bg-[#E'] { background-color: var(--surface-raised) !important; }
+html[data-theme='dark'] [class*='bg-[#D8D5FF]'] { background-color: #252A4A !important; }
+
+html[data-theme='dark'] [class*='bg-gradient-to'] {
+  background-color: var(--surface) !important;
+  background-image: linear-gradient(135deg, #202A38 0%, #171D26 100%) !important;
+}
+html[data-theme='dark'] [class*='bg-gradient-to'][class*='from-emerald'] {
+  background-image: linear-gradient(135deg, #12382F 0%, #171D26 100%) !important;
+}
+html[data-theme='dark'] [class*='bg-gradient-to'][class*='from-amber'] {
+  background-image: linear-gradient(135deg, #3B2D12 0%, #171D26 100%) !important;
+}
+html[data-theme='dark'] [class*='bg-gradient-to'][class*='from-rose'],
+html[data-theme='dark'] [class*='bg-gradient-to'][class*='from-[#701A35]'] {
+  background-image: linear-gradient(135deg, #3B1B2B 0%, #171D26 100%) !important;
+}
+html[data-theme='dark'] [class*='bg-gradient-to'][class*='from-indigo'] {
+  background-image: linear-gradient(135deg, #202750 0%, #171D26 100%) !important;
+}
+
+html[data-theme='dark'] [class~='text-slate-950'],
+html[data-theme='dark'] [class~='text-slate-900'],
+html[data-theme='dark'] [class~='text-slate-800'] { color: #F8FAFC !important; }
+html[data-theme='dark'] [class~='text-slate-700'] { color: #E2E8F0 !important; }
+html[data-theme='dark'] [class~='text-slate-600'] { color: #CBD5E1 !important; }
+html[data-theme='dark'] [class~='text-slate-500'] { color: #AAB7C8 !important; }
+html[data-theme='dark'] [class~='text-slate-400'] { color: #94A3B8 !important; }
+html[data-theme='dark'] [class~='text-slate-300'],
+html[data-theme='dark'] [class~='text-slate-200'] { color: #D7E0EB !important; }
+
+html[data-theme='dark'] [class~='text-blue-900'],
+html[data-theme='dark'] [class~='text-blue-950'],
+html[data-theme='dark'] [class~='text-cyan-700'],
+html[data-theme='dark'] [class~='text-teal-700'],
+html[data-theme='dark'] [class~='text-teal-800'],
+html[data-theme='dark'] [class~='text-teal-900'],
+html[data-theme='dark'] [class~='text-purple-800'],
+html[data-theme='dark'] [class~='text-purple-900'],
+html[data-theme='dark'] [class~='text-purple-950'],
+html[data-theme='dark'] [class~='text-violet-800'],
+html[data-theme='dark'] [class~='text-violet-950'] { color: #A5B4FC !important; }
+html[data-theme='dark'] [class~='text-[#4E1026]'],
+html[data-theme='dark'] [class~='text-[#5C142B]'] { color: #F0B7C9 !important; }
+html[data-theme='dark'] [class~='text-[#245B9B]'] { color: #93C5FD !important; }
+html[data-theme='dark'] [class~='text-[#9A7A3A]'] { color: #E8C77E !important; }
+
+/* Dark-mode equivalents for semantic status colors. */
+html[data-theme='dark'] [class~='text-emerald-950'],
+html[data-theme='dark'] [class~='text-emerald-900'],
+html[data-theme='dark'] [class~='text-emerald-800'],
+html[data-theme='dark'] [class~='text-emerald-700'],
+html[data-theme='dark'] [class~='text-emerald-600'] { color: #6EE7B7 !important; }
+html[data-theme='dark'] [class~='text-amber-950'],
+html[data-theme='dark'] [class~='text-amber-900'],
+html[data-theme='dark'] [class~='text-amber-800'],
+html[data-theme='dark'] [class~='text-amber-700'],
+html[data-theme='dark'] [class~='text-amber-600'] { color: #FCD34D !important; }
+html[data-theme='dark'] [class~='text-rose-950'],
+html[data-theme='dark'] [class~='text-rose-900'],
+html[data-theme='dark'] [class~='text-rose-800'],
+html[data-theme='dark'] [class~='text-rose-700'],
+html[data-theme='dark'] [class~='text-rose-600'],
+html[data-theme='dark'] [class~='text-red-800'],
+html[data-theme='dark'] [class~='text-red-700'],
+html[data-theme='dark'] [class~='text-red-600'] { color: #FDA4AF !important; }
+html[data-theme='dark'] [class~='text-blue-800'],
+html[data-theme='dark'] [class~='text-blue-700'],
+html[data-theme='dark'] [class~='text-blue-600'],
+html[data-theme='dark'] [class~='text-indigo-950'],
+html[data-theme='dark'] [class~='text-indigo-800'],
+html[data-theme='dark'] [class~='text-indigo-700'],
+html[data-theme='dark'] [class~='text-purple-900'],
+html[data-theme='dark'] [class~='text-purple-800'],
+html[data-theme='dark'] [class~='text-purple-700'],
+html[data-theme='dark'] [class~='text-violet-700'] { color: #A5B4FC !important; }
+html[data-theme='dark'] [class~='text-orange-700'],
+html[data-theme='dark'] [class~='text-orange-600'] { color: #FDBA74 !important; }
+
+html[data-theme='dark'] [class~='border-slate-100'],
+html[data-theme='dark'] [class~='border-slate-200'],
+html[data-theme='dark'] [class~='border-slate-300'],
+html[data-theme='dark'] [class*='border-[#D0C8B8]'],
+html[data-theme='dark'] [class*='border-[#E1C98D]'],
+html[data-theme='dark'] [class*='border-[#E2D2B0]'],
+html[data-theme='dark'] [class*='border-[#E7DFD2]'],
+html[data-theme='dark'] [class*='border-[#E6E1D6]'],
+html[data-theme='dark'] [class*='border-[#EEE8DE]'],
+html[data-theme='dark'] [class*='border-[#EDE8DF]'],
+html[data-theme='dark'] [class*='border-[#EBE7DF]'] { border-color: var(--border) !important; }
+html[data-theme='dark'] [class~='divide-slate-100'] > :not([hidden]) ~ :not([hidden]) { border-color: var(--border) !important; }
+html[data-theme='dark'] [class*='border-[#D'],
+html[data-theme='dark'] [class*='border-[#E'] { border-color: var(--border) !important; }
+html[data-theme='dark'] [class*='border-slate-100/'],
+html[data-theme='dark'] [class*='border-slate-200/'],
+html[data-theme='dark'] [class*='border-slate-300/'] { border-color: var(--border) !important; }
+html[data-theme='dark'] [class*='divide-[#'] > :not([hidden]) ~ :not([hidden]),
+html[data-theme='dark'] [class*='divide-slate-200'] > :not([hidden]) ~ :not([hidden]),
+html[data-theme='dark'] [class*='divide-slate-300'] > :not([hidden]) ~ :not([hidden]) { border-color: var(--border) !important; }
+
+html[data-theme='dark'] [class~='text-[#24131B]'],
+html[data-theme='dark'] [class~='text-[#25151C]'] { color: #F8FAFC !important; }
+html[data-theme='dark'] [class~='text-[#701A35]'] { color: #E6A6BF !important; }
+html[data-theme='dark'] [class~='text-[#C5A059]'],
+html[data-theme='dark'] [class~='text-[#A07A39]'] { color: #E8C77E !important; }
+html[data-theme='dark'] [class~='border-[#701A35]'] { border-color: #A95779 !important; }
+html[data-theme='dark'] [class~='bg-[#701A35]'] { background-color: #843B5B !important; }
+html[data-theme='dark'] [class*='bg-[#701A35]/'] { background-color: rgba(132, 59, 91, 0.26) !important; }
+
+html[data-theme='dark'] [class~='bg-emerald-50'],
+html[data-theme='dark'] [class~='bg-emerald-100'],
+html[data-theme='dark'] [class*='bg-emerald-50/'],
+html[data-theme='dark'] [class*='bg-emerald-100/'] { background-color: #12382F !important; }
+html[data-theme='dark'] [class~='bg-amber-50'],
+html[data-theme='dark'] [class~='bg-amber-100'],
+html[data-theme='dark'] [class*='bg-amber-50/'],
+html[data-theme='dark'] [class*='bg-amber-100/'] { background-color: #3B2D12 !important; }
+html[data-theme='dark'] [class~='bg-rose-50'],
+html[data-theme='dark'] [class~='bg-rose-100'],
+html[data-theme='dark'] [class*='bg-rose-50/'],
+html[data-theme='dark'] [class*='bg-rose-100/'] { background-color: #3B1B2B !important; }
+html[data-theme='dark'] [class~='bg-blue-50'],
+html[data-theme='dark'] [class~='bg-blue-100'],
+html[data-theme='dark'] [class~='bg-indigo-50'],
+html[data-theme='dark'] [class~='bg-indigo-100'],
+html[data-theme='dark'] [class~='bg-cyan-50'],
+html[data-theme='dark'] [class~='bg-purple-50'],
+html[data-theme='dark'] [class~='bg-purple-100'],
+html[data-theme='dark'] [class~='bg-violet-50'],
+html[data-theme='dark'] [class~='bg-violet-100'],
+html[data-theme='dark'] [class~='bg-teal-50'],
+html[data-theme='dark'] [class~='bg-teal-100'] { background-color: #202750 !important; }
+html[data-theme='dark'] [class~='bg-red-50'],
+html[data-theme='dark'] [class~='bg-red-100'],
+html[data-theme='dark'] [class~='bg-rose-200'] { background-color: #3B1B2B !important; }
+html[data-theme='dark'] [class~='bg-amber-200'],
+html[data-theme='dark'] [class~='bg-orange-50'],
+html[data-theme='dark'] [class~='bg-yellow-50'] { background-color: #3B2D12 !important; }
+html[data-theme='dark'] [class~='bg-emerald-200'] { background-color: #165343 !important; }
+
+/* Opacity variants are separate Tailwind classes, so cover them explicitly. */
+html[data-theme='dark'] [class*='bg-slate-50/'],
+html[data-theme='dark'] [class*='bg-slate-100/'] { background-color: var(--surface-muted) !important; }
+html[data-theme='dark'] [class*='bg-slate-200/'],
+html[data-theme='dark'] [class*='bg-slate-300/'] { background-color: var(--surface-subtle) !important; }
+html[data-theme='dark'] [class*='bg-amber-50/'],
+html[data-theme='dark'] [class*='bg-amber-100/'] { background-color: #3B2D12 !important; }
+html[data-theme='dark'] [class*='bg-emerald-50/'],
+html[data-theme='dark'] [class*='bg-emerald-100/'] { background-color: #12382F !important; }
+html[data-theme='dark'] [class*='bg-blue-50/'],
+html[data-theme='dark'] [class*='bg-indigo-50/'],
+html[data-theme='dark'] [class*='bg-purple-50/'],
+html[data-theme='dark'] [class*='bg-violet-50/'] { background-color: #202750 !important; }
+html[data-theme='dark'] [class*='bg-rose-50/'],
+html[data-theme='dark'] [class*='bg-red-50/'] { background-color: #3B1B2B !important; }
+html[data-theme='dark'] [class*='bg-orange-50/'],
+html[data-theme='dark'] [class*='bg-yellow-50/'] { background-color: #3B2812 !important; }
+
+html[data-theme='dark'] [class*='hover:bg-slate-50']:hover,
+html[data-theme='dark'] [class*='hover:bg-slate-100']:hover,
+html[data-theme='dark'] [class*='hover:bg-white']:hover,
+html[data-theme='dark'] [class*='hover:bg-[#F']:hover,
+html[data-theme='dark'] [class*='hover:bg-[#E']:hover { background-color: #2B3748 !important; }
+html[data-theme='dark'] input,
+html[data-theme='dark'] select,
+html[data-theme='dark'] textarea { color-scheme: dark; }
+html[data-theme='dark'] option { background-color: var(--surface) !important; color: var(--foreground) !important; }
+html[data-theme='dark'] input::placeholder,
+html[data-theme='dark'] textarea::placeholder { color: #8291A5 !important; }
+html[data-theme='dark'] .dark-theme-control {
+  background-color: var(--surface) !important;
+  border-color: var(--border-strong) !important;
+  color: var(--gold-light) !important;
 }
 
 /* Force Ubuntu across the entire app — override Tailwind font classes */

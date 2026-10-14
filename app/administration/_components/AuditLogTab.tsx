@@ -243,7 +243,7 @@ export const AuditLogTab: React.FC = () => {
         data={filteredLogs}
         columns={columns}
         keyExtractor={(l) => l.id}
-        title="ASR Group Audit Log"
+        title="ASR GROUP Audit Log"
         exportFileName="asr_audit_trail"
         searchPlaceholder="Search audit events by target, actor, or diff values..."
         pageSizeDefault={20}

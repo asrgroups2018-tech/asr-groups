@@ -213,7 +213,7 @@ export const AccountStatement: React.FC = () => {
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(18);
     doc.setTextColor(255, 255, 255);
-    doc.text('ASR Group', 32, 32);
+    doc.text('ASR GROUP', 32, 32);
 
     // Statement title
     doc.setFillColor(248, 246, 242);
@@ -295,7 +295,7 @@ export const AccountStatement: React.FC = () => {
         doc.setFontSize(8);
         doc.setTextColor(130, 130, 130);
         doc.text(
-          `ASR Group · Confidential · Page ${data.pageNumber}`,
+          `ASR GROUP · Confidential · Page ${data.pageNumber}`,
           pw / 2, ph - 16, { align: 'center' }
         );
       },
@@ -450,7 +450,7 @@ export const AccountStatement: React.FC = () => {
               <div className="border-b-2 border-[#701A35] pb-4 mb-4">
                 <div className="flex items-start justify-between">
                   <div>
-                    <div className="text-xl font-bold text-[#701A35]">ASR Group</div>
+                    <div className="text-xl font-bold text-[#701A35]">ASR GROUP</div>
                   </div>
                 </div>
               </div>
@@ -541,7 +541,7 @@ export const AccountStatement: React.FC = () => {
                   <div className="border-t border-slate-400 w-40 pt-1 text-[9px] text-slate-500">
                     Authorised Signatory
                   </div>
-                  <div className="text-[9px] text-slate-500 mt-0.5">ASR Group</div>
+                  <div className="text-[9px] text-slate-500 mt-0.5">ASR GROUP</div>
                 </div>
               </div>
             </div>

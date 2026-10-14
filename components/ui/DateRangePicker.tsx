@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect, useMemo, useTransition } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import {
   CalendarDays,
   ChevronLeft,
@@ -39,12 +39,24 @@ const FULL_MONTH_NAMES = [
 
 function formatDateForDisplay(dateStr: string | null): string {
   if (!dateStr) return '';
-  const d = new Date(dateStr);
+  const d = parseDateValue(dateStr);
   if (isNaN(d.getTime())) return dateStr;
   const month = MONTH_NAMES[d.getMonth()];
   const day = d.getDate();
   const year = d.getFullYear();
   return `${month} ${day}, ${year}`;
+}
+
+function parseDateValue(value: string): Date {
+  const isoMatch = /^(\d{4})-(\d{2})-(\d{2})/.exec(value.trim());
+  if (isoMatch) {
+    return new Date(Number(isoMatch[1]), Number(isoMatch[2]) - 1, Number(isoMatch[3]));
+  }
+  const numericMatch = /^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})$/.exec(value.trim());
+  if (numericMatch) {
+    return new Date(Number(numericMatch[3]), Number(numericMatch[2]) - 1, Number(numericMatch[1]));
+  }
+  return new Date(value);
 }
 
 function toIsoDate(d: Date): string {
@@ -72,8 +84,8 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
   className = '',
 }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [popoverPlacement, setPopoverPlacement] = useState<'bottom' | 'top'>('bottom');
   const containerRef = useRef<HTMLDivElement>(null);
-  const [, startTransition] = useTransition();
 
   // Tab mode: 'presets' | 'calendar' | 'month-year'
   const [activeTab, setActiveTab] = useState<'presets' | 'calendar' | 'month-year'>('presets');
@@ -81,17 +93,17 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
 
   // Working calendar view anchor date
   const [calendarAnchor, setCalendarAnchor] = useState<Date>(() => {
-    if (value.startDate) return new Date(value.startDate);
+    if (value.startDate) return parseDateValue(value.startDate);
     return new Date();
   });
 
   // Internal working dates while popover is open
   const [tempStart, setTempStart] = useState<Date>(() => {
-    if (value.startDate) return new Date(value.startDate);
+    if (value.startDate) return parseDateValue(value.startDate);
     return getCurrentMonthRange().start;
   });
   const [tempEnd, setTempEnd] = useState<Date>(() => {
-    if (value.endDate) return new Date(value.endDate);
+    if (value.endDate) return parseDateValue(value.endDate);
     return getCurrentMonthRange().end;
   });
   const [activePreset, setActivePreset] = useState<string>(() => {
@@ -100,22 +112,15 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
     return 'curr_month';
   });
 
-  // Sync internal state when external value changes
-  useEffect(() => {
-    if (value.startDate) {
-      const s = new Date(value.startDate);
-      setTempStart(s);
-      setCalendarAnchor(new Date(s.getFullYear(), s.getMonth(), 1));
-    }
-    if (value.endDate) {
-      setTempEnd(new Date(value.endDate));
-    }
-    if (value.presetLabel) {
-      setActivePreset(value.presetLabel);
-    } else if (!value.startDate && !value.endDate) {
-      setActivePreset('all');
-    }
-  }, [value.startDate, value.endDate, value.presetLabel]);
+  const syncWorkingRangeFromValue = () => {
+    const defaultRange = getCurrentMonthRange();
+    const nextStart = value.startDate ? parseDateValue(value.startDate) : defaultRange.start;
+    const nextEnd = value.endDate ? parseDateValue(value.endDate) : defaultRange.end;
+    setTempStart(nextStart);
+    setTempEnd(nextEnd);
+    setCalendarAnchor(new Date(nextStart.getFullYear(), nextStart.getMonth(), 1));
+    setActivePreset(value.presetLabel || (!value.startDate && !value.endDate ? 'all' : 'custom'));
+  };
 
   // Click outside listener
   useEffect(() => {
@@ -132,6 +137,27 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
     };
   }, [isOpen]);
 
+  const updatePopoverPlacement = useCallback(() => {
+    if (!containerRef.current || typeof window === 'undefined') return;
+    const triggerRect = containerRef.current.getBoundingClientRect();
+    const estimatedHeight = Math.min(640, window.innerHeight - 80);
+    const roomBelow = window.innerHeight - triggerRect.bottom;
+    const roomAbove = triggerRect.top;
+    setPopoverPlacement(roomBelow < estimatedHeight && roomAbove > roomBelow ? 'top' : 'bottom');
+  }, []);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const update = () => updatePopoverPlacement();
+    update();
+    window.addEventListener('resize', update);
+    window.addEventListener('scroll', update, true);
+    return () => {
+      window.removeEventListener('resize', update);
+      window.removeEventListener('scroll', update, true);
+    };
+  }, [isOpen, updatePopoverPlacement]);
+
   const handlePresetClick = (presetId: string) => {
     const now = new Date();
     let s = new Date(tempStart);
@@ -140,13 +166,6 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
     switch (presetId) {
       case 'all': {
         setActivePreset('all');
-        startTransition(() => {
-          onChange({
-            startDate: null,
-            endDate: null,
-            presetLabel: 'all',
-          });
-        });
         return;
       }
       case 'today': {
@@ -206,14 +225,6 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
     setCalendarAnchor(new Date(s.getFullYear(), s.getMonth(), 1));
     setActivePreset(presetId);
 
-    // Apply smoothly via startTransition
-    startTransition(() => {
-      onChange({
-        startDate: toIsoDate(s),
-        endDate: toIsoDate(e),
-        presetLabel: presetId,
-      });
-    });
   };
 
   const handleDaySelect = (dayDate: Date) => {
@@ -222,9 +233,8 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
 
     if (activeSegment === 'start') {
       newStart = dayDate;
-      if (dayDate > tempEnd) {
-        newEnd = dayDate;
-      }
+      // Start a new range from the selected day. The next click chooses its end.
+      newEnd = dayDate;
       setTempStart(newStart);
       setTempEnd(newEnd);
       setActiveSegment('end');
@@ -240,14 +250,6 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
       setActiveSegment('start');
     }
     setActivePreset('custom');
-
-    startTransition(() => {
-      onChange({
-        startDate: toIsoDate(newStart),
-        endDate: toIsoDate(newEnd),
-        presetLabel: 'custom',
-      });
-    });
   };
 
   const handleMonthYearSelect = (monthIdx: number, year: number) => {
@@ -258,44 +260,30 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
     setCalendarAnchor(s);
     setActivePreset('custom');
     setActiveTab('calendar');
-
-    startTransition(() => {
-      onChange({
-        startDate: toIsoDate(s),
-        endDate: toIsoDate(e),
-        presetLabel: 'custom',
-      });
-    });
   };
 
   const handleClear = () => {
     setActivePreset('all');
-    startTransition(() => {
-      onChange({
-        startDate: null,
-        endDate: null,
-        presetLabel: 'all',
-      });
+    onChange({
+      startDate: null,
+      endDate: null,
+      presetLabel: 'all',
     });
     setIsOpen(false);
   };
 
   const handleDone = () => {
-    startTransition(() => {
-      if (activePreset === 'all') {
-        onChange({
-          startDate: null,
-          endDate: null,
-          presetLabel: 'all',
-        });
-      } else {
-        onChange({
-          startDate: toIsoDate(tempStart),
-          endDate: toIsoDate(tempEnd),
-          presetLabel: activePreset,
-        });
-      }
-    });
+    if (activePreset === 'all') {
+      onChange({ startDate: null, endDate: null, presetLabel: 'all' });
+    } else {
+      const start = tempStart <= tempEnd ? tempStart : tempEnd;
+      const end = tempStart <= tempEnd ? tempEnd : tempStart;
+      onChange({
+        startDate: toIsoDate(start),
+        endDate: toIsoDate(end),
+        presetLabel: activePreset,
+      });
+    }
     setIsOpen(false);
   };
 
@@ -307,23 +295,26 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
 
   // Range day count calculation
   const totalDaysSelected = useMemo(() => {
-    if (!value.startDate && !value.endDate) return null;
+    if (activePreset === 'all') return null;
     const s = new Date(tempStart);
     const e = new Date(tempEnd);
     const diffTime = Math.abs(e.getTime() - s.getTime());
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
     return diffDays;
-  }, [value.startDate, value.endDate, tempStart, tempEnd]);
+  }, [activePreset, tempStart, tempEnd]);
 
   const yearsList = useMemo(() => {
-    const list = [];
-    for (let y = 2020; y <= 2028; y++) {
+    const list: number[] = [];
+    const currentYear = new Date().getFullYear();
+    const firstYear = currentYear - 6;
+    const lastYear = currentYear + 6;
+    for (let y = firstYear; y <= lastYear; y++) {
       list.push(y);
     }
     return list;
   }, []);
 
-  const isAllDates = !value.startDate && !value.endDate && activePreset === 'all';
+  const isAllDates = activePreset === 'all';
 
   const displayText = useMemo(() => {
     if (!value.startDate && !value.endDate) {
@@ -344,7 +335,15 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
         </label>
         <button
           type="button"
-          onClick={() => setIsOpen(!isOpen)}
+          onClick={() => {
+            if (!isOpen) {
+              syncWorkingRangeFromValue();
+              setActiveTab('presets');
+              setActiveSegment('start');
+              updatePopoverPlacement();
+            }
+            setIsOpen((open) => !open);
+          }}
           className="flex items-center justify-between gap-3 px-3.5 py-2 bg-white border border-[#E6E1D6] hover:border-[#701A35] rounded-xl shadow-2xs text-xs font-semibold text-slate-800 transition-all duration-120 cursor-pointer min-w-[240px] btn-press"
         >
           <span className="truncate font-mono font-medium">{displayText}</span>
@@ -356,7 +355,7 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
 
       {/* Popover Modal (Smooth, Lag-free, Responsive Enterprise Layout) */}
       {isOpen && (
-        <div className="absolute top-full left-0 mt-2 z-50 w-[360px] sm:w-[420px] bg-white rounded-2xl border border-[#E6E1D6] shadow-2xl p-4 space-y-3.5 motion-popover select-none">
+        <div className={`absolute left-0 z-50 w-[min(420px,calc(100vw-2rem))] max-h-[calc(100vh-5rem)] overflow-y-auto overscroll-contain rounded-2xl border border-[#E6E1D6] bg-white p-4 shadow-2xl space-y-3.5 motion-popover select-none ${popoverPlacement === 'top' ? 'bottom-full mb-2' : 'top-full mt-2'}`}>
           {/* Header */}
           <div className="flex items-center justify-between pb-2.5 border-b border-[#EDE8DF]">
             <div className="flex items-center gap-2">
@@ -769,7 +768,7 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
                 ? `${totalDaysSelected} Days Selected`
                 : 'Custom Selection'}
             </span>
-            <span className="text-slate-400">Auto-applies instantly</span>
+            <span className="text-slate-400">Click Done to apply</span>
           </div>
         </div>
       )}

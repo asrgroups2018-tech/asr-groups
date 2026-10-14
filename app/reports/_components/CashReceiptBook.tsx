@@ -173,7 +173,7 @@ export const CashReceiptBook: React.FC = () => {
     doc.setFillColor(112, 26, 53); doc.rect(0, 0, pw, 58, 'F');
     doc.setFillColor(197, 160, 89); doc.rect(0, 56, pw, 2, 'F');
     doc.setFont('helvetica', 'bold'); doc.setFontSize(16); doc.setTextColor(255, 255, 255);
-    doc.text('ASR GROUP · CASH & RECEIPT BOOK', 32, 28);
+    doc.text('ASR GROUP · Cash & Receipt Book', 32, 28);
     doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(238, 216, 161);
     const periodLabel = fromDate || toDate
       ? `${fromDate ? fmtDate(fromDate) : 'Beginning'} to ${toDate ? fmtDate(toDate) : 'Date'}`
@@ -204,7 +204,7 @@ export const CashReceiptBook: React.FC = () => {
       margin: { left: 32, right: 32, bottom: 34 },
       didDrawPage: (d) => {
         doc.setFontSize(8); doc.setTextColor(130, 130, 130);
-        doc.text(`ASR Group · Cash & Receipt Book · Page ${d.pageNumber} · Confidential`, pw / 2, ph - 16, { align: 'center' });
+        doc.text(`ASR GROUP · Cash & Receipt Book · Page ${d.pageNumber} · Confidential`, pw / 2, ph - 16, { align: 'center' });
       },
     });
     doc.save(`ASR_ReceiptBook_${safeFileName(fromDate || today)}.pdf`);

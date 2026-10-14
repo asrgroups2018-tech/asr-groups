@@ -926,7 +926,7 @@ export const INITIAL_AUDIT_LOGS: AuditLogEntry[] = [
 
 export const INITIAL_SYSTEM_SETTINGS: SystemSettingsState = {
   companyProfile: {
-    companyName: 'ASR Group',
+    companyName: 'ASR GROUP',
     legalEntityName: '',
     logoUrl: '/groups-finalized.png',
     gstin: '',

@@ -109,7 +109,7 @@ export const AddCompanyModal: React.FC<AddCompanyModalProps> = ({ isOpen, onClos
               <span className="font-bold text-slate-800 text-xs">Outside-Party Company</span>
             </label>
             <p className="text-[11px] text-slate-500">
-              Check this if this entity is an external syndicate/funder (e.g. CS, MC, TA, TATVA) rather than ASR Group's own internal company.
+              Check this if this entity is an external syndicate/funder (e.g. CS, MC, TA, TATVA) rather than ASR GROUP's own internal company.
             </p>
           </div>
 

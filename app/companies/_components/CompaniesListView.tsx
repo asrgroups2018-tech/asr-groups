@@ -147,7 +147,7 @@ export const CompaniesListView: React.FC = () => {
             {c.name}
           </button>
           <span className="text-[10px] text-slate-400 block mt-0.5">
-            {c.isOutsideParty ? 'Outside Party Entity' : 'ASR Group Internal Entity'}
+            {c.isOutsideParty ? 'Outside Party Entity' : 'ASR GROUP Internal Entity'}
           </span>
         </div>
       ),
@@ -158,17 +158,17 @@ export const CompaniesListView: React.FC = () => {
       header: 'Ownership',
       sortable: true,
       align: 'center',
-      accessor: (c) => (c.isOutsideParty ? 'Outside Party' : 'ASR Group'),
+      accessor: (c) => (c.isOutsideParty ? 'Outside Party' : 'ASR GROUP'),
       render: (c) => (
         <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${
           c.isOutsideParty
             ? 'bg-purple-50 text-purple-700 border-purple-200'
             : 'bg-emerald-50 text-emerald-700 border-emerald-200'
         }`}>
-          {c.isOutsideParty ? 'Outside Party' : 'ASR Group'}
+          {c.isOutsideParty ? 'Outside Party' : 'ASR GROUP'}
         </span>
       ),
-      exportValue: (c) => (c.isOutsideParty ? 'Outside Party' : 'ASR Group'),
+      exportValue: (c) => (c.isOutsideParty ? 'Outside Party' : 'ASR GROUP'),
     },
     {
       key: 'totalFunded',
@@ -245,7 +245,7 @@ export const CompaniesListView: React.FC = () => {
             </h4>
           </div>
           <span className="text-[11px] text-slate-500 mt-1 block">
-            {c.isOutsideParty ? 'Outside Party Entity' : 'ASR Group Internal Entity'}
+            {c.isOutsideParty ? 'Outside Party Entity' : 'ASR GROUP Internal Entity'}
           </span>
         </div>
         <div className="text-right shrink-0">
@@ -256,7 +256,7 @@ export const CompaniesListView: React.FC = () => {
                 : 'bg-emerald-50 text-emerald-700 border-emerald-200'
             }`}
           >
-            {c.isOutsideParty ? 'Outside Party' : 'ASR Group'}
+            {c.isOutsideParty ? 'Outside Party' : 'ASR GROUP'}
           </span>
         </div>
       </div>
@@ -360,7 +360,7 @@ export const CompaniesListView: React.FC = () => {
 
         <div className="bg-gradient-to-br from-emerald-100/90 via-emerald-50 to-white p-3 rounded-xl border-2 border-emerald-300 shadow-sm hover:border-emerald-400 transition-all">
           <span className="text-[10px] font-bold text-emerald-900 uppercase tracking-wider font-mono">
-            ASR Group Internal
+            ASR GROUP Internal
           </span>
           <div className="mt-1">
             <span className="text-xl font-black font-mono text-emerald-700 block tracking-tight">
@@ -392,7 +392,7 @@ export const CompaniesListView: React.FC = () => {
         <div className="flex items-center gap-1.5 bg-slate-100/80 p-1 rounded-xl border border-slate-200">
           {[
             { id: 'ALL', label: 'All Entities' },
-            { id: 'ASR', label: 'ASR Group Internal' },
+            { id: 'ASR', label: 'ASR GROUP Internal' },
             { id: 'OUTSIDE', label: 'Outside Parties' },
           ].map((tab) => {
             const isActive = partyFilter === tab.id;

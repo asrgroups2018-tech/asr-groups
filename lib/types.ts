@@ -335,7 +335,7 @@ export interface Company {
   id: string; // e.g. "COMP-PASS", "COMP-CS"
   name: string; // Full Company Name
   shortCode: string; // Short ticker code (PASS, ALA, IG, GS, MARS, TG, FIN, MM, CS, MC, TA (SS), TATVA, etc.)
-  isOutsideParty: boolean; // false = ASR Group Own, true = Outside-Party
+  isOutsideParty: boolean; // false = ASR GROUP Own, true = Outside-Party
   isActive?: boolean; // true = active for new loans, false = legacy/hidden
   totalFunded?: number; // Total ₹ capital provided across all loans
   totalCollected?: number; // Total ₹ collected back

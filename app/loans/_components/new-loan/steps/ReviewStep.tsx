@@ -91,7 +91,7 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({
                     <span className="text-amber-300 font-bold shrink-0">{pct.toFixed(1)}%</span>
                   </div>
                   <div className={`text-[10px] font-mono ${c.isOutsideParty ? 'text-purple-300' : 'text-emerald-300'}`}>
-                    Code: {c.shortCode} • {c.isOutsideParty ? 'Outside Party' : 'ASR Group Internal'}
+                    Code: {c.shortCode} • {c.isOutsideParty ? 'Outside Party' : 'ASR GROUP Internal'}
                   </div>
                   <div className="pt-1 border-t border-[#2C1420]">
                     <MoneyDisplay

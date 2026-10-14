@@ -109,7 +109,7 @@ export const CompanyDetailsView: React.FC = () => {
               </span>
             </div>
             <p className="text-xs text-slate-600 font-medium mt-0.5">
-              {company.isOutsideParty ? 'Outside Party Entity' : 'ASR Group Internal Entity'} · Portfolio Breakdown
+              {company.isOutsideParty ? 'Outside Party Entity' : 'ASR GROUP Internal Entity'} · Portfolio Breakdown
             </p>
           </div>
         </div>
@@ -120,7 +120,7 @@ export const CompanyDetailsView: React.FC = () => {
               ? 'bg-purple-50 text-purple-700 border-purple-200'
               : 'bg-emerald-50 text-emerald-700 border-emerald-200'
           }`}>
-            {company.isOutsideParty ? 'Outside Party' : 'ASR Group Own'}
+            {company.isOutsideParty ? 'Outside Party' : 'ASR GROUP Own'}
           </span>
         </div>
       </div>
@@ -159,7 +159,7 @@ export const CompanyDetailsView: React.FC = () => {
           </span>
           <div className="mt-1.5">
             <span className="text-2xl font-black text-emerald-800 block tracking-tight font-serif">
-              {company.isOutsideParty ? 'Outside Party' : 'ASR Group Own'}
+              {company.isOutsideParty ? 'Outside Party' : 'ASR GROUP Own'}
             </span>
           </div>
           <span className="text-[11px] text-emerald-800 font-bold mt-1 block font-mono">
@@ -190,7 +190,7 @@ export const CompanyDetailsView: React.FC = () => {
             <div>
               <span className="text-slate-400 text-[11px] block font-mono">Ownership Type</span>
               <span className="text-slate-800 font-semibold block mt-0.5">
-                {company.isOutsideParty ? 'Outside-Party Entity' : 'ASR Group Internal Entity'}
+                {company.isOutsideParty ? 'Outside-Party Entity' : 'ASR GROUP Internal Entity'}
               </span>
             </div>
           </div>

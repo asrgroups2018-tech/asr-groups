@@ -110,7 +110,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpenMobile, onCloseMobile })
             <div className="w-11 h-11 rounded-full overflow-hidden relative shrink-0 shadow-xs">
               <Image
                 src="/groups-finalized.png"
-                alt="ASR Group Logo"
+                alt="ASR GROUP Logo"
                 fill
                 sizes="44px"
                 className="object-cover"
@@ -119,7 +119,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpenMobile, onCloseMobile })
             </div>
             <div>
               <h1 className="font-serif text-sm font-bold text-[#EED8A1] tracking-wide leading-tight">
-                ASR Group
+                ASR GROUP
               </h1>
             </div>
           </div>

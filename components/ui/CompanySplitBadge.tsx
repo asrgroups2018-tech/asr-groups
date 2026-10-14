@@ -146,7 +146,7 @@ export const CompanySplitBadge: React.FC<CompanySplitBadgeProps> = ({
                     : 'bg-emerald-950/80 text-emerald-300 border-emerald-500/40'
                 }`}
               >
-                {isOutside ? 'Outside Partner' : 'ASR Group'}
+                {isOutside ? 'Outside Partner' : 'ASR GROUP'}
               </span>
             </div>
 

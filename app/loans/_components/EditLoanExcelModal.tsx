@@ -98,7 +98,7 @@ export interface CompanyColumnDef {
 }
 
 export const ALL_COMPANY_COLUMNS: CompanyColumnDef[] = [
-  // 10 ASR Group Companies
+  // 10 ASR GROUP Companies
   { key: 'pass', label: 'PASS ENTERPRISES', isOutside: false },
   { key: 'kars', label: 'KARS ENTERPRISES', isOutside: false },
   { key: 'ig', label: 'INFIN GROUP', isOutside: false },

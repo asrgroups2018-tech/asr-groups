@@ -1,5 +1,5 @@
 /* ─────────────────────────────────────────────────────────────────────────────
-   ASR Groups — Portal Login CSS
+   ASR GROUP — Portal Login CSS
    Theme: Modern Luxury Burgundy (#7B1C2E) & Gold (#C9A84C / #E8C97A)
    Fixed Viewport, Background Slideshow, Compact Centered Card & Crisp Intro Animation
    ───────────────────────────────────────────────────────────────────────────── */
@@ -141,6 +141,20 @@ html, body {
   overflow: hidden;
   opacity: 0;
   animation: asrPageFadeIn 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.45s forwards;
+}
+
+.asr-theme-toggle {
+  position: absolute;
+  top: 24px;
+  right: 28px;
+  z-index: 30;
+}
+
+.asr-theme-toggle .dark-theme-control {
+  background: rgba(10, 2, 8, 0.65) !important;
+  border-color: rgba(201, 168, 76, 0.45) !important;
+  color: #e8c97a !important;
+  backdrop-filter: blur(12px);
 }
 
 @keyframes asrPageFadeIn {

@@ -120,7 +120,7 @@ export const ForeclosureStatement: React.FC = () => {
     return calcForeclosure(selectedLoan, asOfDate, rebateType, rebateNum);
   }, [selectedLoan, asOfDate, rebateType, rebateNum]);
 
-  const companyName = 'ASR Group';
+  const companyName = 'ASR GROUP';
   const today = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' });
 
   const exportPdf = () => {
@@ -134,7 +134,7 @@ export const ForeclosureStatement: React.FC = () => {
     doc.setFillColor(112, 26, 53); doc.rect(0, 0, pw, 70, 'F');
     doc.setFillColor(197, 160, 89); doc.rect(0, 68, pw, 2, 'F');
     doc.setFont('helvetica', 'bold'); doc.setFontSize(15); doc.setTextColor(255, 255, 255);
-    doc.text(companyName.toUpperCase(), pw / 2, 26, { align: 'center' });
+    doc.text(companyName, pw / 2, 26, { align: 'center' });
     doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(238, 216, 161);
     doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(255, 255, 255);
     doc.text('FORECLOSURE STATEMENT', pw / 2, 64, { align: 'center' });

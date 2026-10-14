@@ -136,8 +136,8 @@ export async function exportLoansToExcel(loans: Loan[], dateRangeLabel?: string)
   const rows = flattenLoansForExport(loans);
 
   const workbook = new ExcelJS.Workbook();
-  workbook.creator = 'ASR Group';
-  workbook.lastModifiedBy = 'ASR Group';
+  workbook.creator = 'ASR GROUP';
+  workbook.lastModifiedBy = 'ASR GROUP';
   workbook.created = new Date();
   workbook.modified = new Date();
 
@@ -159,7 +159,7 @@ export async function exportLoansToExcel(loans: Loan[], dateRangeLabel?: string)
     { header: 'RECD DATE', key: 'recdDate', width: 14, align: 'center', type: 'base' },
     { header: 'DEP NAME', key: 'depName', width: 15, align: 'center', type: 'base' },
     { header: 'CHQ NO', key: 'chqNo', width: 14, align: 'center', type: 'base' },
-    // 8 ASR Group Own Companies (Active + Historical)
+    // 8 ASR GROUP Own Companies (Active + Historical)
     { header: 'PASS ENTERPRISES', key: 'pass', width: 18, align: 'right', type: 'asr' },
     { header: 'KARS ENTERPRISES', key: 'kars', width: 18, align: 'right', type: 'asr' },
     { header: 'INFIN GROUP', key: 'ig', width: 16, align: 'right', type: 'asr' },
@@ -435,7 +435,7 @@ export function exportLoansToPDF(loans: Loan[], dateRangeLabel?: string) {
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(16);
   doc.setTextColor(255, 255, 255);
-  doc.text('ASR GROUP · EXECUTIVE LOANS & EMI LEDGER', 30, 28);
+  doc.text('ASR GROUP · Executive Loans & EMI Ledger', 30, 28);
 
   // Subtitle / Filters
   doc.setFont('helvetica', 'normal');
@@ -583,7 +583,7 @@ export function exportLoansToPDF(loans: Loan[], dateRangeLabel?: string) {
       doc.setFontSize(8);
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(150, 150, 150);
-      const str = `Page ${data.pageNumber} of ${doc.getNumberOfPages()}  |  ASR Group  |  Confidential`;
+      const str = `Page ${data.pageNumber} of ${doc.getNumberOfPages()}  |  ASR GROUP  |  Confidential`;
       doc.text(str, pageWidth / 2, pageHeight - 15, { align: 'center' });
     },
   });

@@ -251,7 +251,7 @@ export const HistoricalSheetView: React.FC = () => {
           <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs font-semibold overflow-x-auto max-w-full">
             {[
               { id: 'ALL', label: 'All Companies (16)' },
-              { id: 'ASR_ONLY', label: 'ASR Group Own (10)' },
+              { id: 'ASR_ONLY', label: 'ASR GROUP Own (10)' },
               { id: 'OUTSIDE_ONLY', label: 'Outside Parties (6)' },
             ].map((f) => (
               <button
@@ -330,7 +330,7 @@ export const HistoricalSheetView: React.FC = () => {
                 <th className="p-2.5 w-24 text-center border-r border-[#3D1A2C]">STATUS</th>
                 <th className="p-2.5 w-28 border-r border-[#3D1A2C]">RECD DATE</th>
 
-                {/* ASR Group Own Companies (10) */}
+                {/* ASR GROUP Own Companies (10) */}
                 {showAsrCols && (
                   <>
                     <th className="p-2.5 min-w-[140px] text-right bg-[#301226] border-r border-[#3D1A2C] text-[#EED8A1]">PASS ENTERPRISES</th>
@@ -490,7 +490,7 @@ export const HistoricalSheetView: React.FC = () => {
                       />
                     </td>
 
-                    {/* ASR Group Company Splits (10) */}
+                    {/* ASR GROUP Company Splits (10) */}
                     {showAsrCols && (
                       <>
                         <td className="p-1.5 border-r border-[#EDE8DF] text-right">

@@ -33,7 +33,7 @@ export function printTablePDF(title: string, headers: string[], rows: (string | 
     <!DOCTYPE html>
     <html>
       <head>
-        <title>${title} - ASR Group</title>
+        <title>${title} - ASR GROUP</title>
         <style>
           body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
@@ -92,7 +92,7 @@ export function printTablePDF(title: string, headers: string[], rows: (string | 
       <body>
         <div class="header">
           <div>
-            <div class="title">ASR Group — ${title}</div>
+            <div class="title">ASR GROUP — ${title}</div>
           </div>
           <div class="meta">
             <div>Generated: ${new Date().toLocaleString('en-IN')}</div>
@@ -118,7 +118,7 @@ export function printTablePDF(title: string, headers: string[], rows: (string | 
           </tbody>
         </table>
         <div class="footer">
-          <span>ASR Group</span>
+          <span>ASR GROUP</span>
           <span>Page 1 of 1</span>
         </div>
         <script>

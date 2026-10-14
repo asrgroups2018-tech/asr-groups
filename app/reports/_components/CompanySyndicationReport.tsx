@@ -88,7 +88,7 @@ export const CompanySyndicationReport: React.FC = () => {
       header: 'Ownership',
       sortable: true,
       align: 'center',
-      accessor: (r) => (r.isOutsideParty ? 'Outside Party' : 'ASR Group'),
+      accessor: (r) => (r.isOutsideParty ? 'Outside Party' : 'ASR GROUP'),
       render: (r) => (
         <span
           className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${
@@ -97,10 +97,10 @@ export const CompanySyndicationReport: React.FC = () => {
               : 'bg-emerald-50 text-emerald-700 border-emerald-200'
           }`}
         >
-          {r.isOutsideParty ? 'Outside Party' : 'ASR Group'}
+          {r.isOutsideParty ? 'Outside Party' : 'ASR GROUP'}
         </span>
       ),
-      exportValue: (r) => (r.isOutsideParty ? 'Outside Party' : 'ASR Group'),
+      exportValue: (r) => (r.isOutsideParty ? 'Outside Party' : 'ASR GROUP'),
     },
     {
       key: 'activeLoansCount',

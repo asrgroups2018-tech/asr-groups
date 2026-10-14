@@ -14,6 +14,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import { RoleBadge } from '@/components/ui/RoleBadge';
+import { ThemeToggle } from '@/components/ui/ThemeToggle';
 
 interface TopNavProps {
   onOpenMobileMenu: () => void;
@@ -156,7 +157,7 @@ export const TopNav: React.FC<TopNavProps> = ({ onOpenMobileMenu }) => {
         </button>
 
         <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 flex-wrap">
-          <span className="text-slate-400">ASR Group</span>
+          <span className="text-slate-400">ASR GROUP</span>
           {breadcrumbs.map((crumb, idx) => (
             <React.Fragment key={idx}>
               <span className="text-slate-300">›</span>
@@ -176,6 +177,7 @@ export const TopNav: React.FC<TopNavProps> = ({ onOpenMobileMenu }) => {
 
       {/* Right: Notifications & Profile */}
       <div className="flex items-center gap-2 sm:gap-3">
+        <ThemeToggle />
         {/* Notification Bell */}
         <div className="relative">
           <button
@@ -270,7 +272,7 @@ export const TopNav: React.FC<TopNavProps> = ({ onOpenMobileMenu }) => {
               </div>
               <div className="min-w-0 flex-1">
                 <h2 id="sign-out-title" className="text-base font-bold text-slate-900">
-                  Sign out of ASR Group?
+                  Sign out of ASR GROUP?
                 </h2>
                 <p className="mt-1 text-sm leading-5 text-slate-500">
                   Your current session will be securely ended on this device.

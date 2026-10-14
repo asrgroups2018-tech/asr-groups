@@ -4,6 +4,7 @@ import React, { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Filter, Search, UserPlus, Users } from 'lucide-react';
 import { useApp } from '@/lib/store';
+import { APP_BRAND } from '@/lib/branding';
 import { RoleId, User } from '@/lib/types';
 import { RoleBadge } from '@/components/ui/RoleBadge';
 import { StatusPill } from '@/components/ui/StatusPill';
@@ -19,7 +20,7 @@ const chipLabels: Record<FilterChip, string> = {
 
 export const UserManagementTab: React.FC = () => {
   const router = useRouter();
-  const { users, roles, setSelectedUserId, toggleUserStatus, deleteUser, showToast, systemSettings } = useApp();
+  const { users, roles, setSelectedUserId, toggleUserStatus, deleteUser, showToast } = useApp();
   const [activeChip, setActiveChip] = useState<FilterChip>('all');
   const [roleFilter, setRoleFilter] = useState('all');
   const [query, setQuery] = useState('');
@@ -50,7 +51,7 @@ export const UserManagementTab: React.FC = () => {
     });
   }, [activeChip, query, roleFilter, users]);
 
-  const companyName = systemSettings?.companyProfile?.companyName || 'your organisation';
+  const companyName = APP_BRAND;
   const openAccount = (user: User, edit = false) => {
     setSelectedUserId(user.id);
     router.push(`/administration/users/${encodeURIComponent(user.id)}${edit ? '?edit=1' : ''}`);

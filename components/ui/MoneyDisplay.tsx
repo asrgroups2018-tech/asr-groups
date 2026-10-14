@@ -32,8 +32,7 @@ export const MoneyDisplay: React.FC<MoneyDisplayProps> = ({
 
   const containerRef = useRef<HTMLSpanElement>(null);
   const [isOpen, setIsOpen] = useState(false);
-  const [dynamicAlign, setDynamicAlign] = useState<'left' | 'right' | 'center'>('center');
-  const [dynamicPos, setDynamicPos] = useState<'top' | 'bottom'>('top');
+  const [tooltipCoords, setTooltipCoords] = useState({ top: 0, left: 0 });
 
   const sizeClasses: Record<string, string> = {
     '2xs': 'text-[10px]',
@@ -51,58 +50,36 @@ export const MoneyDisplay: React.FC<MoneyDisplayProps> = ({
     if (typeof window === 'undefined') return;
 
     const rect = el.getBoundingClientRect();
-    const windowWidth = window.innerWidth;
-    const rightSpace = windowWidth - rect.right;
+    const viewportPadding = 12;
+    const tooltipWidth = Math.min(280, Math.max(180, window.innerWidth - viewportPadding * 2));
+    const estimatedHeight = 72;
+    const rightSpace = window.innerWidth - rect.right;
     const leftSpace = rect.left;
-    const topSpace = rect.top;
 
-    // Check if inside a scrollable container
-    const scrollParent = el.closest(
-      '.overflow-y-auto, .overflow-auto, [class*="overflow-y"], [class*="overflow-auto"], .overflow-x-auto'
+    const nextAlign = align || (rightSpace < tooltipWidth / 2 + viewportPadding
+      ? 'right'
+      : leftSpace < tooltipWidth / 2 + viewportPadding
+        ? 'left'
+        : 'center');
+    const idealLeft = nextAlign === 'left'
+      ? rect.left
+      : nextAlign === 'right'
+        ? rect.right - tooltipWidth
+        : rect.left + (rect.width - tooltipWidth) / 2;
+    const left = Math.min(
+      Math.max(viewportPadding, idealLeft),
+      Math.max(viewportPadding, window.innerWidth - tooltipWidth - viewportPadding),
     );
 
-    if (scrollParent) {
-      const parentRect = scrollParent.getBoundingClientRect();
-      const spaceAboveInParent = rect.top - parentRect.top;
-      const spaceRightInParent = parentRect.right - rect.right;
-      const spaceLeftInParent = rect.left - parentRect.left;
+    const forcedPosition = tooltipPosition;
+    const canOpenAbove = rect.top >= estimatedHeight + viewportPadding;
+    const canOpenBelow = rect.bottom + estimatedHeight + viewportPadding <= window.innerHeight;
+    const nextPos = forcedPosition || (canOpenAbove || !canOpenBelow ? 'top' : 'bottom');
+    const top = nextPos === 'top'
+      ? Math.max(viewportPadding, rect.top - estimatedHeight - 10)
+      : Math.min(window.innerHeight - estimatedHeight - viewportPadding, rect.bottom + 10);
 
-      if (!tooltipPosition) {
-        if (spaceAboveInParent < 90 || topSpace < 110) {
-          setDynamicPos('bottom');
-        } else {
-          setDynamicPos('top');
-        }
-      }
-
-      if (!align) {
-        if (spaceRightInParent < 160 || rightSpace < 200) {
-          setDynamicAlign('right');
-        } else if (spaceLeftInParent < 160 || leftSpace < 200) {
-          setDynamicAlign('left');
-        } else {
-          setDynamicAlign('center');
-        }
-      }
-    } else {
-      if (!tooltipPosition) {
-        if (topSpace < 120) {
-          setDynamicPos('bottom');
-        } else {
-          setDynamicPos('top');
-        }
-      }
-
-      if (!align) {
-        if (rightSpace < 220) {
-          setDynamicAlign('right');
-        } else if (leftSpace < 220) {
-          setDynamicAlign('left');
-        } else {
-          setDynamicAlign('center');
-        }
-      }
-    }
+    setTooltipCoords({ top, left });
   }, [align, tooltipPosition]);
 
   const handleMouseEnter = () => {
@@ -120,6 +97,19 @@ export const MoneyDisplay: React.FC<MoneyDisplayProps> = ({
     setIsOpen((prev) => !prev);
   };
 
+  useEffect(() => {
+    if (!isOpen) return;
+    const reposition = () => {
+      if (containerRef.current) updatePosition(containerRef.current);
+    };
+    window.addEventListener('resize', reposition);
+    window.addEventListener('scroll', reposition, true);
+    return () => {
+      window.removeEventListener('resize', reposition);
+      window.removeEventListener('scroll', reposition, true);
+    };
+  }, [isOpen, updatePosition]);
+
   // Close on outside click
   useEffect(() => {
     if (!isOpen) return;
@@ -136,22 +126,6 @@ export const MoneyDisplay: React.FC<MoneyDisplayProps> = ({
     };
   }, [isOpen]);
 
-  const currentPos = tooltipPosition || dynamicPos;
-  const currentAlign = align || dynamicAlign;
-  const isTop = currentPos === 'top';
-
-  const alignBoxClasses: Record<string, string> = {
-    left: 'left-0 items-start',
-    right: 'right-0 items-end',
-    center: 'left-1/2 -translate-x-1/2 items-center',
-  };
-
-  const alignNotchClasses: Record<string, string> = {
-    left: 'left-4',
-    right: 'right-4',
-    center: 'left-1/2 -translate-x-1/2',
-  };
-
   return (
     <>
       <span
@@ -160,7 +134,7 @@ export const MoneyDisplay: React.FC<MoneyDisplayProps> = ({
         onClick={handleClick}
         role="button"
         tabIndex={0}
-        title={words ? `Click or tap to view: ${words}` : undefined}
+        aria-label={words ? `Amount in words: ${words}` : undefined}
         className={`group/money relative inline-flex items-center cursor-pointer select-none active:scale-[0.98] transition-transform ${className}`}
       >
         <span
@@ -174,41 +148,32 @@ export const MoneyDisplay: React.FC<MoneyDisplayProps> = ({
         {/* ─── Desktop Hover/Click Tooltip (Hidden on Mobile) ─── */}
         {showTooltip && words && (
           <span
-            className={`hidden sm:flex-col sm:absolute z-[150] transition-all duration-150 ${alignBoxClasses[currentAlign]} ${
-              isTop ? 'bottom-full mb-2.5' : 'top-full mt-2.5'
-            } ${
+            role="tooltip"
+            className={`hidden sm:block sm:fixed z-[150] transition-opacity duration-150 ${
               isOpen
-                ? 'sm:flex opacity-100 scale-100 pointer-events-auto'
-                : 'sm:hidden group-hover/money:sm:flex opacity-0 group-hover/money:opacity-100 group-hover/money:scale-100 scale-95 pointer-events-none'
+                ? 'opacity-100 pointer-events-auto'
+                : 'opacity-0 group-hover/money:opacity-100 pointer-events-none'
             }`}
             style={{
-              minWidth: '200px',
-              maxWidth: '320px',
+              top: tooltipCoords.top,
+              left: tooltipCoords.left,
+              minWidth: '180px',
+              maxWidth: 'min(280px, calc(100vw - 24px))',
               width: 'max-content',
+              maxHeight: 'calc(100vh - 24px)',
+              overflowY: 'auto',
             }}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Main Card Content */}
-            <div className="relative z-10 px-3.5 py-2.5 bg-[#1A0B16] border border-[#C5A059]/80 rounded-xl shadow-2xl shadow-black/95 backdrop-blur-xl text-center w-full">
-              <div className="flex items-center justify-between gap-1.5 text-[9px] uppercase tracking-wider font-mono font-bold text-[#C5A059] mb-1">
-                <div className="flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#C5A059] animate-pulse shrink-0" />
-                  <span>Amount in Words</span>
-                </div>
-              </div>
-              <p className="text-xs font-sans font-semibold text-amber-50 leading-snug whitespace-normal break-words text-center select-text">
+            <div className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 shadow-xl text-left">
+              <span className="block text-[9px] font-semibold uppercase tracking-wider text-slate-400">
+                Amount in words
+              </span>
+              <p className="mt-1 text-xs font-semibold leading-snug text-white whitespace-normal break-words select-text">
                 {words}
               </p>
             </div>
-
-            {/* Pointer Notch */}
-            <div
-              className={`absolute ${alignNotchClasses[currentAlign]} w-2.5 h-2.5 rotate-45 bg-[#1A0B16] border-[#C5A059]/80 ${
-                isTop
-                  ? '-bottom-1 border-r border-b relative z-20'
-                  : '-top-1 border-l border-t relative z-20'
-              }`}
-            />
           </span>
         )}
       </span>

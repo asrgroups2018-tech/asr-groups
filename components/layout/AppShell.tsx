@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { Sidebar } from './Sidebar';
 import { TopNav } from './TopNav';
 import { Footer } from './Footer';
@@ -13,7 +13,6 @@ interface AppShellProps {
 }
 
 export const AppShell: React.FC<AppShellProps> = ({ children }) => {
-  const pathname = usePathname();
   const router = useRouter();
   const { authReady, isAuthenticated } = useApp();
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
