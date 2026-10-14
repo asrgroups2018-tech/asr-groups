@@ -142,7 +142,7 @@ export default function LoginPage() {
           <div className="asr-intro-badge">
             <Image
               src="/groups-finalized.png"
-              alt="ASR Groups Logo"
+              alt="ASR Group Logo"
               width={160}
               height={160}
               className="asr-intro-logo-img"
@@ -150,7 +150,7 @@ export default function LoginPage() {
               unoptimized
             />
           </div>
-          <h1 className="asr-intro-title">ASR GROUPS</h1>
+          <h1 className="asr-intro-title">ASR GROUP</h1>
         </div>
       )}
 
@@ -173,14 +173,14 @@ export default function LoginPage() {
           <div className="asr-brand-badge">
             <Image
               src="/groups-finalized.png"
-              alt="ASR Groups Logo"
+              alt="ASR Group Logo"
               width={70}
               height={70}
               className="asr-logo-img"
               priority
               unoptimized
             />
-            <span className="asr-brand-title">ASR GROUPS</span>
+            <span className="asr-brand-title">ASR GROUP</span>
           </div>
         </header>
 
@@ -311,7 +311,7 @@ export default function LoginPage() {
 
         {/* Footer */}
         <footer className="asr-footer">
-          <span>© 2026 ASR Groups. All Rights Reserved.</span>
+          <span>© 2026 ASR Group. All Rights Reserved.</span>
         </footer>
       </div>
     </div>

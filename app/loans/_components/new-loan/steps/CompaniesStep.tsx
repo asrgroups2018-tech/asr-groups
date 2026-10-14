@@ -4,7 +4,7 @@ import React, { useMemo } from 'react';
 import { Building2, Check, RefreshCw } from 'lucide-react';
 import { Company } from '@/lib/types';
 import { MoneyDisplay } from '@/components/ui/MoneyDisplay';
-import { formatIndianCommas, parseFormattedNumber } from '@/lib/utils/numberToWords';
+import { DraftNumberInput } from '@/components/ui/DraftNumberInput';
 
 interface CompaniesStepProps {
   companies: Company[];
@@ -350,17 +350,10 @@ export const CompaniesStep: React.FC<CompaniesStepProps> = ({
                       <>
                         {/* Percentage Input */}
                         <div className="flex items-center gap-1.5">
-                          <input
-                            type="number"
-                            min="0"
-                            max="100"
-                            step="0.5"
-                            value={pct === 0 ? '' : pct}
+                          <DraftNumberInput
+                            value={pct}
+                            onCommit={(val) => handlePctChange(company.id, Math.min(100, Math.max(0, val)))}
                             placeholder="0"
-                            onChange={(e) => {
-                              const val = parseFloat(e.target.value) || 0;
-                              handlePctChange(company.id, val);
-                            }}
                             className="w-20 bg-[#240F1D] border border-[#3D1A2C] rounded-lg px-2.5 py-1.5 text-xs font-mono font-bold text-right text-[#EED8A1] focus:outline-hidden focus:border-[#C5A059]"
                           />
                           <span className="text-xs text-slate-400 font-mono font-bold">%</span>
@@ -380,16 +373,10 @@ export const CompaniesStep: React.FC<CompaniesStepProps> = ({
                         {/* Exact Amount Input */}
                         <div className="flex items-center gap-1.5">
                           <span className="text-xs text-[#C5A059] font-mono font-bold">₹</span>
-                          <input
-                            type="text"
-                            inputMode="numeric"
-                            value={manualAmt ? formatIndianCommas(manualAmt) : ''}
+                          <DraftNumberInput
+                            value={manualAmt}
+                            onCommit={(val) => handleAmountChange(company.id, val)}
                             placeholder="0"
-                            onChange={(e) => {
-                              const cleanDigits = e.target.value.replace(/[^0-9.]/g, '');
-                              const num = parseFormattedNumber(cleanDigits);
-                              handleAmountChange(company.id, num);
-                            }}
                             className="w-32 bg-[#240F1D] border border-[#3D1A2C] rounded-lg px-2.5 py-1.5 text-xs font-mono font-bold text-right text-[#EED8A1] focus:outline-hidden focus:border-[#C5A059]"
                           />
                         </div>

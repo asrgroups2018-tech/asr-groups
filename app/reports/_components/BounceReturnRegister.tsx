@@ -15,6 +15,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 import { useApp } from '@/lib/store';
+import { APP_BRAND } from '@/lib/branding';
 import { formatINR } from '@/lib/utils/formatCurrency';
 import { Loan } from '@/lib/types';
 
@@ -183,7 +184,7 @@ export const BounceReturnRegister: React.FC = () => {
     const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
     const pw = doc.internal.pageSize.getWidth();
     const ph = doc.internal.pageSize.getHeight();
-    const companyName = systemSettings.companyProfile.companyName || 'ASR Groups';
+    const companyName = APP_BRAND;
     doc.setFillColor(112, 26, 53); doc.rect(0, 0, pw, 58, 'F');
     doc.setFillColor(197, 160, 89); doc.rect(0, 56, pw, 2, 'F');
     doc.setFont('helvetica', 'bold'); doc.setFontSize(16); doc.setTextColor(255, 255, 255);

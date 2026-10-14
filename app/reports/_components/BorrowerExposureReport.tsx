@@ -54,8 +54,8 @@ export const BorrowerExposureReport: React.FC = () => {
         return {
           id: c.id,
           name: c.name,
-          place: c.place || 'CHENNAI',
-          phone: c.phone || '+91 98400 00000',
+          place: c.place || '',
+          phone: c.phone || '',
           activeLoansCount: c.activeLoansCount || 0,
           totalBorrowed,
           totalRepaid,

@@ -55,7 +55,7 @@ export function flattenLoansForExport(loans: Loan[]): FlattenedLoanExportRow[] {
         seqNo: 1,
         clientName: loan.customerName,
         codeNo: loan.codeNo || '',
-        place: loan.place || 'CHENNAI',
+        place: loan.place || '',
         dueDate: loan.startDate || '',
         amountDue: loan.totalAmount || 0,
         status: loan.status || 'Active',
@@ -91,7 +91,7 @@ export function flattenLoansForExport(loans: Loan[]): FlattenedLoanExportRow[] {
         seqNo: inst.seqNo || idx + 1,
         clientName: loan.customerName,
         codeNo: loan.codeNo || '',
-        place: inst.place || loan.place || 'CHENNAI',
+        place: inst.place || loan.place || '',
         dueDate: inst.dueDate || loan.startDate || '',
         amountDue: Number(inst.amountDue) || 0,
         status: inst.status || 'PENDING',
@@ -136,8 +136,8 @@ export async function exportLoansToExcel(loans: Loan[], dateRangeLabel?: string)
   const rows = flattenLoansForExport(loans);
 
   const workbook = new ExcelJS.Workbook();
-  workbook.creator = 'ASR Groups Internal Finance ERP';
-  workbook.lastModifiedBy = 'ASR Groups ERP';
+  workbook.creator = 'ASR Group';
+  workbook.lastModifiedBy = 'ASR Group';
   workbook.created = new Date();
   workbook.modified = new Date();
 
@@ -187,7 +187,7 @@ export async function exportLoansToExcel(loans: Loan[], dateRangeLabel?: string)
     r.seqNo || rowIdx + 1,
     r.clientName,
     r.codeNo || '',
-    r.place || 'CHENNAI',
+    r.place || '',
     r.dueDate || '',
     r.amountDue || 0,
     r.status || 'PENDING',
@@ -435,7 +435,7 @@ export function exportLoansToPDF(loans: Loan[], dateRangeLabel?: string) {
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(16);
   doc.setTextColor(255, 255, 255);
-  doc.text('ASR GROUPS · EXECUTIVE LOANS & EMI LEDGER', 30, 28);
+  doc.text('ASR GROUP · EXECUTIVE LOANS & EMI LEDGER', 30, 28);
 
   // Subtitle / Filters
   doc.setFont('helvetica', 'normal');
@@ -513,7 +513,7 @@ export function exportLoansToPDF(loans: Loan[], dateRangeLabel?: string) {
       String(r.seqNo),
       r.clientName,
       r.codeNo || '-',
-      r.place || 'CHENNAI',
+      r.place || '',
       r.dueDate || '-',
       r.amountDue.toLocaleString('en-IN'),
       r.status || 'PENDING',
@@ -583,7 +583,7 @@ export function exportLoansToPDF(loans: Loan[], dateRangeLabel?: string) {
       doc.setFontSize(8);
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(150, 150, 150);
-      const str = `Page ${data.pageNumber} of ${doc.getNumberOfPages()}  |  ASR Groups Financial ERP  |  Confidential & Proprietary`;
+      const str = `Page ${data.pageNumber} of ${doc.getNumberOfPages()}  |  ASR Group  |  Confidential`;
       doc.text(str, pageWidth / 2, pageHeight - 15, { align: 'center' });
     },
   });

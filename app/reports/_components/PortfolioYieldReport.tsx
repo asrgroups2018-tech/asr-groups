@@ -45,7 +45,7 @@ export const PortfolioYieldReport: React.FC = () => {
         codeNo: l.codeNo,
         startDate: l.startDate,
         customerName: l.customerName,
-        place: l.place || 'CHENNAI',
+        place: l.place || '',
         totalAmount,
         frequency: l.frequency,
         installmentCount: l.installmentCount || insts.length,

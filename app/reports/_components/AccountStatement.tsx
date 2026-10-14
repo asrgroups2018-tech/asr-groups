@@ -108,14 +108,12 @@ function buildCustomerSummary(
 }
 
 export const AccountStatement: React.FC = () => {
-  const { customers, loans, systemSettings, showToast } = useApp();
+  const { customers, loans, showToast } = useApp();
   const [query, setQuery] = useState('');
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
   const printRef = useRef<HTMLDivElement>(null);
-
-  const companyProfile = systemSettings.companyProfile;
 
   const filteredCustomers = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -215,15 +213,7 @@ export const AccountStatement: React.FC = () => {
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(18);
     doc.setTextColor(255, 255, 255);
-    doc.text(companyProfile.companyName || 'ASR GROUPS', 32, 32);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
-    doc.setTextColor(238, 216, 161);
-    doc.text(companyProfile.registeredAddress || '', 32, 46);
-    doc.text(
-      [companyProfile.supportPhone, companyProfile.supportEmail].filter(Boolean).join(' · '),
-      32, 58
-    );
+    doc.text('ASR Group', 32, 32);
 
     // Statement title
     doc.setFillColor(248, 246, 242);
@@ -305,7 +295,7 @@ export const AccountStatement: React.FC = () => {
         doc.setFontSize(8);
         doc.setTextColor(130, 130, 130);
         doc.text(
-          `${companyProfile.companyName || 'ASR Groups'} · Confidential · Page ${data.pageNumber}`,
+          `ASR Group · Confidential · Page ${data.pageNumber}`,
           pw / 2, ph - 16, { align: 'center' }
         );
       },
@@ -460,16 +450,7 @@ export const AccountStatement: React.FC = () => {
               <div className="border-b-2 border-[#701A35] pb-4 mb-4">
                 <div className="flex items-start justify-between">
                   <div>
-                    <div className="text-xl font-bold text-[#701A35]">{companyProfile.companyName || 'ASR GROUPS'}</div>
-                    <div className="text-[10px] text-slate-500 mt-0.5">{companyProfile.legalEntityName || ''}</div>
-                    <div className="text-[10px] text-slate-500">{companyProfile.registeredAddress || ''}</div>
-                    <div className="text-[10px] text-slate-500">
-                      {[companyProfile.supportPhone, companyProfile.supportEmail].filter(Boolean).join(' · ')}
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    {companyProfile.gstin && <div className="text-[10px] text-slate-500">GSTIN: {companyProfile.gstin}</div>}
-                    {companyProfile.pan && <div className="text-[10px] text-slate-500">PAN: {companyProfile.pan}</div>}
+                    <div className="text-xl font-bold text-[#701A35]">ASR Group</div>
                   </div>
                 </div>
               </div>
@@ -555,13 +536,12 @@ export const AccountStatement: React.FC = () => {
               <div className="mt-10 flex items-end justify-between">
                 <div className="text-[9px] text-slate-500">
                   <p>This is a computer-generated statement.</p>
-                  <p>For queries, contact {companyProfile.supportEmail || ''}</p>
                 </div>
                 <div className="text-center">
                   <div className="border-t border-slate-400 w-40 pt-1 text-[9px] text-slate-500">
                     Authorised Signatory
                   </div>
-                  <div className="text-[9px] text-slate-500 mt-0.5">{companyProfile.companyName || 'ASR Groups'}</div>
+                  <div className="text-[9px] text-slate-500 mt-0.5">ASR Group</div>
                 </div>
               </div>
             </div>

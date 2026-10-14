@@ -16,6 +16,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 import { useApp } from '@/lib/store';
+import { APP_BRAND } from '@/lib/branding';
 import { formatINR } from '@/lib/utils/formatCurrency';
 import { Loan, Company } from '@/lib/types';
 
@@ -257,7 +258,7 @@ export const PortfolioPnL: React.FC = () => {
     return allMonthly.filter((r) => r.monthKey.startsWith(yearFilter));
   }, [allMonthly, yearFilter]);
 
-  const companyName = systemSettings.companyProfile.companyName || 'ASR Groups';
+  const companyName = APP_BRAND;
   const today = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' });
 
   const exportPdf = () => {

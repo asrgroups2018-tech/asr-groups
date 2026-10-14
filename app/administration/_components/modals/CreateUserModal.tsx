@@ -122,7 +122,7 @@ export const CreateUserModal: React.FC<CreateUserModalProps> = ({ isOpen, onClos
 
   const copyCredentials = async () => {
     if (!credentials) return;
-    await navigator.clipboard.writeText(`ASR Groups login\nName: ${credentials.name}\n${credentials.loginLabel}: ${credentials.login}\nPassword: ${credentials.password}`);
+    await navigator.clipboard.writeText(`ASR Group login\nName: ${credentials.name}\n${credentials.loginLabel}: ${credentials.login}\nPassword: ${credentials.password}`);
     showToast('Credentials copied', 'The login details were copied to the clipboard.', 'info');
   };
 

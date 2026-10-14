@@ -15,6 +15,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 import { useApp } from '@/lib/store';
+import { APP_BRAND } from '@/lib/branding';
 import { formatINR } from '@/lib/utils/formatCurrency';
 import { isPaid, isBounce, dateKey } from './CollectionsView';
 import type { DateRange, Period } from './CollectionsView';
@@ -161,7 +162,7 @@ export const CollectionSheet: React.FC<{ dateRange: DateRange; period: Period; p
     return m;
   }, [rows]);
 
-  const companyName = systemSettings.companyProfile.companyName || 'ASR Groups';
+  const companyName = APP_BRAND;
 
   const exportPdf = () => {
     if (!filtered.length) { showToast('Nothing to export', 'No rows match filters.', 'warning'); return; }

@@ -524,7 +524,7 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
         </div>
 
         {/* Modal Footer Controls */}
-        <div className="p-3 sm:p-4 border-t border-[#2C1420] bg-[#230D1B] flex flex-wrap items-center justify-between gap-2">
+        <div className="p-3 sm:p-4 border-t border-[#2C1420] bg-[#230D1B] flex flex-nowrap items-center justify-between gap-2 overflow-hidden">
           {currentStep > 1 ? (
             <button
               type="button"
@@ -537,7 +537,7 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
             <div />
           )}
 
-          <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3 ml-auto">
+          <div className="flex flex-nowrap items-center justify-end gap-2 sm:gap-3 ml-auto shrink-0">
             <button
               type="button"
               onClick={onClose}

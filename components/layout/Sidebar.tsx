@@ -110,7 +110,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpenMobile, onCloseMobile })
             <div className="w-11 h-11 rounded-full overflow-hidden relative shrink-0 shadow-xs">
               <Image
                 src="/groups-finalized.png"
-                alt="ASR Groups Logo"
+                alt="ASR Group Logo"
                 fill
                 sizes="44px"
                 className="object-cover"
@@ -119,7 +119,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpenMobile, onCloseMobile })
             </div>
             <div>
               <h1 className="font-serif text-sm font-bold text-[#EED8A1] tracking-wide leading-tight">
-                ASR Groups
+                ASR Group
               </h1>
             </div>
           </div>
@@ -145,7 +145,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpenMobile, onCloseMobile })
                   <button
                     key={item.id}
                     onClick={() => handleNavClick(item.id, item.href)}
-                    className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-all duration-140 ease-out group cursor-pointer btn-press ${
+                    className={`card-float w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-all duration-140 ease-out group cursor-pointer btn-press ${
                       isActive
                         ? 'bg-[#2E1220] text-[#EED8A1] border border-[#C5A059]/40 shadow-xs font-bold'
                         : 'text-slate-300/80 hover:text-white hover:bg-white/5 border border-transparent'

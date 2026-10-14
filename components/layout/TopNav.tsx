@@ -156,7 +156,7 @@ export const TopNav: React.FC<TopNavProps> = ({ onOpenMobileMenu }) => {
         </button>
 
         <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 flex-wrap">
-          <span className="text-slate-400">ASR Groups</span>
+          <span className="text-slate-400">ASR Group</span>
           {breadcrumbs.map((crumb, idx) => (
             <React.Fragment key={idx}>
               <span className="text-slate-300">›</span>
@@ -270,7 +270,7 @@ export const TopNav: React.FC<TopNavProps> = ({ onOpenMobileMenu }) => {
               </div>
               <div className="min-w-0 flex-1">
                 <h2 id="sign-out-title" className="text-base font-bold text-slate-900">
-                  Sign out of ASR Groups?
+                  Sign out of ASR Group?
                 </h2>
                 <p className="mt-1 text-sm leading-5 text-slate-500">
                   Your current session will be securely ended on this device.

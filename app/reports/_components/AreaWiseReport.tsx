@@ -12,6 +12,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 import { useApp } from '@/lib/store';
+import { APP_BRAND } from '@/lib/branding';
 import { formatINR } from '@/lib/utils/formatCurrency';
 import { Loan } from '@/lib/types';
 
@@ -130,7 +131,7 @@ export const AreaWiseReport: React.FC = () => {
   const sortIndicator = (col: keyof AreaRow) =>
     sortCol === col ? (sortDir === 'desc' ? ' ↓' : ' ↑') : '';
 
-  const companyName = systemSettings.companyProfile.companyName || 'ASR Groups';
+  const companyName = APP_BRAND;
   const today = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' });
 
   const exportPdf = () => {

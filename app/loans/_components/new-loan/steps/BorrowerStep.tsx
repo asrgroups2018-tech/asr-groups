@@ -41,13 +41,17 @@ export const BorrowerStep: React.FC<BorrowerStepProps> = ({
   setTotalAmount,
 }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
+  const [searchDraft, setSearchDraft] = useState(customerSearch);
+  const [newNameDraft, setNewNameDraft] = useState(newCustomerName);
+  const [newPlaceDraft, setNewPlaceDraft] = useState(newCustomerPlace);
+  const [newCodeDraft, setNewCodeDraft] = useState(newCustomerCodeNo);
 
   const filteredCustomers = customers.filter(
     (c) =>
-      !customerSearch.trim() ||
-      c.name.toLowerCase().includes(customerSearch.toLowerCase()) ||
-      (c.place && c.place.toLowerCase().includes(customerSearch.toLowerCase())) ||
-      (c.codeNo && c.codeNo.toLowerCase().includes(customerSearch.toLowerCase()))
+      !searchDraft.trim() ||
+      c.name.toLowerCase().includes(searchDraft.toLowerCase()) ||
+      (c.place && c.place.toLowerCase().includes(searchDraft.toLowerCase())) ||
+      (c.codeNo && c.codeNo.toLowerCase().includes(searchDraft.toLowerCase()))
   );
 
   return (
@@ -64,6 +68,7 @@ export const BorrowerStep: React.FC<BorrowerStepProps> = ({
               setIsCreatingNewCustomer(!isCreatingNewCustomer);
               setSelectedCustomerId('');
               setCustomerSearch('');
+              setSearchDraft('');
               setIsDropdownOpen(false);
             }}
             className="text-xs text-[#C5A059] hover:underline font-mono cursor-pointer"
@@ -78,15 +83,16 @@ export const BorrowerStep: React.FC<BorrowerStepProps> = ({
               <input
                 type="text"
                 placeholder="Search or select borrower name (e.g. ABI ASSOCIATES)..."
-                value={customerSearch}
+                value={searchDraft}
                 onFocus={() => setIsDropdownOpen(true)}
                 onChange={(e) => {
-                  setCustomerSearch(e.target.value);
+                  setSearchDraft(e.target.value);
                   setSelectedCustomerId('');
                   setIsDropdownOpen(true);
                 }}
+                onBlur={() => setCustomerSearch(searchDraft)}
                 className={`w-full bg-[#160810] border rounded-lg pl-3.5 ${
-                  selectedCustomerId ? 'pr-28 sm:pr-24' : customerSearch ? 'pr-9' : 'pr-3.5'
+                  selectedCustomerId ? 'pr-28 sm:pr-24' : searchDraft ? 'pr-9' : 'pr-3.5'
                 } py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-hidden transition-colors ${
                   selectedCustomerId
                     ? 'border-[#C5A059] bg-[#C5A059]/10 font-semibold text-[#EED8A1]'
@@ -99,10 +105,11 @@ export const BorrowerStep: React.FC<BorrowerStepProps> = ({
                     <Check className="w-3 h-3 text-emerald-400" /> Selected
                   </span>
                 )}
-                {customerSearch && (
+                {searchDraft && (
                   <button
                     type="button"
                     onClick={() => {
+                      setSearchDraft('');
                       setCustomerSearch('');
                       setSelectedCustomerId('');
                       setIsDropdownOpen(true);
@@ -125,6 +132,7 @@ export const BorrowerStep: React.FC<BorrowerStepProps> = ({
                       key={c.id}
                       onClick={() => {
                         setSelectedCustomerId(c.id);
+                        setSearchDraft(c.name);
                         setCustomerSearch(c.name);
                         setIsDropdownOpen(false);
                       }}
@@ -140,7 +148,7 @@ export const BorrowerStep: React.FC<BorrowerStepProps> = ({
                   ))
                 ) : (
                   <div className="p-3 text-xs text-slate-500 text-center">
-                    No borrower found matching &ldquo;{customerSearch}&rdquo;
+                    No borrower found matching &ldquo;{searchDraft}&rdquo;
                   </div>
                 )}
               </div>
@@ -153,8 +161,9 @@ export const BorrowerStep: React.FC<BorrowerStepProps> = ({
               <input
                 type="text"
                 placeholder="e.g. ABI ASSOCIATES"
-                value={newCustomerName}
-                onChange={(e) => setNewCustomerName(e.target.value)}
+                value={newNameDraft}
+                onChange={(e) => setNewNameDraft(e.target.value)}
+                onBlur={() => setNewCustomerName(newNameDraft)}
                 className="w-full bg-[#240F1D] border border-[#3D1A2C] rounded-md px-3 py-1.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-hidden focus:border-[#C5A059]"
               />
             </div>
@@ -163,8 +172,9 @@ export const BorrowerStep: React.FC<BorrowerStepProps> = ({
               <input
                 type="text"
                 placeholder="e.g. CHENNAI, CBE, TIRUPUR"
-                value={newCustomerPlace}
-                onChange={(e) => setNewCustomerPlace(e.target.value)}
+                value={newPlaceDraft}
+                onChange={(e) => setNewPlaceDraft(e.target.value)}
+                onBlur={() => setNewCustomerPlace(newPlaceDraft)}
                 className="w-full bg-[#240F1D] border border-[#3D1A2C] rounded-md px-3 py-1.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-hidden focus:border-[#C5A059]"
               />
             </div>
@@ -173,8 +183,9 @@ export const BorrowerStep: React.FC<BorrowerStepProps> = ({
               <input
                 type="text"
                 placeholder="e.g. 101, A-12"
-                value={newCustomerCodeNo}
-                onChange={(e) => setNewCustomerCodeNo(e.target.value)}
+                value={newCodeDraft}
+                onChange={(e) => setNewCodeDraft(e.target.value)}
+                onBlur={() => setNewCustomerCodeNo(newCodeDraft)}
                 className="w-full bg-[#240F1D] border border-[#3D1A2C] rounded-md px-3 py-1.5 text-xs text-slate-100 font-mono placeholder-slate-500 focus:outline-hidden focus:border-[#C5A059]"
               />
             </div>
@@ -195,6 +206,7 @@ export const BorrowerStep: React.FC<BorrowerStepProps> = ({
             theme="dark"
             size="lg"
             showWords={true}
+            deferChange
             presets={[500000, 1000000, 2000000, 5000000]}
             onPresetClick={(val) => setTotalAmount(val)}
           />

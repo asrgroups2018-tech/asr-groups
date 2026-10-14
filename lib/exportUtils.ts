@@ -33,7 +33,7 @@ export function printTablePDF(title: string, headers: string[], rows: (string | 
     <!DOCTYPE html>
     <html>
       <head>
-        <title>${title} - ASR Groups Finance ERP</title>
+        <title>${title} - ASR Group</title>
         <style>
           body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
@@ -92,8 +92,7 @@ export function printTablePDF(title: string, headers: string[], rows: (string | 
       <body>
         <div class="header">
           <div>
-            <div class="title">ASR Groups — ${title}</div>
-            <div style="font-size: 12px; color: #666; margin-top: 4px;">Internal Finance ERP System</div>
+            <div class="title">ASR Group — ${title}</div>
           </div>
           <div class="meta">
             <div>Generated: ${new Date().toLocaleString('en-IN')}</div>
@@ -119,7 +118,7 @@ export function printTablePDF(title: string, headers: string[], rows: (string | 
           </tbody>
         </table>
         <div class="footer">
-          <span>ASR Family Microfinance & Investment Pvt Ltd</span>
+          <span>ASR Group</span>
           <span>Page 1 of 1</span>
         </div>
         <script>

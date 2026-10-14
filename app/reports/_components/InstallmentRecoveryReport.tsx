@@ -68,7 +68,7 @@ export const InstallmentRecoveryReport: React.FC = () => {
           loanId: l.id,
           seqNo: ins.seqNo,
           clientName: l.customerName,
-          place: l.place || 'CHENNAI',
+          place: l.place || '',
           dueDate: ins.dueDate,
           recdDate: ins.recdDate || null,
           amountDue: Number(ins.amountDue || 0),

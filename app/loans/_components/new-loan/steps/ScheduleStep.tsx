@@ -1,11 +1,12 @@
 'use client';
 
-import React from 'react';
+import React, { useCallback, useMemo, useRef } from 'react';
 import { CheckCircle2, AlertCircle } from 'lucide-react';
 import { Company } from '@/lib/types';
 import { numberToIndianWords } from '@/lib/utils/numberToWords';
-import { formatIndianCommas, parseFormattedNumber } from '@/lib/utils/numberToWords';
+import { formatIndianCommas } from '@/lib/utils/numberToWords';
 import { DatePicker } from '@/components/ui/DatePicker';
+import { DraftNumberInput } from '@/components/ui/DraftNumberInput';
 
 export interface ScheduleStepRow {
   seqNo: number;
@@ -50,6 +51,30 @@ export const ScheduleStep: React.FC<ScheduleStepProps> = ({
   isScheduledTotalBalanced,
   isStep4Valid,
 }) => {
+  const cellRefs = useRef(new Map<string, HTMLInputElement>());
+  const cellKeys = useMemo(
+    () => scheduleRows.flatMap((row) => [
+      `${row.seqNo}:amount`,
+      ...selectedCompanies.map((company) => `${row.seqNo}:${company.shortCode}`),
+    ]),
+    [scheduleRows, selectedCompanies]
+  );
+
+  const registerCell = useCallback((key: string) => (element: HTMLInputElement | null) => {
+    if (element) cellRefs.current.set(key, element);
+    else cellRefs.current.delete(key);
+  }, []);
+
+  const focusNextCell = useCallback((key: string) => {
+    const nextKey = cellKeys[cellKeys.indexOf(key) + 1];
+    if (!nextKey) return;
+    requestAnimationFrame(() => {
+      const nextCell = cellRefs.current.get(nextKey);
+      nextCell?.focus();
+      nextCell?.select();
+    });
+  }, [cellKeys]);
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between text-xs">
@@ -104,11 +129,11 @@ export const ScheduleStep: React.FC<ScheduleStepProps> = ({
                     />
                   </td>
                   <td className="p-1.5">
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      value={row.amountDue ? formatIndianCommas(row.amountDue) : ''}
-                      onChange={(e) => handleRowAmountChange(row.seqNo, parseFormattedNumber(e.target.value))}
+                    <DraftNumberInput
+                      value={row.amountDue}
+                      onCommit={(value) => handleRowAmountChange(row.seqNo, value)}
+                      onEnter={() => focusNextCell(`${row.seqNo}:amount`)}
+                      registerRef={registerCell(`${row.seqNo}:amount`)}
                       className="w-full min-w-0 bg-[#240F1D] border border-[#3D1A2C] rounded px-1.5 py-1 text-[11px] font-bold text-right text-[#EED8A1]"
                     />
                   </td>
@@ -116,11 +141,11 @@ export const ScheduleStep: React.FC<ScheduleStepProps> = ({
                     const val = row.companySplits[c.shortCode] || 0;
                     return (
                       <td key={c.id} className="p-1.5">
-                        <input
-                          type="text"
-                          inputMode="numeric"
-                          value={val ? formatIndianCommas(val) : ''}
-                          onChange={(e) => handleCellSplitChange(row.seqNo, c.shortCode, parseFormattedNumber(e.target.value))}
+                        <DraftNumberInput
+                          value={val}
+                          onCommit={(value) => handleCellSplitChange(row.seqNo, c.shortCode, value)}
+                          onEnter={() => focusNextCell(`${row.seqNo}:${c.shortCode}`)}
+                          registerRef={registerCell(`${row.seqNo}:${c.shortCode}`)}
                           className="w-full min-w-0 bg-[#1F0B18] border border-[#3D1A2C] rounded px-1.5 py-1 text-[11px] text-right text-slate-200 font-semibold"
                         />
                       </td>

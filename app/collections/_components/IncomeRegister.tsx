@@ -6,6 +6,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 import { useApp } from '@/lib/store';
+import { APP_BRAND } from '@/lib/branding';
 import { formatINR } from '@/lib/utils/formatCurrency';
 import { isPaid, dateKey } from './CollectionsView';
 import type { DateRange, Period } from './CollectionsView';
@@ -117,7 +118,7 @@ export const IncomeRegister: React.FC<{ dateRange: DateRange; period: Period; pe
   }, [rows]);
 
   const grandTotal = filtered.reduce((s, r) => s + r.credit, 0);
-  const companyName = systemSettings.companyProfile.companyName || 'ASR Groups';
+  const companyName = APP_BRAND;
 
   // Build groups for grouped view
   const grouped = useMemo(() => {

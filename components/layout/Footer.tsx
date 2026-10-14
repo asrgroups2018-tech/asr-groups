@@ -13,20 +13,20 @@ export const Footer: React.FC = () => {
           <div className="w-5 h-5 rounded-full overflow-hidden relative shrink-0">
             <Image
               src="/groups-finalized.png"
-              alt="ASR Groups Logo"
+              alt="ASR Group Logo"
               fill
               sizes="20px"
               className="object-cover"
             />
           </div>
           <span className="font-bold text-slate-800 tracking-tight text-xs font-serif">
-            ASR GROUPS
+            ASR GROUP
           </span>
         </div>
 
         {/* Right: Copyright Text */}
         <div className="text-[11px] sm:text-xs text-slate-600 font-normal text-right">
-          Copyright {new Date().getFullYear()} ASR Groups. All rights reserved.
+          Copyright {new Date().getFullYear()} ASR Group. All rights reserved.
         </div>
 
       </div>

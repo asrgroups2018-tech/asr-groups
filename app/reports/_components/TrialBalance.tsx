@@ -122,7 +122,7 @@ export const TrialBalance: React.FC = () => {
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(16);
     doc.setTextColor(255, 255, 255);
-    doc.text('ASR GROUPS · TRIAL BALANCE', 32, 28);
+    doc.text('ASR GROUP · TRIAL BALANCE', 32, 28);
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9);
     doc.setTextColor(238, 216, 161);
@@ -153,7 +153,7 @@ export const TrialBalance: React.FC = () => {
       didDrawPage: (data) => {
         doc.setFontSize(8);
         doc.setTextColor(130, 130, 130);
-        doc.text(`ASR Groups · Trial Balance · Page ${data.pageNumber} · Confidential`, pw / 2, ph - 16, { align: 'center' });
+        doc.text(`ASR Group · Trial Balance · Page ${data.pageNumber} · Confidential`, pw / 2, ph - 16, { align: 'center' });
       },
     });
 

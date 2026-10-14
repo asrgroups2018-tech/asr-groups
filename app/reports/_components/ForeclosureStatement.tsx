@@ -90,7 +90,7 @@ function calcForeclosure(loan: Loan, asOfDate: string, rebateType: 'none' | 'per
 }
 
 export const ForeclosureStatement: React.FC = () => {
-  const { loans, showToast, systemSettings } = useApp();
+  const { loans, showToast } = useApp();
   const [loanSearch, setLoanSearch] = useState('');
   const [selectedLoanId, setSelectedLoanId] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
@@ -120,10 +120,7 @@ export const ForeclosureStatement: React.FC = () => {
     return calcForeclosure(selectedLoan, asOfDate, rebateType, rebateNum);
   }, [selectedLoan, asOfDate, rebateType, rebateNum]);
 
-  const companyName = systemSettings.companyProfile.companyName || 'ASR Groups';
-  const companyAddress = systemSettings.companyProfile.registeredAddress || '';
-  const companyGstin = systemSettings.companyProfile.gstin || '';
-  const companyPan = systemSettings.companyProfile.pan || '';
+  const companyName = 'ASR Group';
   const today = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' });
 
   const exportPdf = () => {
@@ -139,9 +136,6 @@ export const ForeclosureStatement: React.FC = () => {
     doc.setFont('helvetica', 'bold'); doc.setFontSize(15); doc.setTextColor(255, 255, 255);
     doc.text(companyName.toUpperCase(), pw / 2, 26, { align: 'center' });
     doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(238, 216, 161);
-    if (companyAddress) doc.text(companyAddress, pw / 2, 40, { align: 'center' });
-    const regLine = [companyGstin ? `GSTIN: ${companyGstin}` : '', companyPan ? `PAN: ${companyPan}` : ''].filter(Boolean).join(' | ');
-    if (regLine) doc.text(regLine, pw / 2, 52, { align: 'center' });
     doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(255, 255, 255);
     doc.text('FORECLOSURE STATEMENT', pw / 2, 64, { align: 'center' });
 

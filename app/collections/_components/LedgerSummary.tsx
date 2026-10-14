@@ -5,6 +5,7 @@ import { BarChart3, FileText, TrendingDown, TrendingUp } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { useApp } from '@/lib/store';
+import { APP_BRAND } from '@/lib/branding';
 import { formatINR } from '@/lib/utils/formatCurrency';
 import { numberToWordsINR } from '@/lib/utils/formatCurrency';
 import { isPaid, isBounce, dateKey } from './CollectionsView';
@@ -104,7 +105,7 @@ export const LedgerSummary: React.FC<{
   }, [loans, dateRange]);
 
   const netBalance = incomeBreakdown.total - expenseBreakdown.totalDisbursed;
-  const companyName = systemSettings.companyProfile.companyName || 'ASR Groups';
+  const companyName = APP_BRAND;
   const today = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' });
 
   const exportPdf = () => {

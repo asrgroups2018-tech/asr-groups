@@ -6,6 +6,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 import { useApp } from '@/lib/store';
+import { APP_BRAND } from '@/lib/branding';
 import { formatINR } from '@/lib/utils/formatCurrency';
 import { dateKey } from './CollectionsView';
 import type { DateRange, Period } from './CollectionsView';
@@ -144,7 +145,7 @@ export const ExpenseRegister: React.FC<{ dateRange: DateRange; period: Period; p
     return Object.entries(map).sort(([, a], [, b]) => b.amount - a.amount);
   }, [rows]);
 
-  const companyName = systemSettings.companyProfile.companyName || 'ASR Groups';
+    const companyName = APP_BRAND;
 
   const exportPdf = () => {
     if (!filtered.length) { showToast('Nothing to export', '', 'warning'); return; }

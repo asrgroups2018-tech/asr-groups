@@ -6,6 +6,7 @@ import { MoneyDisplay } from '@/components/ui/MoneyDisplay';
 import { AmountInput } from '@/components/ui/AmountInput';
 import { DatePicker } from '@/components/ui/DatePicker';
 import { RepaymentFrequency } from '@/lib/types';
+import { DraftNumberInput } from '@/components/ui/DraftNumberInput';
 
 interface TermsStepProps {
   totalAmount: number;
@@ -62,6 +63,7 @@ export const TermsStep: React.FC<TermsStepProps> = ({
           theme="dark"
           size="lg"
           showWords={true}
+          deferChange
           presets={[500000, 1000000, 2000000, 5000000]}
           onPresetClick={(val) => {
             setTotalAmount(val);
@@ -90,6 +92,7 @@ export const TermsStep: React.FC<TermsStepProps> = ({
             theme="dark"
             size="md"
             showWords={true}
+            deferChange
           />
           <span className="text-[11px] text-slate-400 block">
             Principal given to the borrower
@@ -117,6 +120,7 @@ export const TermsStep: React.FC<TermsStepProps> = ({
             theme="dark"
             size="md"
             showWords={true}
+            deferChange
           />
           <span className="text-[11px] text-amber-300/80 block">
             Deducted upfront upon loan creation
@@ -163,21 +167,10 @@ export const TermsStep: React.FC<TermsStepProps> = ({
             <label className="block text-xs font-mono uppercase text-slate-300 font-bold mb-1.5">
               Number of EMIs
             </label>
-            <input
-              type="number"
-              min="1"
-              max="120"
+            <DraftNumberInput
+              value={installmentCount}
+              onCommit={(value) => setInstallmentCount(Math.min(120, Math.max(0, Math.round(value))))}
               placeholder="e.g. 5"
-              value={installmentCount === 0 ? '' : installmentCount}
-              onChange={(e) => {
-                const val = e.target.value;
-                if (val === '') {
-                  setInstallmentCount(0);
-                } else {
-                  const n = parseInt(val, 10);
-                  setInstallmentCount(isNaN(n) ? 0 : n);
-                }
-              }}
               className="w-full h-10 bg-[#160810] border border-[#3D1A2C] rounded-xl px-3 text-sm font-mono text-slate-100 focus:outline-hidden focus:border-[#C5A059] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none text-center"
             />
           </div>

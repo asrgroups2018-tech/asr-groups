@@ -10,8 +10,8 @@ const ubuntu = Ubuntu({
 });
 
 export const metadata: Metadata = {
-  title: "ASR Groups",
-  description: "ASR Groups financial management system",
+  title: "ASR Group",
+  description: "ASR Group financial management system",
   icons: {
     icon: "/groups-finalized.png",
   },

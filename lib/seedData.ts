@@ -926,13 +926,13 @@ export const INITIAL_AUDIT_LOGS: AuditLogEntry[] = [
 
 export const INITIAL_SYSTEM_SETTINGS: SystemSettingsState = {
   companyProfile: {
-    companyName: 'ASR Groups Finance ERP',
-    legalEntityName: 'ASR Family Microfinance & Investment Private Limited',
+    companyName: 'ASR Group',
+    legalEntityName: '',
     logoUrl: '/groups-finalized.png',
-    gstin: '33AABCA1234F1Z8',
-    cin: 'U65929TN2018PTC123456',
-    pan: 'AABCA1234F',
-    registeredAddress: 'No. 42, ASR Towers, Mount Road, Guindy, Chennai, Tamil Nadu, 600032',
+    gstin: '',
+    cin: '',
+    pan: '',
+    registeredAddress: '',
     baseCurrency: 'INR (₹)',
     currencySymbol: '₹',
     financialYearStart: '01-April',

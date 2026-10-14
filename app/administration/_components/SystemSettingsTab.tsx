@@ -216,7 +216,7 @@ export const SystemSettingsTab: React.FC = () => {
             <div className="w-16 h-16 rounded-full overflow-hidden relative shadow-xs shrink-0">
               <Image
                 src="/groups-finalized.png"
-                alt="ASR Groups Logo"
+                alt="ASR Group Logo"
                 fill
                 sizes="64px"
                 className="object-cover"

@@ -25,6 +25,7 @@ export interface AmountInputProps {
   onPresetClick?: (val: number) => void;
   error?: string | null;
   autoFocus?: boolean;
+  deferChange?: boolean;
 }
 
 export const AmountInput: React.FC<AmountInputProps> = ({
@@ -48,6 +49,7 @@ export const AmountInput: React.FC<AmountInputProps> = ({
   onPresetClick,
   error,
   autoFocus = false,
+  deferChange = false,
 }) => {
   const [displayValue, setDisplayValue] = useState<string>(() => {
     if (value === null || value === undefined || value === '' || value === 0) return '';
@@ -76,13 +78,17 @@ export const AmountInput: React.FC<AmountInputProps> = ({
 
     if (cleanDigits === '') {
       setDisplayValue('');
-      onChange(0);
+      if (!deferChange) onChange(0);
       return;
     }
 
     const formatted = formatIndianCommas(cleanDigits);
     setDisplayValue(formatted);
-    onChange(num);
+    if (!deferChange) onChange(num);
+  };
+
+  const commitDeferredValue = () => {
+    if (deferChange) onChange(parseFormattedNumber(displayValue));
   };
 
   const currentNum = parseFormattedNumber(displayValue);
@@ -134,6 +140,13 @@ export const AmountInput: React.FC<AmountInputProps> = ({
           placeholder={placeholder}
           value={displayValue}
           onChange={handleChange}
+          onBlur={deferChange ? commitDeferredValue : undefined}
+          onKeyDown={(e) => {
+            if (deferChange && e.key === 'Enter') {
+              e.preventDefault();
+              commitDeferredValue();
+            }
+          }}
           className={`w-full rounded-lg font-mono transition-all focus:outline-hidden ${sizeClasses} ${
             isDark
               ? 'bg-[#160810] border border-[#3D1A2C] text-[#EED8A1] placeholder-slate-500 focus:border-[#C5A059] focus:bg-[#1A0A13]'

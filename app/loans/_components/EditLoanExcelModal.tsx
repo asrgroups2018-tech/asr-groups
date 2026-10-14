@@ -127,6 +127,7 @@ interface FastGridCellInputProps {
   className: string;
   onCommit: (value: string | number) => void;
   onEnter?: () => void;
+  onNavigate?: (direction: 'left' | 'right' | 'up' | 'down') => void;
   registerRef?: (element: HTMLInputElement | null) => void;
 }
 
@@ -141,6 +142,7 @@ const FastGridCellInput = React.memo<FastGridCellInputProps>(({
   className,
   onCommit,
   onEnter,
+  onNavigate,
   registerRef,
 }) => {
   const formatValue = (nextValue: string | number | null | undefined) => {
@@ -189,6 +191,29 @@ const FastGridCellInput = React.memo<FastGridCellInputProps>(({
           event.preventDefault();
           commit();
           onEnter?.();
+          return;
+        }
+
+        const directionByKey = {
+          ArrowLeft: 'left',
+          ArrowRight: 'right',
+          ArrowUp: 'up',
+          ArrowDown: 'down',
+        } as const;
+        const direction = directionByKey[event.key as keyof typeof directionByKey];
+        if (!direction) return;
+
+        const input = event.currentTarget;
+        const atEditableBoundary =
+          direction === 'up' ||
+          direction === 'down' ||
+          (direction === 'left' && input.selectionStart === 0) ||
+          (direction === 'right' && input.selectionEnd === input.value.length);
+
+        if (atEditableBoundary) {
+          event.preventDefault();
+          commit();
+          onNavigate?.(direction);
         }
       }}
       className={className}
@@ -440,22 +465,25 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
     });
   }, [categoryFilter, activeCompanyKeys]);
 
-  const gridCellKeys = useMemo(() => {
-    const keys: string[] = [];
-    rows.forEach((_, rowIndex) => {
-      keys.push(`${rowIndex}:place`);
-      keys.push(`${rowIndex}:depName`);
-      keys.push(`${rowIndex}:chqNo`);
-      keys.push(`${rowIndex}:amountDue`);
+  const gridRows = useMemo(() => {
+    return rows.map((_, rowIndex) => {
+      const keys = [
+        `${rowIndex}:place`,
+        `${rowIndex}:depName`,
+        `${rowIndex}:chqNo`,
+        `${rowIndex}:amountDue`,
+      ];
       visibleCompanyColumns.forEach((column) => {
         if (activeCompanyKeys.has(column.key)) {
           keys.push(`${rowIndex}:${String(column.key)}`);
         }
       });
       keys.push(`${rowIndex}:remarks`);
+      return keys;
     });
-    return keys;
   }, [rows.length, visibleCompanyColumns, activeCompanyKeys]);
+
+  const gridCellKeys = useMemo(() => gridRows.flat(), [gridRows]);
 
   const registerGridCell = (key: string) => (element: HTMLInputElement | null) => {
     if (element) {
@@ -465,14 +493,30 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
     }
   };
 
-  const focusNextGridCell = (key: string) => {
-    const nextKey = gridCellKeys[gridCellKeys.indexOf(key) + 1];
-    if (!nextKey) return;
+  const focusGridCell = (key: string | undefined) => {
+    if (!key) return;
     requestAnimationFrame(() => {
-      const nextCell = gridCellRefs.current.get(nextKey);
+      const nextCell = gridCellRefs.current.get(key);
       nextCell?.focus();
       nextCell?.select();
     });
+  };
+
+  const focusNextGridCell = (key: string) => {
+    const nextKey = gridCellKeys[gridCellKeys.indexOf(key) + 1];
+    focusGridCell(nextKey);
+  };
+
+  const navigateGridCell = (key: string, direction: 'left' | 'right' | 'up' | 'down') => {
+    const rowIndex = gridRows.findIndex((row) => row.includes(key));
+    if (rowIndex === -1) return;
+    const columnIndex = gridRows[rowIndex].indexOf(key);
+    const rowDelta = direction === 'up' ? -1 : direction === 'down' ? 1 : 0;
+    const columnDelta = direction === 'left' ? -1 : direction === 'right' ? 1 : 0;
+    const targetRow = gridRows[rowIndex + rowDelta];
+    if (!targetRow) return;
+    const targetKey = targetRow[columnIndex + columnDelta];
+    focusGridCell(targetKey);
   };
 
   // Check row validation mismatches
@@ -1223,6 +1267,7 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
                         value={row.place}
                         onCommit={(value) => handleCellChange(idx, 'place', String(value))}
                         onEnter={() => focusNextGridCell(`${idx}:place`)}
+                        onNavigate={(direction) => navigateGridCell(`${idx}:place`, direction)}
                         registerRef={registerGridCell(`${idx}:place`)}
                         className={`w-full h-full px-2.5 py-2 bg-transparent focus:bg-white focus:outline-2 focus:outline-[#701A35] ${
                           isRowPaid ? 'text-emerald-950 font-bold' : 'text-slate-800'
@@ -1236,6 +1281,7 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
                         value={row.depName}
                         onCommit={(value) => handleCellChange(idx, 'depName', String(value))}
                         onEnter={() => focusNextGridCell(`${idx}:depName`)}
+                        onNavigate={(direction) => navigateGridCell(`${idx}:depName`, direction)}
                         registerRef={registerGridCell(`${idx}:depName`)}
                         placeholder="DEP"
                         className={`w-full h-full px-2.5 py-2 bg-transparent focus:bg-white focus:outline-2 focus:outline-[#701A35] uppercase ${
@@ -1250,6 +1296,7 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
                         value={row.chqNo}
                         onCommit={(value) => handleCellChange(idx, 'chqNo', String(value))}
                         onEnter={() => focusNextGridCell(`${idx}:chqNo`)}
+                        onNavigate={(direction) => navigateGridCell(`${idx}:chqNo`, direction)}
                         registerRef={registerGridCell(`${idx}:chqNo`)}
                         placeholder="CHQ"
                         className={`w-full h-full px-2.5 py-2 bg-transparent focus:bg-white focus:outline-2 focus:outline-[#701A35] font-mono ${
@@ -1271,6 +1318,7 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
                         numeric
                         onCommit={(value) => handleCellChange(idx, 'amountDue', Number(value) || 0)}
                         onEnter={() => focusNextGridCell(`${idx}:amountDue`)}
+                        onNavigate={(direction) => navigateGridCell(`${idx}:amountDue`, direction)}
                         registerRef={registerGridCell(`${idx}:amountDue`)}
                         className={`w-full h-full px-2.5 py-2 text-right bg-transparent focus:bg-white focus:outline-2 ${
                           isOverCapital
@@ -1347,6 +1395,7 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
                             placeholder="0"
                             onCommit={(value) => handleCellChange(idx, col.key, Number(value) || 0)}
                             onEnter={() => focusNextGridCell(`${idx}:${String(col.key)}`)}
+                            onNavigate={(direction) => navigateGridCell(`${idx}:${String(col.key)}`, direction)}
                             registerRef={registerGridCell(`${idx}:${String(col.key)}`)}
                             className={`w-full h-full px-2.5 py-2 text-right bg-transparent focus:bg-white focus:outline-2 ${
                               col.isOutside
@@ -1366,6 +1415,7 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
                         value={row.remarks}
                         onCommit={(value) => handleCellChange(idx, 'remarks', String(value))}
                         onEnter={() => focusNextGridCell(`${idx}:remarks`)}
+                        onNavigate={(direction) => navigateGridCell(`${idx}:remarks`, direction)}
                         registerRef={registerGridCell(`${idx}:remarks`)}
                         placeholder="Remarks"
                         className={`w-full h-full px-2.5 py-2 bg-transparent focus:bg-white focus:outline-2 focus:outline-[#701A35] text-xs ${
