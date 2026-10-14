@@ -1,7 +1,8 @@
 import { getTursoClient } from './turso';
 import { initializeSchema } from './schema';
-import { AuditActor, Cheque, ChequeStatus } from '@/lib/types';
+import { AuditActor, Cheque, ChequeActor, ChequeStatus } from '@/lib/types';
 import { logAudit } from './administration';
+import { randomUUID } from 'node:crypto';
 
 let schemaInitialized = false;
 
@@ -17,6 +18,15 @@ async function ensureDbInitialized() {
 }
 
 export function mapChequeRow(row: any): Cheque {
+  const mapActor = (prefix: 'created_by' | 'deposited_by'): ChequeActor | null => {
+    if (!row[`${prefix}_id`] && !row[`${prefix}_name`] && !row[`${prefix}_email`]) return null;
+    return {
+      id: String(row[`${prefix}_id`] || ''),
+      name: String(row[`${prefix}_name`] || ''),
+      email: String(row[`${prefix}_email`] || ''),
+    };
+  };
+
   return {
     id: String(row.id),
     chequeNumber: String(row.cheque_number),
@@ -26,6 +36,8 @@ export function mapChequeRow(row: any): Cheque {
     depositDate: String(row.deposit_date),
     status: (row.status as ChequeStatus) || 'Pending',
     depositedAt: row.deposited_at ? String(row.deposited_at) : null,
+    createdBy: mapActor('created_by'),
+    depositedBy: mapActor('deposited_by'),
     createdAt: String(row.created_at),
   };
 }
@@ -73,8 +85,8 @@ export async function getChequeById(id: string): Promise<Cheque | null> {
   await ensureDbInitialized();
   const client = getTursoClient();
   const res = await client.execute({
-    sql: 'SELECT * FROM cheques WHERE id = ?',
-    args: [id],
+    sql: 'SELECT * FROM cheques WHERE LOWER(id) = LOWER(?) LIMIT 1',
+    args: [id.trim()],
   });
   if (res.rows.length === 0) return null;
   return mapChequeRow(res.rows[0]);
@@ -86,7 +98,7 @@ export async function createCheque(data: {
   customerName: string;
   amount: number;
   depositDate: string;
-}, actor?: AuditActor): Promise<Cheque> {
+}, actor: AuditActor): Promise<Cheque> {
   await ensureDbInitialized();
   const client = getTursoClient();
 
@@ -108,22 +120,34 @@ export async function createCheque(data: {
     throw new Error('Date to deposit is required.');
   }
 
-  const countRes = await client.execute('SELECT COUNT(*) as count FROM cheques');
-  const count = Number(countRes.rows[0]?.count || 0);
   const now = new Date().toISOString();
-  const year = depDate.slice(0, 4) || '2026';
-  const id = `CHQ-${year}-${String(1001 + count).padStart(4, '0')}`;
+  const year = depDate.slice(0, 4) || String(new Date().getUTCFullYear());
+  const id = `CHQ-${year}-${randomUUID()}`;
 
   await client.execute({
-    sql: `INSERT INTO cheques (id, cheque_number, customer_id, customer_name, amount, deposit_date, status, created_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    args: [id, chequeNum, data.customerId || null, custName, amt, depDate, 'Pending', now],
+    sql: `INSERT INTO cheques (
+            id, cheque_number, customer_id, customer_name, amount, deposit_date, status,
+            created_by_id, created_by_name, created_by_email, created_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    args: [
+      id,
+      chequeNum,
+      data.customerId || null,
+      custName,
+      amt,
+      depDate,
+      'Pending',
+      actor.id,
+      actor.name,
+      actor.email || '',
+      now,
+    ],
   });
 
   await logAudit({
-    actorId: actor?.id || 'SYSTEM',
-    actorName: actor?.name || 'System',
-    actorRoleId: actor?.primaryRoleId ?? 0,
+    actorId: actor.id,
+    actorName: actor.name,
+    actorRoleId: actor.primaryRoleId,
     action: 'Logged Cheque',
     target: `Cheque ${chequeNum} (${custName})`,
     beforeVal: '-',
@@ -134,7 +158,7 @@ export async function createCheque(data: {
   return (await getChequeById(id))!;
 }
 
-export async function markChequeDeposited(id: string, depositedAt?: string, actor?: AuditActor): Promise<Cheque | null> {
+export async function markChequeDeposited(id: string, depositedAt: string | undefined, actor: AuditActor): Promise<Cheque | null> {
   await ensureDbInitialized();
   const client = getTursoClient();
 
@@ -144,14 +168,17 @@ export async function markChequeDeposited(id: string, depositedAt?: string, acto
   const actualDepositedAt = depositedAt || new Date().toISOString().slice(0, 10);
 
   await client.execute({
-    sql: `UPDATE cheques SET status = 'Deposited', deposited_at = ? WHERE id = ?`,
-    args: [actualDepositedAt, id],
+    sql: `UPDATE cheques SET
+            status = 'Deposited', deposited_at = ?,
+            deposited_by_id = ?, deposited_by_name = ?, deposited_by_email = ?
+          WHERE id = ?`,
+    args: [actualDepositedAt, actor.id, actor.name, actor.email || '', existing.id],
   });
 
   await logAudit({
-    actorId: actor?.id || 'SYSTEM',
-    actorName: actor?.name || 'System',
-    actorRoleId: actor?.primaryRoleId ?? 0,
+    actorId: actor.id,
+    actorName: actor.name,
+    actorRoleId: actor.primaryRoleId,
     action: 'Deposited Cheque',
     target: `Cheque ${existing.chequeNumber} (${existing.customerName})`,
     beforeVal: 'Status: Pending',
@@ -162,7 +189,7 @@ export async function markChequeDeposited(id: string, depositedAt?: string, acto
   return await getChequeById(id);
 }
 
-export async function deleteCheque(id: string, actor?: AuditActor): Promise<boolean> {
+export async function deleteCheque(id: string, actor: AuditActor): Promise<boolean> {
   await ensureDbInitialized();
   const client = getTursoClient();
 
@@ -171,13 +198,13 @@ export async function deleteCheque(id: string, actor?: AuditActor): Promise<bool
 
   await client.execute({
     sql: 'DELETE FROM cheques WHERE id = ?',
-    args: [id],
+    args: [existing.id],
   });
 
   await logAudit({
-    actorId: actor?.id || 'SYSTEM',
-    actorName: actor?.name || 'System',
-    actorRoleId: actor?.primaryRoleId ?? 0,
+    actorId: actor.id,
+    actorName: actor.name,
+    actorRoleId: actor.primaryRoleId,
     action: 'Deleted Cheque',
     target: `Cheque ${existing.chequeNumber} (${existing.customerName})`,
     beforeVal: `Amount: ₹${existing.amount.toLocaleString('en-IN')}, Status: ${existing.status}`,

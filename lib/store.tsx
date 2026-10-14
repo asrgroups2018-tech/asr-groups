@@ -1040,7 +1040,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (json.success) {
         showToast('Cheque Deposited', `Cheque marked as Deposited.`, 'success');
         setCheques((prev) =>
-          prev.map((c) => (c.id === id ? { ...c, status: 'Deposited', depositedAt: depositedAt || new Date().toISOString() } : c))
+          prev.map((c) => (c.id.toLowerCase() === id.toLowerCase() ? (json.data || c) : c))
         );
         refreshAll(false);
         return true;

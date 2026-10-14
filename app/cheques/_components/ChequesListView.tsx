@@ -123,15 +123,16 @@ export const ChequesListView: React.FC = () => {
   const columns: ColumnDef<Cheque>[] = [
     {
       key: 'chequeNumber',
-      header: 'Cheque Number',
+      header: 'Cheque No.',
       sortable: true,
       filterable: true,
+      className: '!px-2 !py-2 w-[100px]',
       render: (item) => (
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-[#701A35]/10 border border-[#701A35]/20 text-[#701A35] flex items-center justify-center shrink-0">
-            <Landmark className="w-3.5 h-3.5" />
+        <div className="flex items-center gap-1.5 min-w-0">
+          <div className="w-6 h-6 rounded-md bg-[#701A35]/10 border border-[#701A35]/20 text-[#701A35] flex items-center justify-center shrink-0">
+            <Landmark className="w-3 h-3" />
           </div>
-          <span className="font-mono font-bold text-slate-900 text-xs tracking-wider">
+          <span className="font-mono font-bold text-slate-900 text-[11px] tracking-wide break-all leading-tight">
             #{item.chequeNumber}
           </span>
         </div>
@@ -140,14 +141,15 @@ export const ChequesListView: React.FC = () => {
     },
     {
       key: 'customerName',
-      header: 'Customer Name',
+      header: 'Customer',
       sortable: true,
       filterable: true,
+      className: '!px-2 !py-2 w-[130px]',
       render: (item) => (
-        <div className="space-y-0.5">
-          <span className="font-bold text-slate-900 text-xs block">{item.customerName}</span>
+        <div className="space-y-0.5 min-w-0 leading-tight">
+          <span className="font-bold text-slate-900 text-[11px] block break-words">{item.customerName}</span>
           {item.customerId && (
-            <span className="font-mono text-[10px] text-slate-400 block">ID: {item.customerId}</span>
+            <span className="font-mono text-[9px] text-slate-400 block break-all">ID: {item.customerId}</span>
           )}
         </div>
       ),
@@ -158,6 +160,7 @@ export const ChequesListView: React.FC = () => {
       header: 'Amount (₹)',
       sortable: true,
       align: 'right',
+      className: '!px-2 !py-2 w-[100px]',
       render: (item) => (
         <MoneyDisplay
           amount={item.amount}
@@ -169,11 +172,12 @@ export const ChequesListView: React.FC = () => {
     },
     {
       key: 'depositDate',
-      header: 'Date to Deposit',
+      header: 'Deposit Date',
       sortable: true,
       filterable: true,
+      className: '!px-2 !py-2 w-[110px]',
       render: (item) => (
-        <span className="font-mono text-xs text-slate-700 font-medium whitespace-nowrap">
+        <span className="font-mono text-[11px] text-slate-700 font-medium whitespace-nowrap">
           {formatDisplayDate(item.depositDate)}
         </span>
       ),
@@ -185,37 +189,66 @@ export const ChequesListView: React.FC = () => {
       sortable: true,
       filterable: true,
       align: 'center',
-      render: (item) => <StatusPill status={item.status} size="sm" />,
+      className: '!px-2 !py-2 w-[100px]',
+      render: (item) => <StatusPill status={item.status} size="xs" />,
       exportValue: (item) => item.status,
     },
     {
       key: 'depositedAt',
-      header: 'Deposited Date',
+      header: 'Bank Date',
       sortable: true,
+      className: '!px-2 !py-2 w-[95px]',
       render: (item) => (
-        <span className="font-mono text-xs text-slate-600 whitespace-nowrap">
+        <span className="font-mono text-[11px] text-slate-600 whitespace-nowrap">
           {item.depositedAt ? formatDisplayDate(item.depositedAt) : '—'}
         </span>
       ),
       exportValue: (item) => item.depositedAt || '',
     },
     {
+      key: 'createdBy',
+      header: 'Logged By',
+      sortable: true,
+      className: '!px-2 !py-2 w-[125px]',
+      render: (item) => (
+        <div className="min-w-0 leading-tight" title={item.createdBy?.email || undefined}>
+          <span className="font-semibold text-slate-800 text-[10px] block break-words">{item.createdBy?.name || '—'}</span>
+          {item.createdBy?.email && <span className="text-[9px] text-slate-400 block mt-0.5 break-all">{item.createdBy.email}</span>}
+        </div>
+      ),
+      exportValue: (item) => item.createdBy ? `${item.createdBy.name} (${item.createdBy.email})` : '',
+    },
+    {
+      key: 'depositedBy',
+      header: 'Confirmed By',
+      sortable: true,
+      className: '!px-2 !py-2 w-[125px]',
+      render: (item) => (
+        <div className="min-w-0 leading-tight" title={item.depositedBy?.email || undefined}>
+          <span className="font-semibold text-slate-800 text-[10px] block break-words">{item.depositedBy?.name || '—'}</span>
+          {item.depositedBy?.email && <span className="text-[9px] text-slate-400 block mt-0.5 break-all">{item.depositedBy.email}</span>}
+        </div>
+      ),
+      exportValue: (item) => item.depositedBy ? `${item.depositedBy.name} (${item.depositedBy.email})` : '',
+    },
+    {
       key: 'actions',
       header: 'Actions',
       align: 'right',
+      className: '!px-2 !py-2 w-[120px]',
       render: (item) => (
-        <div className="flex items-center justify-end gap-2 whitespace-nowrap">
+        <div className="flex items-center justify-end gap-1 whitespace-nowrap">
           {item.status === 'Pending' ? (
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 setDepositingCheque(item);
               }}
-              className="px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold cursor-pointer transition-all shadow-2xs flex items-center gap-1.5 group"
+              className="px-2 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold cursor-pointer transition-all shadow-2xs flex items-center gap-1 group"
               title="Mark this cheque as deposited in bank"
             >
               <CheckCircle2 className="w-3.5 h-3.5 text-white/90" />
-              <span>Mark as Deposited</span>
+              <span>Deposit</span>
             </button>
           ) : (
             <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-1 rounded-md border border-emerald-200/80">
@@ -459,17 +492,19 @@ export const ChequesListView: React.FC = () => {
         </div>
 
         {/* DataTable */}
-        <DataTable
-          data={filteredData}
-          columns={columns}
-          keyExtractor={(item) => item.id}
-          title="Cheque Deposits"
-          exportFileName="ASR_Cheques"
-          searchPlaceholder="Search by cheque number, customer name, amount..."
-          pageSizeDefault={15}
-          emptyStateMessage="No cheques logged for the selected filter."
-          footerTotals={totalsFooter}
-        />
+        <div className="min-w-0 [&_table]:table-fixed [&_table]:w-full">
+          <DataTable
+            data={filteredData}
+            columns={columns}
+            keyExtractor={(item) => item.id}
+            title="Cheque Deposits"
+            exportFileName="ASR_Cheques"
+            searchPlaceholder="Search by cheque number, customer name, amount..."
+            pageSizeDefault={15}
+            emptyStateMessage="No cheques logged for the selected filter."
+            footerTotals={totalsFooter}
+          />
+        </div>
       </div>
 
       {/* ─── Add Cheque Modal ─── */}

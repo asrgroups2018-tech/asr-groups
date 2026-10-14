@@ -17,7 +17,7 @@ export const AddChequeModal: React.FC<AddChequeModalProps> = ({
   onClose,
   onSuccess,
 }) => {
-  const { customers, createCheque, showToast } = useApp();
+  const { customers, createCheque, showToast, currentActor } = useApp();
 
   const [chequeNumber, setChequeNumber] = useState('');
   const [customerName, setCustomerName] = useState('');
@@ -285,6 +285,18 @@ export const AddChequeModal: React.FC<AddChequeModalProps> = ({
               />
               <span className="text-[10px] text-slate-400 mt-1 block">
                 Planned bank presentation date
+              </span>
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 flex items-center gap-2.5">
+            <User className="w-4 h-4 text-slate-400 shrink-0" />
+            <div className="min-w-0">
+              <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block">
+                Logged by (automatic)
+              </span>
+              <span className="text-xs text-slate-800 font-semibold truncate block">
+                {currentActor.name} · {currentActor.email}
               </span>
             </div>
           </div>

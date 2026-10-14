@@ -42,6 +42,7 @@ export async function queueMutationForApproval(
     entityId: input.entityId,
     requesterId: input.actor.id,
     requesterName: input.actor.name,
+    requesterEmail: input.actor.email,
     requesterRoleId: input.actor.primaryRoleId,
     approverRoleId: rule?.whoMustApprove ?? SUPER_ADMIN_ROLE_ID,
     amount: input.amount || 0,

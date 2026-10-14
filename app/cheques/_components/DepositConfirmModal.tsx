@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { Cheque } from '@/lib/types';
 import { useApp } from '@/lib/store';
-import { CheckCircle2, X, Landmark, Calendar, Banknote } from 'lucide-react';
+import { CheckCircle2, X, Landmark, Calendar, Banknote, User } from 'lucide-react';
 import { DatePicker, toIsoDate, formatDisplayDate } from '@/components/ui/DatePicker';
 import { MoneyDisplay } from '@/components/ui/MoneyDisplay';
 
@@ -20,7 +20,7 @@ export const DepositConfirmModal: React.FC<DepositConfirmModalProps> = ({
   cheque,
   onSuccess,
 }) => {
-  const { markChequeDeposited } = useApp();
+  const { markChequeDeposited, currentActor } = useApp();
   const [depositedAt, setDepositedAt] = useState<string>(toIsoDate(new Date()));
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -109,6 +109,18 @@ export const DepositConfirmModal: React.FC<DepositConfirmModalProps> = ({
             <span className="text-[10px] text-slate-400 mt-1 block">
               This updates the deposit log and marks the cheque status as Deposited.
             </span>
+          </div>
+
+          <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 px-3 py-2.5 flex items-center gap-2.5">
+            <User className="w-4 h-4 text-emerald-700 shrink-0" />
+            <div className="min-w-0">
+              <span className="text-[10px] text-emerald-700 font-bold uppercase tracking-wider block">
+                Confirmed by (automatic)
+              </span>
+              <span className="text-xs text-slate-800 font-semibold truncate block">
+                {currentActor.name} · {currentActor.email}
+              </span>
+            </div>
           </div>
 
           {/* Action Buttons */}

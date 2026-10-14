@@ -31,6 +31,7 @@ export function mapApprovalRequestRow(row: any): ApprovalRequest {
     entityId: String(row.entity_id),
     requesterId: String(row.requester_id),
     requesterName: String(row.requester_name),
+    requesterEmail: row.requester_email ? String(row.requester_email) : undefined,
     requesterRoleId: Number(row.requester_role_id ?? 2) as RoleId,
     approverRoleId: Number(row.approver_role_id ?? 1) as RoleId,
     amount: Number(row.amount || 0),
@@ -108,6 +109,7 @@ export async function createApprovalRequest(data: {
   entityId: string;
   requesterId: string;
   requesterName: string;
+  requesterEmail?: string;
   requesterRoleId: RoleId;
   approverRoleId: RoleId;
   amount?: number;
@@ -131,9 +133,9 @@ export async function createApprovalRequest(data: {
   await client.execute({
     sql: `INSERT INTO approval_requests (
       id, rule_id, change_type, title, description, entity_type, entity_id,
-      requester_id, requester_name, requester_role_id, approver_role_id, amount,
+      requester_id, requester_name, requester_email, requester_role_id, approver_role_id, amount,
       status, before_payload, proposed_payload, created_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     args: [
       reqId,
       data.ruleId || null,
@@ -144,6 +146,7 @@ export async function createApprovalRequest(data: {
       data.entityId,
       data.requesterId,
       data.requesterName,
+      data.requesterEmail || null,
       data.requesterRoleId,
       data.approverRoleId,
       data.amount || 0,
@@ -196,6 +199,7 @@ export async function approveApprovalRequest(
   const requesterActor = {
     id: req.requesterId,
     name: req.requesterName,
+    email: req.requesterEmail,
     primaryRoleId: req.requesterRoleId,
   };
   let payload: any = {};

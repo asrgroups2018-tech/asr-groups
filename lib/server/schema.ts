@@ -226,6 +226,7 @@ export const SCHEMA_STATEMENTS = [
     entity_id TEXT NOT NULL,
     requester_id TEXT NOT NULL,
     requester_name TEXT NOT NULL,
+    requester_email TEXT,
     requester_role_id INTEGER NOT NULL DEFAULT 2,
     approver_role_id INTEGER NOT NULL DEFAULT 1,
     amount REAL NOT NULL DEFAULT 0,
@@ -252,6 +253,12 @@ export const SCHEMA_STATEMENTS = [
     deposit_date TEXT NOT NULL,
     status TEXT NOT NULL DEFAULT 'Pending',
     deposited_at TEXT,
+    created_by_id TEXT,
+    created_by_name TEXT,
+    created_by_email TEXT,
+    deposited_by_id TEXT,
+    deposited_by_name TEXT,
+    deposited_by_email TEXT,
     created_at TEXT NOT NULL
   );`,
   `CREATE INDEX IF NOT EXISTS idx_cheques_status ON cheques(status);`,
@@ -291,6 +298,67 @@ export function initializeSchema(client: Client): Promise<void> {
       }
 
       await client.batch(SCHEMA_STATEMENTS);
+
+      // Add columns introduced after the original schema was deployed.
+      // Each statement is intentionally idempotent for existing Turso/SQLite databases.
+      for (const statement of [
+        'ALTER TABLE approval_requests ADD COLUMN requester_email TEXT',
+        'ALTER TABLE cheques ADD COLUMN created_by_id TEXT',
+        'ALTER TABLE cheques ADD COLUMN created_by_name TEXT',
+        'ALTER TABLE cheques ADD COLUMN created_by_email TEXT',
+        'ALTER TABLE cheques ADD COLUMN deposited_by_id TEXT',
+        'ALTER TABLE cheques ADD COLUMN deposited_by_name TEXT',
+        'ALTER TABLE cheques ADD COLUMN deposited_by_email TEXT',
+      ]) {
+        try {
+          await client.execute(statement);
+        } catch {
+          // The column already exists.
+        }
+      }
+
+      // Preserve actor information for cheque rows created before the actor
+      // columns existed by linking the existing audit trail back to the row.
+      try {
+        await client.execute(`
+          UPDATE cheques
+          SET
+            created_by_id = COALESCE(created_by_id, (
+              SELECT actor_id FROM audit_logs
+              WHERE action = 'Logged Cheque'
+                AND LOWER(target) = LOWER('Cheque ' || cheques.cheque_number || ' (' || cheques.customer_name || ')')
+              ORDER BY timestamp ASC LIMIT 1
+            )),
+            created_by_name = COALESCE(created_by_name, (
+              SELECT actor_name FROM audit_logs
+              WHERE action = 'Logged Cheque'
+                AND LOWER(target) = LOWER('Cheque ' || cheques.cheque_number || ' (' || cheques.customer_name || ')')
+              ORDER BY timestamp ASC LIMIT 1
+            )),
+            deposited_by_id = COALESCE(deposited_by_id, (
+              SELECT actor_id FROM audit_logs
+              WHERE action = 'Deposited Cheque'
+                AND LOWER(target) = LOWER('Cheque ' || cheques.cheque_number || ' (' || cheques.customer_name || ')')
+              ORDER BY timestamp ASC LIMIT 1
+            )),
+            deposited_by_name = COALESCE(deposited_by_name, (
+              SELECT actor_name FROM audit_logs
+              WHERE action = 'Deposited Cheque'
+                AND LOWER(target) = LOWER('Cheque ' || cheques.cheque_number || ' (' || cheques.customer_name || ')')
+              ORDER BY timestamp ASC LIMIT 1
+            ))
+          WHERE created_by_id IS NULL OR deposited_by_id IS NULL
+        `);
+        await client.execute(`
+          UPDATE cheques
+          SET
+            created_by_email = COALESCE(created_by_email, (SELECT email FROM users WHERE users.id = cheques.created_by_id LIMIT 1)),
+            deposited_by_email = COALESCE(deposited_by_email, (SELECT email FROM users WHERE users.id = cheques.deposited_by_id LIMIT 1))
+          WHERE created_by_email IS NULL OR deposited_by_email IS NULL
+        `);
+      } catch {
+        // Actor backfill is best effort; new writes always store the actor.
+      }
     })().catch((error) => {
       schemaInitialization = null;
       throw error;

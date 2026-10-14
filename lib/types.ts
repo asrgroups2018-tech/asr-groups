@@ -58,7 +58,9 @@ export interface User {
   customerId?: string;
 }
 
-export type AuditActor = Pick<User, 'id' | 'name' | 'primaryRoleId'>;
+export type AuditActor = Pick<User, 'id' | 'name' | 'primaryRoleId'> & {
+  email?: User['email'];
+};
 
 export type ModuleAction = 'view' | 'create' | 'edit' | 'delete' | 'approve' | 'export';
 
@@ -144,6 +146,7 @@ export interface ApprovalRequest {
   entityId: string;
   requesterId: string;
   requesterName: string;
+  requesterEmail?: string;
   requesterRoleId: RoleId;
   approverRoleId: RoleId;
   amount: number;
@@ -316,7 +319,15 @@ export interface Cheque {
   depositDate: string; // Expected Date to Deposit ("YYYY-MM-DD")
   status: ChequeStatus; // 'Pending' | 'Deposited'
   depositedAt?: string | null; // Actual Timestamp when deposited
+  createdBy?: ChequeActor | null;
+  depositedBy?: ChequeActor | null;
   createdAt: string; // Timestamp when logged
+}
+
+export interface ChequeActor {
+  id: string;
+  name: string;
+  email: string;
 }
 
 // 2. Company = Funding Entity (ASR own or Outside-party)

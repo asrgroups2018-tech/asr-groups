@@ -47,6 +47,7 @@ export async function POST(req: NextRequest) {
       ...body,
       requesterId: auth.user.id,
       requesterName: auth.user.name,
+      requesterEmail: auth.user.email,
       requesterRoleId: auth.user.primaryRoleId,
       ruleId: evaluation.rule?.id,
       approverRoleId: body.changeType === 'Role Change' ? 0 : evaluation.approverRoleId,
