@@ -241,10 +241,10 @@ export const LoanDetailsView: React.FC = () => {
 
       {/* ─── Sub-Tab Navigation Bar ─── */}
       <div className="bg-white rounded-2xl border border-slate-200 p-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-sm">
-        <div className="flex items-center gap-1.5 overflow-x-auto max-w-full pb-0.5 sm:pb-0 bg-slate-100/80 p-1 rounded-xl border border-slate-200/80">
+        <div className="flex max-w-full flex-wrap items-center gap-1.5 bg-slate-100/80 p-1 rounded-xl border border-slate-200/80">
           <button
             onClick={() => setActiveTab('overview')}
-            className={`flex-1 sm:flex-initial px-3.5 py-1.5 rounded-lg text-xs font-bold btn-press transition-all duration-120 whitespace-nowrap cursor-pointer ${
+            className={`flex-1 sm:flex-initial px-3.5 py-1.5 rounded-lg text-xs font-bold btn-press transition-all duration-120 cursor-pointer ${
               activeTab === 'overview'
                 ? 'bg-[#701A35] text-white shadow-xs'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'

@@ -1,5 +1,7 @@
 'use client';
 
+import { ModalFrame } from '@/components/ui/ModalFrame';
+
 import React, { useState } from 'react';
 import { RoleId } from '@/lib/types';
 import { AlertTriangle, ShieldAlert, X } from 'lucide-react';
@@ -25,7 +27,7 @@ export const ElevatedAccessModal: React.FC<ElevatedAccessModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+    <ModalFrame onClose={onClose} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
       <div className="bg-white rounded-2xl border border-amber-200 shadow-2xl max-w-lg w-full overflow-hidden motion-modal">
         {/* Amber alert ribbon */}
         <div className="bg-amber-500 text-slate-950 px-6 py-3.5 flex items-center justify-between font-bold text-sm">
@@ -106,6 +108,6 @@ export const ElevatedAccessModal: React.FC<ElevatedAccessModalProps> = ({
           </div>
         </div>
       </div>
-    </div>
+    </ModalFrame>
   );
 };

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import {
   Calculator,
   ChevronDown,
@@ -15,6 +15,8 @@ import { formatINR } from '@/lib/utils/formatCurrency';
 import { numberToWordsINR } from '@/lib/utils/formatCurrency';
 import { Loan } from '@/lib/types';
 import { DatePicker, getTodayIsoDate } from '@/components/ui/DatePicker';
+import { CustomSelect } from '@/components/ui/CustomSelect';
+import { FloatingPopover } from '@/components/ui/FloatingPopover';
 
 const PAID_STATUSES = new Set(['PASS', 'NEFT', 'CASH', 'CLS', 'PAID']);
 const isPaid = (s: string) => PAID_STATUSES.has(String(s || '').trim().toUpperCase());
@@ -95,6 +97,7 @@ export const ForeclosureStatement: React.FC = () => {
   const [loanSearch, setLoanSearch] = useState('');
   const [selectedLoanId, setSelectedLoanId] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
+  const loanInputRef = useRef<HTMLInputElement>(null);
   const [asOfDate, setAsOfDate] = useState(getTodayIsoDate);
   const [rebateType, setRebateType] = useState<'none' | 'percent' | 'fixed'>('none');
   const [rebateValue, setRebateValue] = useState('');
@@ -234,6 +237,7 @@ export const ForeclosureStatement: React.FC = () => {
               <div className="relative">
                 <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                 <input
+                  ref={loanInputRef}
                   value={selectedLoan ? `${selectedLoan.customerName} — ${selectedLoan.id}` : loanSearch}
                   onChange={(e) => { setLoanSearch(e.target.value); setSelectedLoanId(''); setShowDropdown(true); }}
                   onFocus={() => setShowDropdown(true)}
@@ -247,7 +251,7 @@ export const ForeclosureStatement: React.FC = () => {
                   </button>
                 )}
                 {showDropdown && !selectedLoan && (
-                  <div className="absolute left-0 right-0 top-full z-20 mt-1 max-h-56 overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-xl">
+                  <FloatingPopover anchorRef={loanInputRef} open={showDropdown && !selectedLoan} onClose={() => setShowDropdown(false)} className="rounded-xl border border-slate-200 bg-white shadow-xl">
                     {filteredLoans.length === 0 ? (
                       <p className="px-4 py-3 text-xs text-slate-500">No loans found.</p>
                     ) : filteredLoans.map((l) => (
@@ -264,7 +268,7 @@ export const ForeclosureStatement: React.FC = () => {
                         </div>
                       </button>
                     ))}
-                  </div>
+                  </FloatingPopover>
                 )}
               </div>
             </div>
@@ -278,15 +282,7 @@ export const ForeclosureStatement: React.FC = () => {
                 Rebate / Discount
               </label>
               <div className="flex gap-1.5">
-                <div className="relative">
-                  <select value={rebateType} onChange={(e) => setRebateType(e.target.value as any)}
-                    className="appearance-none rounded-xl border border-slate-200 bg-[#FCFBF9] py-2.5 pl-3 pr-7 text-[11px] font-semibold text-slate-700 outline-none focus:border-[#C5A059]">
-                    <option value="none">None</option>
-                    <option value="percent">% Rate</option>
-                    <option value="fixed">Fixed ₹</option>
-                  </select>
-                  <ChevronDown className="pointer-events-none absolute right-1.5 top-1/2 h-3 w-3 -translate-y-1/2 text-slate-400" />
-                </div>
+                <CustomSelect value={rebateType} onChange={(value) => setRebateType(value as any)} options={[{ value: 'none', label: 'None' }, { value: 'percent', label: '% Rate' }, { value: 'fixed', label: 'Fixed ₹' }]} buttonClassName="rounded-xl border-slate-200 bg-[#FCFBF9] py-2.5 pl-3 pr-7 text-[11px] text-slate-700" menuClassName="min-w-full" />
                 {rebateType !== 'none' && (
                   <input type="number" min="0" value={rebateValue}
                     onChange={(e) => setRebateValue(e.target.value)}

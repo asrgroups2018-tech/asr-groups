@@ -1,5 +1,7 @@
 'use client';
 
+import { ModalFrame } from '@/components/ui/ModalFrame';
+
 import React, { useState, useId } from 'react';
 import * as XLSX from 'xlsx';
 import {
@@ -16,6 +18,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '@/lib/store';
 import { MatchedImportRow, ImportMatchResult, RawIncomingRow } from '@/lib/server/continuationMatcher';
+import { CustomSelect } from '@/components/ui/CustomSelect';
 
 interface ImportReviewModalProps {
   isOpen: boolean;
@@ -234,7 +237,7 @@ export const ImportReviewModal: React.FC<ImportReviewModalProps> = ({ isOpen, on
   const newLoanTotal = planRows.filter((r) => r.decision === 'NEW_LOAN').length;
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 overflow-y-auto animate-in fade-in duration-150">
+    <ModalFrame onClose={onClose} dismissible={!(isProcessingFile || step === 'COMMITTING')} className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 overflow-y-auto animate-in fade-in duration-150">
       <div className="bg-white rounded-3xl border border-[#E6E1D6] shadow-2xl w-full max-w-5xl max-h-[92vh] flex flex-col overflow-hidden motion-modal">
         {/* Header */}
         <div className="px-6 py-5 border-b border-[#E6E1D6] flex items-center justify-between bg-[#FAF8F5]">
@@ -422,29 +425,13 @@ export const ImportReviewModal: React.FC<ImportReviewModalProps> = ({ isOpen, on
                           </td>
                           <td className="p-3">
                             <div className="flex items-center gap-2">
-                              <select
+                              <CustomSelect
                                 value={isCont ? row.targetLoanId || 'NEW' : 'NEW'}
-                                onChange={(e) => {
-                                  const val = e.target.value;
-                                  if (val === 'NEW') {
-                                    updateRowDecision(row.rowIndex, 'NEW_LOAN');
-                                  } else {
-                                    updateRowDecision(row.rowIndex, 'CONTINUATION', val);
-                                  }
-                                }}
-                                className={`text-xs font-semibold py-1 px-2.5 rounded-lg border focus:outline-hidden cursor-pointer ${
-                                  isCont
-                                    ? 'bg-emerald-50 border-emerald-300 text-emerald-800'
-                                    : 'bg-blue-50 border-blue-300 text-blue-800'
-                                }`}
-                              >
-                                <option value="NEW">+ Create as New Loan</option>
-                                {row.candidateLoans.map((cl) => (
-                                  <option key={cl.loanId} value={cl.loanId}>
-                                    ✓ Match to {cl.loanId} (₹{cl.totalAmount.toLocaleString('en-IN')})
-                                  </option>
-                                ))}
-                              </select>
+                                onChange={(value) => value === 'NEW' ? updateRowDecision(row.rowIndex, 'NEW_LOAN') : updateRowDecision(row.rowIndex, 'CONTINUATION', value)}
+                                options={[{ value: 'NEW', label: '+ Create as New Loan' }, ...row.candidateLoans.map((candidate) => ({ value: candidate.loanId, label: `✓ Match to ${candidate.loanId} (₹${candidate.totalAmount.toLocaleString('en-IN')})` }))]}
+                                buttonClassName={`rounded-lg border px-2.5 py-1 text-xs ${isCont ? 'border-emerald-300 bg-emerald-50 text-emerald-800' : 'border-blue-300 bg-blue-50 text-blue-800'}`}
+                                menuClassName="min-w-[16rem]"
+                              />
                             </div>
                           </td>
                         </tr>
@@ -519,6 +506,6 @@ export const ImportReviewModal: React.FC<ImportReviewModalProps> = ({ isOpen, on
           </div>
         )}
       </div>
-    </div>
+    </ModalFrame>
   );
 };

@@ -14,6 +14,7 @@ import { useApp } from '@/lib/store';
 import { formatINR, numberToWordsINR } from '@/lib/utils/formatCurrency';
 import { Customer, Loan, Installment } from '@/lib/types';
 import { DateRangePicker } from '@/components/ui/DateRangePicker';
+import { FloatingPopover } from '@/components/ui/FloatingPopover';
 
 const PAID_STATUSES = new Set(['PASS', 'NEFT', 'CASH', 'CLS', 'PAID']);
 const isPaid = (s: string) => PAID_STATUSES.has(String(s || '').trim().toUpperCase());
@@ -111,6 +112,8 @@ function buildCustomerSummary(
 export const AccountStatement: React.FC = () => {
   const { customers, loans, showToast } = useApp();
   const [query, setQuery] = useState('');
+  const [customerMenuOpen, setCustomerMenuOpen] = useState(false);
+  const customerInputRef = useRef<HTMLInputElement>(null);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
@@ -345,26 +348,28 @@ export const AccountStatement: React.FC = () => {
           {/* Controls */}
           <div className="flex flex-wrap items-end gap-3 border-t border-[#EEE8DE] pt-4">
             {/* Customer Search */}
-            <div className="min-w-[260px] flex-1">
+            <div className="w-full min-w-0 flex-1 sm:min-w-[260px]">
               <label className="block text-[9px] font-bold uppercase tracking-[0.1em] text-slate-500 mb-1">
                 Select Customer
               </label>
               <div className="relative">
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                 <input
+                  ref={customerInputRef}
                   value={query}
-                  onChange={(e) => { setQuery(e.target.value); setSelectedCustomerId(''); }}
+                  onChange={(e) => { setQuery(e.target.value); setSelectedCustomerId(''); setCustomerMenuOpen(true); }}
+                  onFocus={() => setCustomerMenuOpen(true)}
                   placeholder="Search by name, ID, or place…"
                   className="w-full rounded-xl border border-slate-200 bg-[#FCFBF9] py-2.5 pl-10 pr-3 text-xs outline-none focus:border-[#C5A059]"
                 />
               </div>
               {query && !selectedCustomerId && filteredCustomers.length > 0 && (
-                <div className="mt-1 max-h-48 overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-lg">
+                <FloatingPopover anchorRef={customerInputRef} open={customerMenuOpen} onClose={() => setCustomerMenuOpen(false)} className="rounded-xl border border-slate-200 bg-white shadow-lg">
                   {filteredCustomers.map((c) => (
                     <button
                       key={c.id}
                       type="button"
-                      onClick={() => { setSelectedCustomerId(c.id); setQuery(c.name); }}
+                      onClick={() => { setSelectedCustomerId(c.id); setQuery(c.name); setCustomerMenuOpen(false); }}
                       className="flex w-full items-start gap-2 px-3 py-2.5 text-left hover:bg-[#FBF8F3]"
                     >
                       <div>
@@ -373,7 +378,7 @@ export const AccountStatement: React.FC = () => {
                       </div>
                     </button>
                   ))}
-                </div>
+                </FloatingPopover>
               )}
             </div>
 

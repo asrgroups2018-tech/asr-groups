@@ -19,6 +19,7 @@ import { useApp } from '@/lib/store';
 import { APP_BRAND } from '@/lib/branding';
 import { formatINR } from '@/lib/utils/formatCurrency';
 import { Loan, Company } from '@/lib/types';
+import { CustomSelect } from '@/components/ui/CustomSelect';
 
 const PAID_STATUSES = new Set(['PASS', 'NEFT', 'CASH', 'CLS', 'PAID']);
 const isPaid = (s: string) => PAID_STATUSES.has(String(s || '').trim().toUpperCase());
@@ -560,11 +561,7 @@ export const PortfolioPnL: React.FC = () => {
               {monthly.length} month{monthly.length === 1 ? '' : 's'} of data
             </p>
           </div>
-          <select value={yearFilter} onChange={(e) => setYearFilter(e.target.value)}
-            className="appearance-none rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 outline-none focus:border-[#C5A059]">
-            <option value="all">All Years</option>
-            {availableYears.map((y) => <option key={y} value={y}>{y}</option>)}
-          </select>
+          <CustomSelect value={yearFilter} onChange={setYearFilter} options={[{ value: 'all', label: 'All Years' }, ...availableYears.map((year) => ({ value: year, label: year }))]} buttonClassName="rounded-xl border-slate-200 bg-white px-3 py-2 text-xs text-slate-700" menuClassName="min-w-full" />
         </div>
         {showMonthly && (
           <div className="overflow-x-auto">

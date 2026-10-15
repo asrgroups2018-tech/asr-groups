@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useRef, useState } from 'react';
 import Image from 'next/image';
 import { useRouter, usePathname } from 'next/navigation';
 import { useApp } from '@/lib/store';
@@ -25,6 +25,8 @@ import {
 } from 'lucide-react';
 import { RoleBadge } from '@/components/ui/RoleBadge';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
+import { FloatingPopover } from '@/components/ui/FloatingPopover';
+import { ModalFrame } from '@/components/ui/ModalFrame';
 
 interface SidebarProps {
   isOpenMobile: boolean;
@@ -62,16 +64,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpenMobile, onCloseMobile })
   const profileRef = useRef<HTMLDivElement>(null);
 
   const activeRoleName = roles.find((role) => role.id === simulatedRoleId)?.name || 'Role';
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (profileRef.current && !profileRef.current.contains(event.target as Node)) {
-        setIsProfileOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
 
   const handleSignOut = async () => {
     setIsSigningOut(true);
@@ -243,15 +235,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpenMobile, onCloseMobile })
             <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-amber-400/40 bg-[#831843] text-[10px] font-bold tracking-wider text-amber-100">{currentActor.initials}</div>
             <div className="min-w-0 flex-1"><p className="truncate text-[11px] font-bold text-white">{currentActor.name}</p><p className="mt-0.5 flex items-center gap-1 text-[9px] font-semibold text-slate-400"><span className="truncate">{activeRoleName}</span><ChevronDown className="h-3 w-3 shrink-0" /></p></div>
           </button>
-          {isProfileOpen && <div className="motion-popover absolute bottom-3 left-full z-50 ml-2 w-64 rounded-2xl border border-[#3C2330] bg-[#21121B] p-3 shadow-2xl">
+          {isProfileOpen && <FloatingPopover anchorRef={profileRef} open={isProfileOpen} onClose={() => setIsProfileOpen(false)} preferredSide="top" width={256} className="rounded-2xl border border-[#3C2330] bg-[#21121B] p-3 shadow-2xl">
             <div className="border-b border-white/10 px-2 pb-3"><p className="text-xs font-bold text-white">{currentActor.name}</p><p className="mt-1 truncate text-[11px] text-slate-400">{currentActor.email}</p><div className="mt-2 flex flex-wrap items-center gap-1.5"><RoleBadge roleId={simulatedRoleId} roleName={activeRoleName} size="xs" /><span className="font-mono text-[10px] text-slate-500">ID: {currentActor.id}</span></div></div>
             <div className="pt-2"><button type="button" onClick={() => { setIsProfileOpen(false); setIsSignOutOpen(true); }} className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-xs font-medium text-rose-300 transition hover:bg-rose-500/10 hover:text-rose-200"><LogOut className="h-3.5 w-3.5" /><span>Sign Out</span></button></div>
-          </div>}
+          </FloatingPopover>}
         </div>
       </aside>
 
       {isSignOutOpen && (
-        <div
+        <ModalFrame onClose={() => setIsSignOutOpen(false)} dismissible={!isSigningOut}
           className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/60 px-4 backdrop-blur-sm"
           role="presentation"
           onMouseDown={(event) => {
@@ -275,7 +267,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpenMobile, onCloseMobile })
               </button>
             </div>
           </div>
-        </div>
+        </ModalFrame>
       )}
     </>
   );

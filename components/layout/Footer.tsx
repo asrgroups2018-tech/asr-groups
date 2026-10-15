@@ -6,7 +6,7 @@ import Image from 'next/image';
 export const Footer: React.FC = () => {
   return (
     <footer className="app-footer w-full shrink-0 select-none border-t border-[#EBE7DF] bg-white px-4 py-2.5 text-slate-500 shadow-xs sm:px-6 md:px-8">
-      <div className="flex w-full items-center justify-between gap-3">
+      <div className="flex w-full flex-wrap items-center justify-between gap-2 sm:gap-3">
         <div className="flex items-center gap-2">
           <div className="relative h-5 w-5 shrink-0 overflow-hidden rounded-full">
             <Image

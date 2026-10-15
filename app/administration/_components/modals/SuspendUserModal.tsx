@@ -1,5 +1,7 @@
 'use client';
 
+import { ModalFrame } from '@/components/ui/ModalFrame';
+
 import React, { useState } from 'react';
 import { User } from '@/lib/types';
 import { useApp } from '@/lib/store';
@@ -30,7 +32,7 @@ export const SuspendUserModal: React.FC<SuspendUserModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
+    <ModalFrame onClose={onClose} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
       <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-md w-full overflow-hidden motion-modal">
         {/* Header */}
         <div
@@ -106,6 +108,6 @@ export const SuspendUserModal: React.FC<SuspendUserModalProps> = ({
           </div>
         </div>
       </div>
-    </div>
+    </ModalFrame>
   );
 };

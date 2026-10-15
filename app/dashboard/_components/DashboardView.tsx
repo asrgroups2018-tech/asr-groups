@@ -458,8 +458,8 @@ export const DashboardView: React.FC = () => {
       )}
 
       {/* ─── Top Brand Header & Filter Bar ─── */}
-      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
+      <div className="bg-white p-3 sm:p-5 lg:p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col xl:flex-row xl:items-center justify-between gap-4">
+        <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2.5">
             <div className="w-10 h-10 rounded-xl bg-[#701A35] text-[#EED8A1] shadow-sm flex items-center justify-center shrink-0">
               <TrendingUp className="w-5 h-5" />
@@ -476,8 +476,8 @@ export const DashboardView: React.FC = () => {
         </div>
 
         {/* Time Period Filter (Applies ONLY to Period-scoped cards & lists below) */}
-        <div className="flex items-center gap-2 overflow-x-auto max-w-full pb-1 sm:pb-0">
-          <div className="flex items-center gap-1.5 bg-slate-100/80 p-1 rounded-xl border border-slate-200/80 whitespace-nowrap">
+        <div className="w-full min-w-0 shrink-0 sm:w-fit">
+          <div className="dashboard-timeframes flex w-full flex-nowrap items-center gap-1 rounded-xl border border-slate-200/80 bg-slate-100/80 p-1 sm:gap-1.5">
             {[
               { id: 'all', label: 'All Time' },
               { id: 'today', label: 'Today' },
@@ -489,8 +489,10 @@ export const DashboardView: React.FC = () => {
               return (
                 <button
                   key={f.id}
+                  type="button"
+                  aria-pressed={isActive}
                   onClick={() => setTimeFilter(f.id as any)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold btn-press transition-all duration-120 cursor-pointer ${
+                  className={`min-h-11 min-w-0 flex-1 whitespace-nowrap rounded-lg px-1 py-2.5 text-[10px] font-bold btn-press transition-colors cursor-pointer sm:min-h-0 sm:flex-none sm:px-3 sm:py-2 sm:text-xs ${
                     isActive
                       ? 'bg-[#701A35] text-white shadow-xs'
                       : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'

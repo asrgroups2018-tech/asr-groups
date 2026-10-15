@@ -15,6 +15,7 @@ import {
   X,
 } from 'lucide-react';
 import { exportToCSV, printTablePDF } from '@/lib/exportUtils';
+import { CustomSelect } from './CustomSelect';
 
 export interface ColumnDef<T> {
   key: string;
@@ -207,8 +208,8 @@ export function DataTable<T>({
         </div>
 
         {/* Right: Search & Export */}
-        <div className="flex items-center gap-2 flex-1 sm:justify-end w-full sm:w-auto">
-          <div className="relative flex-1 sm:w-64 sm:flex-initial">
+        <div className="flex min-w-0 flex-wrap items-center gap-2 flex-1 sm:justify-end w-full sm:w-auto">
+          <div className="relative min-w-0 flex-1 sm:w-64 sm:flex-initial">
             <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
@@ -257,7 +258,7 @@ export function DataTable<T>({
       </div>
 
       {/* Desktop Spreadsheet Table View */}
-      <div className={`${fitViewport ? 'overflow-x-hidden' : 'overflow-x-auto'} hidden md:block`}>
+      <div className={`${fitViewport ? 'overflow-x-hidden' : 'overflow-x-auto'} hidden lg:block`}>
         <table className={`w-full text-left text-xs border-collapse ${fitViewport ? 'table-fixed' : ''}`}>
           <thead>
             <tr className="bg-slate-100 border-b-2 border-slate-200 text-[11px] font-mono font-bold text-slate-700 uppercase tracking-wider select-none sticky top-0 z-10">
@@ -422,7 +423,7 @@ export function DataTable<T>({
       </div>
 
       {/* Mobile Card List View (Responsive) */}
-      <div className="block md:hidden divide-y divide-slate-100">
+      <div className="block lg:hidden divide-y divide-slate-100">
         {paginatedData.length === 0 ? (
           <div className="p-8 text-center text-slate-500 text-xs">{emptyStateMessage}</div>
         ) : (
@@ -454,9 +455,9 @@ export function DataTable<T>({
                     : (item as any)[col.key];
 
                   return (
-                    <div key={col.key} className="flex justify-between items-center text-xs">
-                      <span className="font-semibold text-slate-500">{col.header}:</span>
-                      <span className="text-slate-800 text-right">{content}</span>
+                    <div key={col.key} className="flex flex-wrap justify-between items-start gap-2 text-xs">
+                      <span className="shrink-0 font-semibold text-slate-500">{col.header}:</span>
+                      <div className="min-w-0 max-w-full break-words text-slate-800 text-right">{content}</div>
                     </div>
                   );
                 })}
@@ -470,19 +471,16 @@ export function DataTable<T>({
       <div className="p-3.5 border-t border-[#E6E1D6] bg-white flex flex-wrap items-center justify-between gap-3 text-xs text-slate-600">
         <div className="flex items-center gap-2">
           <span className="text-slate-500 font-medium">Show Row:</span>
-          <select
-            value={pageSize}
-            onChange={(e) => {
-              setPageSize(Number(e.target.value));
+          <CustomSelect
+            value={String(pageSize)}
+            onChange={(value) => {
+              setPageSize(Number(value));
               setCurrentPage(1);
             }}
-            className="px-2.5 py-1 rounded-lg border border-slate-200 bg-[#FAF8F5] focus:outline-none focus:ring-1 focus:ring-amber-500 text-xs font-semibold cursor-pointer"
-          >
-            <option value={10}>10</option>
-            <option value={20}>20</option>
-            <option value={50}>50</option>
-            <option value={100}>100</option>
-          </select>
+            options={[10, 20, 50, 100].map((size) => ({ value: String(size), label: String(size) }))}
+            buttonClassName="rounded-lg border-slate-200 bg-[#FAF8F5] px-2.5 py-1 text-xs"
+            menuClassName="min-w-full"
+          />
         </div>
 
         <div className="flex items-center gap-1">

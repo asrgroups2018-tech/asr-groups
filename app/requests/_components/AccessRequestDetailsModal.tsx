@@ -1,5 +1,7 @@
 'use client';
 
+import { ModalFrame } from '@/components/ui/ModalFrame';
+
 import React from 'react';
 import { Check, Clock3, FileKey2, UserRound, X } from 'lucide-react';
 import { AccessRequest } from '@/lib/types';
@@ -27,7 +29,7 @@ export const AccessRequestDetailsModal: React.FC<AccessRequestDetailsModalProps>
   const isPending = request.status === 'Pending';
 
   return (
-    <div
+    <ModalFrame onClose={onClose}
       className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-sm"
       role="dialog"
       aria-modal="true"
@@ -100,7 +102,7 @@ export const AccessRequestDetailsModal: React.FC<AccessRequestDetailsModalProps>
           </div>
         </footer>
       </section>
-    </div>
+    </ModalFrame>
   );
 };
 

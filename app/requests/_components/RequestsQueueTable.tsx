@@ -4,7 +4,7 @@ import React, { useMemo, useState } from 'react';
 import { AccessRequest, ApprovalRequest } from '@/lib/types';
 import { useApp } from '@/lib/store';
 import { DataTable, ColumnDef } from '@/components/ui/DataTable';
-import { StatusPill } from '@/components/ui/StatusPill';
+import { AnyStatus, StatusPill } from '@/components/ui/StatusPill';
 import { RoleBadge } from '@/components/ui/RoleBadge';
 import { MoneyDisplay } from '@/components/ui/MoneyDisplay';
 import { getPermissionActionLabel, getPermissionModuleLabel } from '@/lib/permissions';
@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { RequestDetailsModal } from './RequestDetailsModal';
 import { AccessRequestDetailsModal } from './AccessRequestDetailsModal';
+import { CustomSelect } from '@/components/ui/CustomSelect';
 
 type QueueRequest = ApprovalRequest & {
   source: 'approval' | 'access';
@@ -187,7 +188,7 @@ export const RequestsQueueTable: React.FC<RequestsQueueTableProps> = ({ accessRe
       sortable: true,
       accessor: (r) => r.status,
       className: 'w-[14%]',
-      render: (r) => <StatusPill status={r.status as any} size="sm" />,
+      render: (r) => <StatusPill status={r.status as AnyStatus} size="sm" />,
       exportValue: (r) => r.status,
     },
     {
@@ -236,33 +237,35 @@ export const RequestsQueueTable: React.FC<RequestsQueueTableProps> = ({ accessRe
     <div className="space-y-4">
       {/* Filters Bar matching Loans page */}
       <div className="bg-white p-4.5 rounded-2xl border border-slate-200 shadow-sm flex flex-col xl:flex-row xl:items-end justify-between gap-3.5">
-        <div className="flex flex-col sm:flex-row sm:items-end gap-3 flex-1 flex-wrap">
+        <div className="flex min-w-0 flex-col sm:flex-row sm:items-end gap-3 flex-1 flex-wrap">
           {/* Change Type Filter Dropdown */}
-          <div className="relative min-w-[200px]">
+          <div className="relative w-full min-w-0 sm:w-[220px]">
             <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 font-mono mb-1 block">
               Filter by Workflow Type
             </label>
-            <div className="relative">
-              <select
-                value={changeTypeFilter}
-                onChange={(e) => setChangeTypeFilter(e.target.value)}
-                className="w-full bg-white border border-slate-300 hover:border-[#701A35] rounded-xl px-3 py-2 text-xs text-slate-900 font-bold transition-colors cursor-pointer shadow-2xs focus:outline-none focus:border-[#701A35]"
-              >
-                <option value="ALL">All Workflow Types</option>
-                <option value="Loan Update">Loan Restructuring</option>
-                <option value="Loan Split">Loan Split</option>
-                <option value="Loan Merge">Loan Merge</option>
-                <option value="Historical Correction">Historical Receipt</option>
-                <option value="Customer Update">Customer Profile</option>
-                <option value="Role Change">Role Elevation</option>
-                <option value="ACCESS">Page Access</option>
-              </select>
-            </div>
+            <CustomSelect
+              value={changeTypeFilter}
+              aria-label="Filter by workflow type"
+              onChange={setChangeTypeFilter}
+              options={[
+                { value: 'ALL', label: 'All Workflow Types' },
+                { value: 'Loan Update', label: 'Loan Restructuring' },
+                { value: 'Loan Split', label: 'Loan Split' },
+                { value: 'Loan Merge', label: 'Loan Merge' },
+                { value: 'Historical Correction', label: 'Historical Receipt' },
+                { value: 'Customer Update', label: 'Customer Profile' },
+                { value: 'Role Change', label: 'Role Elevation' },
+                { value: 'ACCESS', label: 'Page Access' },
+              ]}
+              buttonClassName="rounded-xl border-slate-300 px-3 py-2 text-xs text-slate-900 shadow-2xs hover:border-[#701A35]"
+              menuClassName="min-w-full"
+              size="sm"
+            />
           </div>
         </div>
 
         {/* Status Filter Tabs matching Loans page */}
-        <div className="flex flex-wrap items-center bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs font-semibold max-w-full">
+        <div className="grid grid-cols-3 gap-1.5 sm:flex sm:flex-wrap items-center bg-slate-100 p-1.5 rounded-xl border border-slate-200 text-xs font-semibold max-w-full">
           {(['ALL', 'Pending', 'Approved', 'Auto-Approved', 'Rejected'] as const).map((st) => (
             <button
               key={st}

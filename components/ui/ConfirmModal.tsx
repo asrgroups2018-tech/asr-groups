@@ -1,5 +1,7 @@
 'use client';
 
+import { ModalFrame } from '@/components/ui/ModalFrame';
+
 import React, { useState, useEffect } from 'react';
 import { AlertTriangle, Trash2, X, AlertCircle, Info, Loader2 } from 'lucide-react';
 import { MoneyDisplay } from './MoneyDisplay';
@@ -96,7 +98,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
   const styles = getVariantStyles();
 
   return (
-    <div
+    <ModalFrame onClose={onClose} dismissible={!(isLoading)}
       className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150"
       onClick={(e) => {
         if (e.target === e.currentTarget && !isLoading) {
@@ -204,6 +206,6 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
           </button>
         </div>
       </div>
-    </div>
+    </ModalFrame>
   );
 };

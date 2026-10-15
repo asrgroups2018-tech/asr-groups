@@ -14,6 +14,7 @@ import * as XLSX from 'xlsx';
 import { useApp } from '@/lib/store';
 import { formatINR } from '@/lib/utils/formatCurrency';
 import { Loan } from '@/lib/types';
+import { CustomSelect } from '@/components/ui/CustomSelect';
 
 const PAID_STATUSES = new Set(['PASS', 'NEFT', 'CASH', 'CLS', 'PAID']);
 const isPaid = (s: string) => PAID_STATUSES.has(String(s || '').trim().toUpperCase());
@@ -233,19 +234,7 @@ export const MonthlyCollectionSummary: React.FC = () => {
 
           {/* Filters & Export */}
           <div className="flex flex-wrap items-end gap-3 border-t border-[#EEE8DE] pt-4">
-            <label className="block min-w-[130px] text-[9px] font-bold uppercase tracking-[0.1em] text-slate-500">
-              Year
-              <select
-                value={yearFilter}
-                onChange={(e) => setYearFilter(e.target.value)}
-                className="mt-1 w-full appearance-none rounded-xl border border-slate-200 bg-[#FCFBF9] px-3 py-2.5 text-xs font-semibold normal-case text-slate-700 outline-none focus:border-[#C5A059]"
-              >
-                <option value="all">All Years</option>
-                {availableYears.map((y) => (
-                  <option key={y} value={y}>{y}</option>
-                ))}
-              </select>
-            </label>
+            <label className="block min-w-[130px] text-[9px] font-bold uppercase tracking-[0.1em] text-slate-500">Year<CustomSelect value={yearFilter} onChange={setYearFilter} options={[{ value: 'all', label: 'All Years' }, ...availableYears.map((year) => ({ value: year, label: year }))]} buttonClassName="mt-1 rounded-xl border-slate-200 bg-[#FCFBF9] px-3 py-2.5 text-xs text-slate-700" menuClassName="min-w-full" size="md" /></label>
             <div className="ml-auto flex gap-2">
               <button
                 type="button"

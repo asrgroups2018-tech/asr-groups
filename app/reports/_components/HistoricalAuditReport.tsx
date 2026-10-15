@@ -265,7 +265,7 @@ export const HistoricalAuditReport: React.FC = () => {
 
       {/* Filter Bar matching Loans page */}
       <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between gap-3">
-        <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs font-semibold overflow-x-auto max-w-full">
+        <div className="flex max-w-full flex-wrap items-center bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs font-semibold">
           {[
             { id: 'ALL', label: `All (${receipts.length})` },
             { id: 'MISMATCH_ONLY', label: `Discrepancies Only (${stats.mismatchCount})` },
@@ -275,7 +275,7 @@ export const HistoricalAuditReport: React.FC = () => {
             <button
               key={tab.id}
               onClick={() => setFilterMode(tab.id as any)}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all duration-120 cursor-pointer whitespace-nowrap ${
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all duration-120 cursor-pointer ${
                 filterMode === tab.id
                   ? 'bg-[#701A35] text-white shadow-xs'
                   : 'text-slate-700 hover:text-slate-950 hover:bg-slate-200/60'

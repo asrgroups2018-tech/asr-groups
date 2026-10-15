@@ -26,7 +26,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
   }
 
   return (
-    <div className="relative flex h-screen w-screen flex-col overflow-hidden bg-[#F8F6F1]">
+    <div className="app-shell relative flex h-dvh w-full flex-col overflow-hidden bg-[#F8F6F1]">
       <div className="flex min-h-0 w-full flex-1 overflow-hidden">
         <Sidebar
           isOpenMobile={isMobileSidebarOpen}

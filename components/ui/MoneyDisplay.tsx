@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { formatINR, numberToWordsINR } from '@/lib/utils/formatCurrency';
+import { ModalFrame } from './ModalFrame';
 
 export interface MoneyDisplayProps {
   amount: number | null | undefined;
@@ -46,22 +47,17 @@ export const MoneyDisplay = React.memo<MoneyDisplayProps>(({
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!showTooltip || !words) return;
+    if (window.matchMedia('(min-width: 640px)').matches) return;
     setIsOpen((prev) => !prev);
   };
 
-  // Close on outside click
   useEffect(() => {
     if (!isOpen) return;
-    const handleOutsideClick = (e: MouseEvent | TouchEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleOutsideClick);
-    document.addEventListener('touchstart', handleOutsideClick);
+    const desktop = window.matchMedia('(min-width: 640px)');
+    const closeOnDesktop = () => { if (desktop.matches) setIsOpen(false); };
+    desktop.addEventListener('change', closeOnDesktop);
     return () => {
-      document.removeEventListener('mousedown', handleOutsideClick);
-      document.removeEventListener('touchstart', handleOutsideClick);
+      desktop.removeEventListener('change', closeOnDesktop);
     };
   }, [isOpen]);
 
@@ -90,11 +86,14 @@ export const MoneyDisplay = React.memo<MoneyDisplayProps>(({
 
       {/* ─── Mobile Touch Bottom Sheet Modal (Shown only when tapped on Mobile) ─── */}
       {showTooltip && words && isOpen && (
-        <div
-          className="fixed inset-0 z-[250] sm:hidden flex flex-col justify-end p-4 bg-black/40 backdrop-blur-xs animate-in fade-in duration-150"
+        <ModalFrame
+          onClose={() => setIsOpen(false)}
+          placement="bottom"
+          aria-label="Amount in words"
+          className="fixed inset-0 z-[250] bg-black/40 backdrop-blur-xs animate-in fade-in duration-150"
           onClick={(e) => {
             e.stopPropagation();
-            setIsOpen(false);
+            if (e.target === e.currentTarget) setIsOpen(false);
           }}
         >
           <div
@@ -134,7 +133,7 @@ export const MoneyDisplay = React.memo<MoneyDisplayProps>(({
               Done
             </button>
           </div>
-        </div>
+        </ModalFrame>
       )}
     </>
   );

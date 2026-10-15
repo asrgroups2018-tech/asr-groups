@@ -1,5 +1,7 @@
 'use client';
 
+import { ModalFrame } from '@/components/ui/ModalFrame';
+
 import React, { useState, useEffect } from 'react';
 import { useApp } from '@/lib/store';
 import { Role, ModuleAction, PermissionMatrixState } from '@/lib/types';
@@ -104,7 +106,7 @@ export const EditRoleModal: React.FC<EditRoleModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
+    <ModalFrame onClose={onClose} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
       <div className="bg-white rounded-2xl border border-[#E6E1D6] shadow-2xl max-w-3xl w-full overflow-hidden flex flex-col max-h-[90vh] motion-modal">
         {/* Header */}
         <div className="bg-[#1A0A13] text-white px-6 py-4 flex items-center justify-between border-b border-[#2C1420] shrink-0">
@@ -339,6 +341,6 @@ export const EditRoleModal: React.FC<EditRoleModalProps> = ({
           </div>
         </form>
       </div>
-    </div>
+    </ModalFrame>
   );
 };

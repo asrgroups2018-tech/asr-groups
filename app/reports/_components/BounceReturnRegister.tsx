@@ -19,6 +19,7 @@ import { APP_BRAND } from '@/lib/branding';
 import { formatINR } from '@/lib/utils/formatCurrency';
 import { Loan } from '@/lib/types';
 import { DateRangePicker } from '@/components/ui/DateRangePicker';
+import { CustomSelect } from '@/components/ui/CustomSelect';
 
 // Statuses that indicate instrument was returned/bounced
 const BOUNCE_STATUSES = new Set(['RET', 'RET NEFT', 'RET PASS', 'BOUNCE', 'RETURNED']);
@@ -309,11 +310,7 @@ export const BounceReturnRegister: React.FC = () => {
               </button>
             ))}
             {/* Type filter */}
-            <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}
-              className="appearance-none rounded-xl border border-slate-200 bg-[#FCFBF9] px-3 py-2.5 text-xs font-semibold text-slate-700 outline-none focus:border-[#C5A059]">
-              <option value="All">All Types</option>
-              {allTypes.map((t) => <option key={t} value={t}>{t}</option>)}
-            </select>
+            <CustomSelect value={typeFilter} onChange={setTypeFilter} options={[{ value: 'All', label: 'All Types' }, ...allTypes.map((type) => ({ value: type, label: type }))]} buttonClassName="rounded-xl border-slate-200 bg-[#FCFBF9] px-3 py-2.5 text-xs text-slate-700" menuClassName="min-w-full" size="md" />
             <DateRangePicker
               label="Bounce Date Range"
               value={{ startDate: fromDate || null, endDate: toDate || null, presetLabel: 'custom' }}

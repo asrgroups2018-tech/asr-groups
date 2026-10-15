@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { RoleBadge } from '@/components/ui/RoleBadge';
 import { DataTable, ColumnDef } from '@/components/ui/DataTable';
+import { CustomSelect } from '@/components/ui/CustomSelect';
 
 export const AuditLogTab: React.FC = () => {
   const { auditLogs, users } = useApp();
@@ -195,35 +196,13 @@ export const AuditLogTab: React.FC = () => {
             {/* Action Type Filter */}
             <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs">
               <Filter className="w-3.5 h-3.5 text-slate-400" />
-              <select
-                value={selectedActionType}
-                onChange={(e) => setSelectedActionType(e.target.value)}
-                className="bg-transparent font-semibold text-slate-700 focus:outline-none cursor-pointer text-xs"
-              >
-                <option value="all">All Action Types</option>
-                {uniqueActions.map((act) => (
-                  <option key={act} value={act}>
-                    {act}
-                  </option>
-                ))}
-              </select>
+              <CustomSelect value={selectedActionType} onChange={setSelectedActionType} options={[{ value: 'all', label: 'All Action Types' }, ...uniqueActions.map((act) => ({ value: act, label: act }))]} buttonClassName="border-0 bg-transparent px-1 py-1 text-xs text-slate-700 shadow-none" menuClassName="min-w-[13rem]" />
             </div>
 
             {/* Actor Filter */}
             <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs">
               <UserRound className="w-3.5 h-3.5 text-slate-400" />
-              <select
-                value={selectedActor}
-                onChange={(e) => setSelectedActor(e.target.value)}
-                className="bg-transparent font-semibold text-slate-700 focus:outline-none cursor-pointer text-xs"
-              >
-                <option value="all">All Actors</option>
-                {uniqueActors.map((actor) => (
-                  <option key={actor} value={actor}>
-                    {actor}
-                  </option>
-                ))}
-              </select>
+              <CustomSelect value={selectedActor} onChange={setSelectedActor} options={[{ value: 'all', label: 'All Actors' }, ...uniqueActors.map((actor) => ({ value: actor, label: actor }))]} buttonClassName="border-0 bg-transparent px-1 py-1 text-xs text-slate-700 shadow-none" menuClassName="min-w-[13rem]" />
             </div>
 
             {/* Sensitive Filter Toggle */}

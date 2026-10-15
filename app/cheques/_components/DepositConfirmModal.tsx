@@ -1,5 +1,7 @@
 'use client';
 
+import { ModalFrame } from '@/components/ui/ModalFrame';
+
 import React, { useState } from 'react';
 import { Cheque } from '@/lib/types';
 import { useApp } from '@/lib/store';
@@ -41,7 +43,7 @@ export const DepositConfirmModal: React.FC<DepositConfirmModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
+    <ModalFrame onClose={onClose} dismissible={!(isSubmitting)} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
       <div className="bg-white rounded-2xl border border-emerald-200 shadow-2xl max-w-md w-full overflow-hidden flex flex-col motion-modal">
         {/* Header */}
         <div className="px-6 py-4 border-b border-emerald-100 flex items-center justify-between bg-emerald-50/60">
@@ -143,6 +145,6 @@ export const DepositConfirmModal: React.FC<DepositConfirmModalProps> = ({
           </div>
         </form>
       </div>
-    </div>
+    </ModalFrame>
   );
 };

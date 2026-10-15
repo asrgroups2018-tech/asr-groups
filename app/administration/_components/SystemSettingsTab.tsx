@@ -155,7 +155,7 @@ export const SystemSettingsTab: React.FC = () => {
   return (
     <div className="space-y-6 pb-20">
       {/* Sub-tab Navigation */}
-      <div className="bg-white rounded-2xl p-2.5 border border-slate-200 shadow-sm flex items-center gap-2 overflow-x-auto">
+      <div className="bg-white rounded-2xl p-2.5 border border-slate-200 shadow-sm flex flex-wrap items-center gap-2">
         {[
           { id: 'profile', label: 'Company Profile', icon: <Building2 className="w-4 h-4" /> },
           {

@@ -17,6 +17,7 @@ import { useApp } from '@/lib/store';
 import { formatINR } from '@/lib/utils/formatCurrency';
 import { Loan } from '@/lib/types';
 import { DateRangePicker } from '@/components/ui/DateRangePicker';
+import { CustomSelect } from '@/components/ui/CustomSelect';
 
 const PAID_STATUSES = new Set(['PASS', 'NEFT', 'CASH', 'CLS', 'PAID']);
 const isPaid = (s: string) => PAID_STATUSES.has(String(s || '').trim().toUpperCase());
@@ -294,17 +295,7 @@ export const LoanLedger: React.FC = () => {
                 placeholder="Search customer, loan ID, code, place…"
                 className="w-full rounded-xl border border-slate-200 bg-[#FCFBF9] py-2.5 pl-10 pr-3 text-xs outline-none focus:border-[#C5A059]" />
             </div>
-            <label className="block min-w-[120px] text-[9px] font-bold uppercase tracking-[0.1em] text-slate-500">
-              Status
-              <span className="relative mt-1 block">
-                <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
-                  className="w-full appearance-none rounded-xl border border-slate-200 bg-[#FCFBF9] py-2.5 pl-3 pr-8 text-xs font-semibold normal-case text-slate-700 outline-none focus:border-[#C5A059]">
-                  <option value="All">All Statuses</option>
-                  {allStatuses.map((s) => <option key={s} value={s}>{s}</option>)}
-                </select>
-                <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
-              </span>
-            </label>
+            <label className="block min-w-[120px] text-[9px] font-bold uppercase tracking-[0.1em] text-slate-500">Status<CustomSelect value={statusFilter} onChange={setStatusFilter} options={[{ value: 'All', label: 'All Statuses' }, ...allStatuses.map((status) => ({ value: status, label: status }))]} buttonClassName="mt-1 rounded-xl border-slate-200 bg-[#FCFBF9] py-2.5 pl-3 pr-8 text-xs text-slate-700" menuClassName="min-w-full" size="md" /></label>
             <DateRangePicker
               label="Entry Date Range"
               value={{ startDate: fromDate || null, endDate: toDate || null, presetLabel: 'custom' }}

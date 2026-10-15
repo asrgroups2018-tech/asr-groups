@@ -4,6 +4,7 @@ import React from 'react';
 import { useApp } from '@/lib/store';
 import { ShieldCheck, ShieldAlert, UserCheck } from 'lucide-react';
 import { RoleBadge } from '@/components/ui/RoleBadge';
+import { CustomSelect } from '@/components/ui/CustomSelect';
 
 export const RoleRibbon: React.FC = () => {
   const { simulatedRoleId, currentActor, setSimulatedRoleId, roles } = useApp();
@@ -37,17 +38,13 @@ export const RoleRibbon: React.FC = () => {
         <span className="text-[11px] text-slate-400 hidden lg:inline">
           Simulate Role:
         </span>
-        <select
-          value={simulatedRoleId}
-          onChange={(e) => setSimulatedRoleId(Number(e.target.value) as any)}
-          className="bg-[#162238] border border-slate-700 text-slate-200 text-xs rounded-lg px-2.5 py-1 font-medium focus:outline-none focus:ring-1 focus:ring-amber-400 cursor-pointer"
-        >
-          {roles.map((r) => (
-            <option key={r.id} value={r.id}>
-              Role {r.id} · {r.name}
-            </option>
-          ))}
-        </select>
+        <CustomSelect
+          value={String(simulatedRoleId)}
+          onChange={(value) => setSimulatedRoleId(Number(value) as any)}
+          options={roles.map((r) => ({ value: String(r.id), label: `Role ${r.id} · ${r.name}` }))}
+          buttonClassName="rounded-lg border-slate-700 bg-[#162238] px-2.5 py-1 text-xs text-slate-200"
+          menuClassName="min-w-[13rem]"
+        />
 
         <RoleBadge roleId={simulatedRoleId} size="xs" />
       </div>

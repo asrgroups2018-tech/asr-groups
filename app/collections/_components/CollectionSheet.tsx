@@ -20,6 +20,7 @@ import { formatINR } from '@/lib/utils/formatCurrency';
 import { getTodayIsoDate } from '@/components/ui/DatePicker';
 import { isPaid, isBounce, dateKey } from './CollectionsView';
 import type { DateRange, Period } from './CollectionsView';
+import { CustomSelect } from '@/components/ui/CustomSelect';
 
 const fmtDate = (v: string) => {
   if (!v) return '—';
@@ -224,7 +225,7 @@ export const CollectionSheet: React.FC<{ dateRange: DateRange; period: Period; p
       <div className="border-b border-[#E7DFD2] bg-[#FCFBF9] px-4 py-3">
         <div className="flex flex-wrap items-center gap-2">
           {/* Date mode */}
-          <div className="flex rounded-lg border border-slate-200 bg-white p-0.5 text-[11px]">
+          <div className="flex items-center gap-1 rounded-lg border border-slate-200 bg-white p-1 text-[11px]">
             {(['due', 'received'] as const).map((m) => (
               <button key={m} type="button" onClick={() => setDateMode(m)}
                 className={`rounded-md px-2.5 py-1.5 font-bold transition ${dateMode === m ? 'bg-[#701A35] text-white' : 'text-slate-500 hover:text-[#701A35]'}`}>
@@ -234,7 +235,7 @@ export const CollectionSheet: React.FC<{ dateRange: DateRange; period: Period; p
           </div>
 
           {/* Status pills */}
-          <div className="flex gap-1 flex-wrap">
+          <div className="flex flex-wrap gap-1.5">
             {(['All', 'Paid', 'Pending', 'Overdue', 'Bounce'] as const).map((s) => (
               <button key={s} type="button" onClick={() => setStatusFilter(s as any)}
                 className={`rounded-lg border px-2.5 py-1.5 text-[11px] font-bold transition ${
@@ -253,14 +254,7 @@ export const CollectionSheet: React.FC<{ dateRange: DateRange; period: Period; p
 
           {/* Mode filter */}
           {allModes.length > 0 && (
-            <div className="relative">
-              <select value={modeFilter} onChange={(e) => setModeFilter(e.target.value)}
-                className="appearance-none rounded-lg border border-slate-200 bg-white py-2 pl-2.5 pr-7 text-[11px] font-semibold text-slate-700 outline-none focus:border-[#C5A059]">
-                <option value="All">All Modes</option>
-                {allModes.map((m) => <option key={m}>{m}</option>)}
-              </select>
-              <ChevronDown className="pointer-events-none absolute right-1.5 top-1/2 h-3 w-3 -translate-y-1/2 text-slate-400" />
-            </div>
+            <CustomSelect value={modeFilter} onChange={setModeFilter} options={[{ value: 'All', label: 'All Modes' }, ...allModes.map((mode) => ({ value: mode, label: mode }))]} buttonClassName="rounded-lg border-slate-200 bg-white py-2 pl-2.5 pr-7 text-[11px] text-slate-700" menuClassName="min-w-full" />
           )}
 
           {/* Search */}

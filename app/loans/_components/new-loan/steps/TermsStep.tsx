@@ -144,7 +144,7 @@ export const TermsStep: React.FC<TermsStepProps> = ({
             <label className="block text-xs font-mono uppercase text-slate-300 font-bold mb-1.5">
               Repayment Frequency
             </label>
-            <div className="grid grid-cols-4 gap-1 p-1 bg-[#160810] rounded-xl border border-[#3D1A2C] h-10 items-center">
+            <div className="grid grid-cols-4 gap-1.5 p-1 bg-[#160810] rounded-xl border border-[#3D1A2C] h-10 items-center">
               {frequencyOptions.map((opt) => {
                 const isSelected = frequency === opt.value;
                 return (

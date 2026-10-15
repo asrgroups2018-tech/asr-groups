@@ -1,5 +1,7 @@
 'use client';
 
+import { ModalFrame } from '@/components/ui/ModalFrame';
+
 import React, { useState } from 'react';
 import { useApp } from '@/lib/store';
 import { Users, X, MapPin } from 'lucide-react';
@@ -51,7 +53,7 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
+    <ModalFrame onClose={onClose} dismissible={!(isSubmitting)} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
       <div className="bg-white rounded-2xl border border-[#E6E1D6] shadow-2xl max-w-md w-full overflow-hidden flex flex-col motion-modal">
         {/* Header */}
         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-[#FAF8F5]">
@@ -141,6 +143,6 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
           </div>
         </form>
       </div>
-    </div>
+    </ModalFrame>
   );
 };

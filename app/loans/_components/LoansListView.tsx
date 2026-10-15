@@ -30,6 +30,7 @@ import { EditLoanExcelModal } from './EditLoanExcelModal';
 import { ImportReviewModal } from './ImportReviewModal';
 import { exportLoansToExcel, exportLoansToPDF } from '@/lib/utils/exportLoansLedger';
 import { DateRangePicker, DateRangeValue, getCurrentMonthRange } from '@/components/ui/DateRangePicker';
+import { FloatingPopover } from '@/components/ui/FloatingPopover';
 import { getTodayIsoDate } from '@/components/ui/DatePicker';
 import { MoneyDisplay } from '@/components/ui/MoneyDisplay';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
@@ -166,20 +167,6 @@ export const LoansListView: React.FC = () => {
     const todayIso = getTodayIsoDate();
     return new Map(loans.map((loan) => [loan.id, getDerivedLoanStatus(loan, todayIso)]));
   }, [loans]);
-
-  // Close dropdowns on outside click
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (clientDropdownRef.current && !clientDropdownRef.current.contains(e.target as Node)) {
-        setIsClientDropdownOpen(false);
-      }
-      if (exportMenuRef.current && !exportMenuRef.current.contains(e.target as Node)) {
-        setIsExportMenuOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
 
   const toggleExpand = (id: string) => {
     setExpandedLoanIds((prev) => {
@@ -443,7 +430,7 @@ export const LoansListView: React.FC = () => {
 
             {/* Dropdown Options: Export to Excel and Export to PDF */}
             {isExportMenuOpen && (
-              <div className="absolute right-0 mt-2 w-52 bg-white rounded-xl border border-slate-200 shadow-xl p-1.5 z-40 motion-popover">
+              <FloatingPopover anchorRef={exportMenuRef} open={isExportMenuOpen} onClose={() => setIsExportMenuOpen(false)} align="end" width={208} className="bg-white rounded-xl border border-slate-200 shadow-xl p-1.5">
                 {/* Option 1: Excel */}
                 <button
                   onClick={async () => {
@@ -491,7 +478,7 @@ export const LoansListView: React.FC = () => {
                   <FileText className="w-4 h-4 text-[#701A35]" />
                   <span className="font-medium">Export to PDF</span>
                 </button>
-              </div>
+              </FloatingPopover>
             )}
           </div>
 
@@ -517,7 +504,7 @@ export const LoansListView: React.FC = () => {
       </div>
 
       {/* 5 High-Impact KPI Badges */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-3">
         <div className="bg-gradient-to-br from-[#701A35]/12 via-[#FAF8F5] to-white p-3 rounded-xl border-2 border-[#701A35]/30 shadow-sm hover:border-[#701A35]/50 transition-all">
           <span className="text-[10px] font-bold text-[#701A35] uppercase tracking-wider font-mono">
             {dateRange.startDate ? 'Filtered Loans' : 'Total Loan Amount'}
@@ -604,7 +591,7 @@ export const LoansListView: React.FC = () => {
       <div className="relative z-30 bg-white p-4.5 rounded-2xl border border-slate-200 shadow-sm flex flex-col xl:flex-row xl:items-end justify-between gap-3.5">
         <div className="flex flex-col sm:flex-row sm:items-end gap-3 flex-1 flex-wrap">
           {/* Multi-Select Client Filter Dropdown */}
-          <div className="relative min-w-[220px]" ref={clientDropdownRef}>
+          <div className="relative w-full min-w-0 sm:w-[220px]" ref={clientDropdownRef}>
             <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 font-mono mb-1 block">
               Filter by Client ({clientStats.length})
             </label>
@@ -628,7 +615,7 @@ export const LoansListView: React.FC = () => {
 
             {/* Dropdown Menu */}
             {isClientDropdownOpen && (
-              <div className="absolute top-full left-0 mt-1.5 w-80 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 p-3 space-y-2.5 motion-popover">
+              <FloatingPopover anchorRef={clientDropdownRef} open={isClientDropdownOpen} onClose={() => setIsClientDropdownOpen(false)} width={320} className="bg-white border border-slate-200 rounded-2xl shadow-xl p-3 space-y-2.5">
                 {/* Search inside dropdown */}
                 <div className="relative">
                   <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
@@ -695,7 +682,7 @@ export const LoansListView: React.FC = () => {
                     })
                   )}
                 </div>
-              </div>
+              </FloatingPopover>
             )}
           </div>
 
@@ -725,12 +712,12 @@ export const LoansListView: React.FC = () => {
 
         {/* Status Filter Tabs & Expand/Collapse */}
         <div className="flex flex-wrap items-center gap-2 w-full xl:w-auto justify-between xl:justify-end shrink-0">
-          <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs font-semibold overflow-x-auto max-w-full">
+          <div className="flex max-w-full flex-wrap items-center bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs font-semibold">
             {(['ALL', 'Active', 'Overdue', 'Closed'] as const).map((st) => (
               <button
                 key={st}
                 onClick={() => setStatusFilter(st)}
-                className={`px-3.5 py-1.5 rounded-lg text-xs font-bold btn-press transition-all duration-120 cursor-pointer whitespace-nowrap ${
+                  className={`px-3.5 py-1.5 rounded-lg text-xs font-bold btn-press transition-all duration-120 cursor-pointer ${
                   statusFilter === st
                     ? 'bg-[#701A35] text-white shadow-xs'
                     : 'text-slate-700 hover:text-slate-950 hover:bg-slate-200/60'
@@ -906,7 +893,7 @@ export const LoansListView: React.FC = () => {
       ) : (
         <>
           {/* ─── Desktop Table View (lg+ Screens ≥ 1024px) ─── */}
-          <div className="hidden lg:block bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+          <div className="hidden xl:block bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
             {/* Desktop Table Header */}
             <div className="grid grid-cols-[2.5fr_1.1fr_1.1fr_1.4fr_0.6fr_2fr_1fr_0.9fr_1fr] gap-3 px-5 py-3.5 bg-slate-100 border-b-2 border-slate-200 text-[11px] font-mono font-bold text-slate-700 uppercase tracking-wider select-none items-center">
               {/* Client & Loan ID */}
@@ -996,7 +983,7 @@ export const LoansListView: React.FC = () => {
             </div>
 
             {/* Desktop Table Rows (lg+) */}
-            <div className="hidden lg:block divide-y divide-slate-200">
+            <div className="hidden xl:block divide-y divide-slate-200">
               {filteredAndSortedLoans.map((loan) => {
                 const isExpanded = expandedLoanIds.has(loan.id);
                 const hasDateFilter = Boolean(dateRange.startDate && dateRange.endDate);
@@ -1328,7 +1315,7 @@ export const LoansListView: React.FC = () => {
           </div>
 
           {/* ─── Mobile & Tablet Card View (Visible on screens < 1024px) ─── */}
-          <div className="block lg:hidden space-y-3.5">
+          <div className="block xl:hidden space-y-3.5">
             {filteredAndSortedLoans.map((loan) => {
               const isExpanded = expandedLoanIds.has(loan.id);
               const collected = loan.totalCollected || 0;

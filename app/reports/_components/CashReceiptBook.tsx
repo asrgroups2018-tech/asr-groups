@@ -20,6 +20,7 @@ import { formatINR } from '@/lib/utils/formatCurrency';
 import { Loan } from '@/lib/types';
 import { DateRangePicker } from '@/components/ui/DateRangePicker';
 import { getTodayIsoDate } from '@/components/ui/DatePicker';
+import { CustomSelect } from '@/components/ui/CustomSelect';
 
 const PAID_STATUSES = new Set(['PASS', 'NEFT', 'CASH', 'CLS', 'PAID']);
 const isPaid = (s: string) => PAID_STATUSES.has(String(s || '').trim().toUpperCase());
@@ -271,17 +272,7 @@ export const CashReceiptBook: React.FC = () => {
             />
 
             {/* Mode filter */}
-            <label className="block min-w-[120px] text-[9px] font-bold uppercase tracking-[0.1em] text-slate-500">
-              Mode
-              <span className="relative mt-1 block">
-                <select value={modeFilter} onChange={(e) => setModeFilter(e.target.value)}
-                  className="w-full appearance-none rounded-xl border border-slate-200 bg-[#FCFBF9] py-2.5 pl-3 pr-8 text-xs font-semibold normal-case text-slate-700 outline-none focus:border-[#C5A059]">
-                  <option value="ALL">All Modes</option>
-                  {allModes.map((m) => <option key={m} value={m}>{m}</option>)}
-                </select>
-                <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
-              </span>
-            </label>
+            <label className="block min-w-[120px] text-[9px] font-bold uppercase tracking-[0.1em] text-slate-500">Mode<CustomSelect value={modeFilter} onChange={setModeFilter} options={[{ value: 'ALL', label: 'All Modes' }, ...allModes.map((mode) => ({ value: mode, label: mode }))]} buttonClassName="mt-1 rounded-xl border-slate-200 bg-[#FCFBF9] py-2.5 pl-3 pr-8 text-xs text-slate-700" menuClassName="min-w-full" size="md" /></label>
 
             {/* Search */}
             <div className="relative min-w-[200px] flex-1">

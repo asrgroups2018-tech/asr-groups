@@ -1,5 +1,7 @@
 'use client';
 
+import { ModalFrame } from '@/components/ui/ModalFrame';
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { useApp } from '@/lib/store';
 import {
@@ -509,7 +511,7 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
   const targetCustomer = customers.find((c) => c.id === selectedCustomerId);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/70 backdrop-blur-xs overflow-y-auto animate-in fade-in duration-150">
+    <ModalFrame onClose={onClose} className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/70 backdrop-blur-xs overflow-y-auto animate-in fade-in duration-150">
       <div className="relative w-full max-w-4xl bg-[#1A0A13] border border-[#3D1A2C] rounded-2xl shadow-2xl text-slate-100 flex flex-col my-auto sm:my-8 overflow-hidden motion-modal max-h-[96vh]">
         {/* Header */}
         <div className="p-4 sm:p-6 border-b border-[#2C1420] flex items-center justify-between bg-[#230D1B]">
@@ -542,7 +544,7 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
         </div>
 
         {/* Progress Stepper */}
-        <div className="grid grid-cols-6 border-b border-[#2C1420] bg-[#160810] text-[10px] sm:text-xs font-mono">
+        <div className="grid shrink-0 grid-cols-3 sm:grid-cols-6 border-b border-[#2C1420] bg-[#160810] text-[10px] sm:text-xs font-mono">
           {[
             { num: 1, label: '1. Borrower' },
             { num: 2, label: '2. Terms' },
@@ -728,6 +730,6 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
           </div>
         </div>
       </div>
-    </div>
+    </ModalFrame>
   );
 };

@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { MoneyDisplay } from '@/components/ui/MoneyDisplay';
+import { CustomSelect } from '@/components/ui/CustomSelect';
 
 export const HistoricalSheetView: React.FC = () => {
   const { receipts, fetchReceipts, updateHistoricalReceipt, showToast, isSavingReceipt, isLoading } = useApp();
@@ -247,7 +248,7 @@ export const HistoricalSheetView: React.FC = () => {
           </div>
 
           {/* Outside-Party Column Filter Toggle */}
-          <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs font-semibold overflow-x-auto max-w-full">
+          <div className="flex max-w-full flex-wrap items-center bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs font-semibold">
             {[
               { id: 'ALL', label: 'All Companies (16)' },
               { id: 'ASR_ONLY', label: 'ASR GROUP Own (10)' },
@@ -256,7 +257,7 @@ export const HistoricalSheetView: React.FC = () => {
               <button
                 key={f.id}
                 onClick={() => setCategoryFilter(f.id as any)}
-                className={`px-3.5 py-1 rounded-lg text-xs font-semibold transition-all whitespace-nowrap cursor-pointer ${
+                className={`px-3.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                   categoryFilter === f.id
                     ? 'bg-[#701A35] text-white shadow-xs font-bold'
                     : 'text-slate-600 hover:text-slate-900'
@@ -463,19 +464,7 @@ export const HistoricalSheetView: React.FC = () => {
 
                     {/* Scrollable Col 9: STATUS */}
                     <td className="p-1.5 border-r border-[#EDE8DF] text-center">
-                      <select
-                        defaultValue={row.status}
-                        onChange={(e) => handleCellBlur(row, 'status', e.target.value)}
-                        className="bg-transparent text-[10px] font-bold px-1.5 py-0.5 rounded border border-transparent hover:border-slate-300 focus:bg-white focus:border-[#701A35] focus:outline-hidden"
-                      >
-                        {['PASS', 'NEFT', 'CASH', 'CLS', 'PENDING', 'RET', 'RET NEFT', 'RET PASS', 'CS'].map(
-                          (st) => (
-                            <option key={st} value={st}>
-                              {st}
-                            </option>
-                          )
-                        )}
-                      </select>
+                      <CustomSelect value={row.status} onChange={(value) => handleCellBlur(row, 'status', value)} options={['PASS', 'NEFT', 'CASH', 'CLS', 'PENDING', 'RET', 'RET NEFT', 'RET PASS', 'CS'].map((status) => ({ value: status, label: status }))} buttonClassName="rounded border-transparent bg-transparent px-1.5 py-0.5 text-[10px] text-slate-800 shadow-none hover:border-slate-300" menuClassName="min-w-[8rem]" />
                     </td>
 
                     {/* Scrollable Col 10: RECD DATE */}

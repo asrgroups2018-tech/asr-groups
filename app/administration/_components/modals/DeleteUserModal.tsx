@@ -1,5 +1,7 @@
 'use client';
 
+import { ModalFrame } from '@/components/ui/ModalFrame';
+
 import React, { useState } from 'react';
 import { User } from '@/lib/types';
 import { useApp } from '@/lib/store';
@@ -46,7 +48,7 @@ export const DeleteUserModal: React.FC<DeleteUserModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
+    <ModalFrame onClose={onClose} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
       <div className="bg-white rounded-2xl border border-rose-200 shadow-2xl max-w-md w-full overflow-hidden motion-modal">
         {/* Red warning header */}
         <div className="bg-rose-700 text-white px-6 py-4 flex items-center justify-between font-bold text-sm">
@@ -167,6 +169,6 @@ export const DeleteUserModal: React.FC<DeleteUserModalProps> = ({
           )}
         </div>
       </div>
-    </div>
+    </ModalFrame>
   );
 };

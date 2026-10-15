@@ -1,5 +1,7 @@
 'use client';
 
+import { ModalFrame } from '@/components/ui/ModalFrame';
+
 import React, { useState } from 'react';
 import { useApp } from '@/lib/store';
 import { X, ShieldPlus } from 'lucide-react';
@@ -51,7 +53,7 @@ export const CreateRoleModal: React.FC<CreateRoleModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
+    <ModalFrame onClose={onClose} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
       <div className="bg-white rounded-2xl border border-[#E6E1D6] shadow-2xl max-w-lg w-full overflow-hidden motion-modal">
         {/* Header */}
         <div className="bg-[#1A0A13] text-white px-6 py-4 flex items-center justify-between border-b border-[#2C1420]">
@@ -150,6 +152,6 @@ export const CreateRoleModal: React.FC<CreateRoleModalProps> = ({
           </div>
         </form>
       </div>
-    </div>
+    </ModalFrame>
   );
 };

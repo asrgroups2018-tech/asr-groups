@@ -1,5 +1,7 @@
 'use client';
 
+import { ModalFrame } from '@/components/ui/ModalFrame';
+
 import React, { useState } from 'react';
 import { X, Scissors, AlertCircle, ArrowRight, CheckCircle2, CheckSquare, Square } from 'lucide-react';
 import { Loan, Installment } from '@/lib/types';
@@ -141,7 +143,7 @@ export const SplitLoanModal: React.FC<SplitLoanModalProps> = ({ isOpen, onClose,
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 overflow-y-auto animate-in fade-in duration-150">
+    <ModalFrame onClose={onClose} dismissible={!(isSubmitting)} className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 overflow-y-auto animate-in fade-in duration-150">
       <div className="bg-white rounded-3xl border border-[#E6E1D6] shadow-2xl w-full max-w-3xl max-h-[92vh] flex flex-col overflow-hidden motion-modal">
         {/* Header */}
         <div className="px-6 py-5 border-b border-[#E6E1D6] flex items-center justify-between bg-[#FAF8F5]">
@@ -311,6 +313,6 @@ export const SplitLoanModal: React.FC<SplitLoanModalProps> = ({ isOpen, onClose,
           </button>
         </div>
       </div>
-    </div>
+    </ModalFrame>
   );
 };

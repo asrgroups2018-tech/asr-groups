@@ -1,5 +1,7 @@
 'use client';
 
+import { ModalFrame } from '@/components/ui/ModalFrame';
+
 import React, { useMemo } from 'react';
 import { Loan } from '@/lib/types';
 import {
@@ -80,7 +82,7 @@ export const ExportLoansModal: React.FC<ExportLoansModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
+    <ModalFrame onClose={onClose} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
       <div
         className="relative w-full max-w-xl bg-white rounded-3xl shadow-2xl border border-[#E6E1D6] overflow-hidden motion-modal"
         onClick={(e) => e.stopPropagation()}
@@ -203,6 +205,6 @@ export const ExportLoansModal: React.FC<ExportLoansModalProps> = ({
           </button>
         </div>
       </div>
-    </div>
+    </ModalFrame>
   );
 };

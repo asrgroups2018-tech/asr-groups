@@ -1,5 +1,7 @@
 'use client';
 
+import { ModalFrame } from '@/components/ui/ModalFrame';
+
 import React, { useState } from 'react';
 import { ApprovalRequest } from '@/lib/types';
 import { useApp } from '@/lib/store';
@@ -149,16 +151,16 @@ export const RequestDetailsModal: React.FC<RequestDetailsModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+    <ModalFrame onClose={onClose} dismissible={!(isSubmitting)} className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
       <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-2xl w-full max-h-[88vh] flex flex-col overflow-hidden motion-modal">
         {/* Modal Header */}
-        <div className="bg-[#1A0A13] text-white px-6 py-4 flex items-center justify-between border-b border-[#2C1420] shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-[#2C1420] border border-[#3D1A2C] flex items-center justify-center">
+        <div className="bg-[#1A0A13] text-white px-4 sm:px-6 py-4 flex items-start justify-between gap-2 border-b border-[#2C1420] shrink-0">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="w-9 h-9 shrink-0 rounded-xl bg-[#2C1420] border border-[#3D1A2C] flex items-center justify-center">
               {getWorkflowIcon(request.changeType)}
             </div>
-            <div>
-              <div className="flex items-center gap-2">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
                 <span className="text-xs font-mono font-bold text-amber-300">{request.id}</span>
                 <span className="text-slate-500 text-xs">·</span>
                 <span className="text-xs font-bold uppercase tracking-wider text-slate-300 font-mono">
@@ -166,7 +168,7 @@ export const RequestDetailsModal: React.FC<RequestDetailsModalProps> = ({
                 </span>
                 <StatusPill status={request.status as any} />
               </div>
-              <h3 className="text-base font-bold text-white font-serif mt-0.5">{request.title}</h3>
+              <h3 className="break-words text-base font-bold text-white font-serif mt-0.5">{request.title}</h3>
             </div>
           </div>
           <button
@@ -431,6 +433,6 @@ export const RequestDetailsModal: React.FC<RequestDetailsModalProps> = ({
           </div>
         </div>
       </div>
-    </div>
+    </ModalFrame>
   );
 };

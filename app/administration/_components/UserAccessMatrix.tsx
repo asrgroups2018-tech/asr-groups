@@ -5,6 +5,7 @@ import { Check, Lock, Save, X } from 'lucide-react';
 import { MODULES_DATA } from '@/lib/seedData';
 import { ModuleAction, PermissionMatrixState, Role, RoleId } from '@/lib/types';
 import { RoleBadge } from '@/components/ui/RoleBadge';
+import { CustomSelect } from '@/components/ui/CustomSelect';
 
 const columns: { key: ModuleAction; label: string }[] = [
   { key: 'view', label: 'Access' },
@@ -94,7 +95,7 @@ export const UserAccessMatrix: React.FC<UserAccessMatrixProps> = ({
         </div>
         <div className="mt-6 rounded-2xl border border-[#E7DFD2] bg-[#FBF8F3] p-4">
           <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-            <label className="block min-w-0 md:max-w-sm"><span className="block text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">Role to configure</span><select value={accessRoleId} onChange={(event) => setAccessRoleId(Number(event.target.value))} className="mt-1.5 block w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-bold text-slate-800 outline-none focus:border-[#C5A059]">{assignedRoles.map((role) => <option key={role.id} value={role.id}>{role.name}{role.id === draftPrimaryRole ? ' · Primary' : ''}</option>)}</select></label>
+            <label className="block min-w-0 md:max-w-sm"><span className="block text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">Role to configure</span><CustomSelect value={String(accessRoleId)} onChange={(value) => setAccessRoleId(Number(value) as RoleId)} options={assignedRoles.map((role) => ({ value: String(role.id), label: `${role.name}${role.id === draftPrimaryRole ? ' · Primary' : ''}` }))} buttonClassName="mt-1.5 rounded-xl border-slate-200 bg-white px-3 py-2.5 text-xs text-slate-800" menuClassName="min-w-full" size="md" /></label>
             <div className="text-[11px] text-slate-500">{activeRole?.isSystemProtected ? 'Protected role: permissions are read-only.' : 'Tick Access to show the page. Other actions are available only for registered page capabilities.'}</div>
           </div>
         </div>

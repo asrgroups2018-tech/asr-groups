@@ -50,6 +50,57 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* Menus live above cards and table scroll containers, using the current theme. */
+.app-popover {
+  color: var(--foreground);
+  font-size: 0.75rem;
+  line-height: 1.4;
+  text-transform: none;
+  letter-spacing: normal;
+}
+.app-select-menu { background: var(--surface) !important; border-color: var(--border-strong); }
+.app-select-option[aria-selected='true'] {
+  background: #701A35 !important;
+  color: #fff !important;
+}
+html[data-theme='dark'] .app-select-option[aria-selected='true'] { background: #803655 !important; }
+
+/* Every custom dialog fits the available screen, including mobile browser chrome. */
+.app-modal-frame {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: max(0.75rem, env(safe-area-inset-top)) max(0.75rem, env(safe-area-inset-right)) max(0.75rem, env(safe-area-inset-bottom)) max(0.75rem, env(safe-area-inset-left));
+  outline: none;
+}
+.app-modal-frame > :first-child {
+  min-width: 0;
+  margin-block: 0;
+  max-height: calc(100dvh - 1.5rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.app-modal-frame > :first-child > header { flex-shrink: 0; }
+.app-modal-frame[data-placement='end'] { justify-content: flex-end; padding: 0; }
+.app-modal-frame[data-placement='end'] > :first-child { max-height: 100dvh; }
+.app-modal-frame[data-placement='bottom'] { align-items: flex-end; }
+.app-modal-frame[data-placement='bottom'] > :first-child { width: 100%; max-width: 28rem; }
+@media (min-width: 640px) {
+  .app-modal-frame { padding: 1.5rem; }
+  .app-modal-frame > :first-child { max-height: calc(100dvh - 3rem); }
+  .app-modal-frame[data-placement='end'] { padding: 0; }
+  .app-modal-frame[data-placement='end'] > :first-child { max-height: 100dvh; }
+}
+@media (max-width: 639px) {
+  .app-select-trigger, .app-select-option { min-height: 44px; }
+  .app-footer { padding-bottom: max(0.5rem, env(safe-area-inset-bottom)); }
+}
+@media (max-width: 359px) {
+  .dashboard-timeframes button { padding-inline: 2px; font-size: 9px; }
+}
+
 html[data-theme='dark'] .app-footer {
   background: #150810;
   border-color: #2C1420;

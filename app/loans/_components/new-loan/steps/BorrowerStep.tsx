@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { Users, IndianRupee, Check } from 'lucide-react';
 import { Customer } from '@/lib/types';
 import { AmountInput } from '@/components/ui/AmountInput';
+import { FloatingPopover } from '@/components/ui/FloatingPopover';
 
 interface BorrowerStepProps {
   customers: Customer[];
@@ -41,6 +42,7 @@ export const BorrowerStep: React.FC<BorrowerStepProps> = ({
   setTotalAmount,
 }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
+  const borrowerInputRef = useRef<HTMLInputElement>(null);
   const [searchDraft, setSearchDraft] = useState(customerSearch);
   const [newNameDraft, setNewNameDraft] = useState(newCustomerName);
   const [newPlaceDraft, setNewPlaceDraft] = useState(newCustomerPlace);
@@ -81,6 +83,7 @@ export const BorrowerStep: React.FC<BorrowerStepProps> = ({
           <div className="space-y-2 relative">
             <div className="relative">
               <input
+                ref={borrowerInputRef}
                 type="text"
                 placeholder="Search or select borrower name (e.g. ABI ASSOCIATES)..."
                 value={searchDraft}
@@ -125,7 +128,7 @@ export const BorrowerStep: React.FC<BorrowerStepProps> = ({
 
             {/* Quick dropdown matching */}
             {isDropdownOpen && !selectedCustomerId && (
-              <div className="max-h-48 overflow-y-auto rounded-lg border border-[#3D1A2C] bg-[#160810] divide-y divide-[#2C1420] shadow-2xl z-20 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              <FloatingPopover anchorRef={borrowerInputRef} open={isDropdownOpen && !selectedCustomerId} onClose={() => setIsDropdownOpen(false)} className="rounded-lg border border-[#3D1A2C] bg-[#160810] divide-y divide-[#2C1420] shadow-2xl">
                 {filteredCustomers.length > 0 ? (
                   filteredCustomers.slice(0, 10).map((c) => (
                     <div
@@ -151,7 +154,7 @@ export const BorrowerStep: React.FC<BorrowerStepProps> = ({
                     No borrower found matching &ldquo;{searchDraft}&rdquo;
                   </div>
                 )}
-              </div>
+              </FloatingPopover>
             )}
           </div>
         ) : (

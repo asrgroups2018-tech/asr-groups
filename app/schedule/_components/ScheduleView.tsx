@@ -22,6 +22,7 @@ import {
 import { StatusPill } from '@/components/ui/StatusPill';
 import { MoneyDisplay } from '@/components/ui/MoneyDisplay';
 import { DateRangePicker, DateRangeValue } from '@/components/ui/DateRangePicker';
+import { FloatingPopover } from '@/components/ui/FloatingPopover';
 import { exportLoansToExcel, exportLoansToPDF } from '@/lib/utils/exportLoansLedger';
 import { getDerivedLoanStatus } from '@/app/loans/_components/LoansListView';
 import { getAuthorizedLoansForExport, requestLoanExportAccess } from '@/lib/exportAuthorization';
@@ -81,17 +82,6 @@ export const ScheduleView: React.FC = () => {
 
   // Accordion state - all collapsed by default
   const [expandedLoanIds, setExpandedLoanIds] = useState<Set<string>>(new Set());
-
-  // Close export menu on outside click
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (exportMenuRef.current && !exportMenuRef.current.contains(e.target as Node)) {
-        setIsExportMenuOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
 
   // Toggle loan expand/collapse
   const toggleExpandLoan = (id: string) => {
@@ -252,7 +242,7 @@ export const ScheduleView: React.FC = () => {
             </button>
 
             {isExportMenuOpen && (
-              <div className="absolute right-0 mt-2 w-52 bg-white rounded-xl border border-slate-200 shadow-xl p-1.5 z-40 motion-popover">
+              <FloatingPopover anchorRef={exportMenuRef} open={isExportMenuOpen} onClose={() => setIsExportMenuOpen(false)} align="end" width={208} className="bg-white rounded-xl border border-slate-200 shadow-xl p-1.5">
                 <button
                   onClick={async () => {
                     if (!canExportSchedule) {
@@ -298,7 +288,7 @@ export const ScheduleView: React.FC = () => {
                   <FileText className="w-4 h-4 text-[#701A35]" />
                   <span className="font-medium">Export to PDF</span>
                 </button>
-              </div>
+              </FloatingPopover>
             )}
           </div>
 

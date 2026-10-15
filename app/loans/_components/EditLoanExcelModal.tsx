@@ -1,5 +1,7 @@
 'use client';
 
+import { ModalFrame } from '@/components/ui/ModalFrame';
+
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useApp } from '@/lib/store';
 import { useTheme } from '@/components/providers/ThemeProvider';
@@ -910,7 +912,7 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
   const remainingDiff = capitalAmount - totalLoanAmount;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-1 sm:p-4 bg-black/80 backdrop-blur-xs animate-in fade-in duration-150">
+    <ModalFrame onClose={onClose} dismissible={!(isSaving)} className="fixed inset-0 z-50 flex items-center justify-center p-1 sm:p-4 bg-black/80 backdrop-blur-xs animate-in fade-in duration-150">
       <div className="loan-spreadsheet-modal bg-[#FAF8F5] rounded-2xl border border-[#D0C8B8] shadow-2xl w-full max-w-[99vw] h-[98vh] sm:h-[96vh] flex flex-col overflow-hidden motion-modal">
         {/* ─── Excel Modal Top Toolbar ─── */}
         <div className="p-3 sm:p-4 bg-white border-b border-[#D0C8B8] flex flex-col md:flex-row md:items-center justify-between gap-2.5 sm:gap-3 shrink-0">
@@ -1505,6 +1507,6 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
           </table>
         </div>
       </div>
-    </div>
+    </ModalFrame>
   );
 };

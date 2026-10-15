@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
+import { ModalFrame } from './ModalFrame';
 import {
   CalendarDays,
   ChevronLeft,
@@ -138,21 +139,6 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
     }
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isOpen]);
-
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setIsOpen(false);
-    };
-    document.addEventListener('keydown', handleEscape);
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      document.removeEventListener('keydown', handleEscape);
     };
   }, [isOpen]);
 
@@ -352,7 +338,7 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
 
       {/* Popover Modal (Smooth, Lag-free, Responsive Enterprise Layout) */}
       {isOpen && typeof document !== 'undefined' && createPortal(
-        <div
+        <ModalFrame onClose={() => setIsOpen(false)}
           className="fixed inset-0 z-[1000] flex items-center justify-center bg-slate-950/25 p-4 backdrop-blur-[2px] motion-popover"
           onMouseDown={(event) => {
             if (event.target === event.currentTarget) setIsOpen(false);
@@ -789,7 +775,7 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
             <span className="text-slate-400">Click Done to apply</span>
           </div>
           </div>
-        </div>,
+        </ModalFrame>,
         document.body
       )}
     </div>

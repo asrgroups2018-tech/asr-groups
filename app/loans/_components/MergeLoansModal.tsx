@@ -1,10 +1,13 @@
 'use client';
 
+import { ModalFrame } from '@/components/ui/ModalFrame';
+
 import React, { useState } from 'react';
 import { X, GitMerge, AlertCircle, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { Loan } from '@/lib/types';
 import { useApp } from '@/lib/store';
 import { evaluateApprovalAction } from '@/lib/utils/approvalRouting';
+import { CustomSelect } from '@/components/ui/CustomSelect';
 
 interface MergeLoansModalProps {
   isOpen: boolean;
@@ -113,7 +116,7 @@ export const MergeLoansModal: React.FC<MergeLoansModalProps> = ({ isOpen, onClos
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150">
+    <ModalFrame onClose={onClose} dismissible={!(isSubmitting)} className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150">
       <div className="bg-white rounded-3xl border border-[#E6E1D6] shadow-2xl w-full max-w-xl overflow-hidden motion-modal">
         {/* Header */}
         <div className="px-6 py-5 border-b border-[#E6E1D6] flex items-center justify-between bg-[#FAF8F5]">
@@ -142,17 +145,7 @@ export const MergeLoansModal: React.FC<MergeLoansModalProps> = ({ isOpen, onClos
             <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 font-mono block mb-1.5">
               1. Target Primary Loan (Will Keep this Loan ID)
             </label>
-            <select
-              value={targetLoanId}
-              onChange={(e) => setTargetLoanId(e.target.value)}
-              className="w-full bg-[#FBF9F5] border border-[#E6E1D6] rounded-xl px-3.5 py-2.5 text-xs text-slate-900 font-semibold focus:outline-hidden focus:border-[#701A35] cursor-pointer"
-            >
-              {loans.map((l) => (
-                <option key={l.id} value={l.id}>
-                  {l.id} · {l.customerName} (₹{l.totalAmount.toLocaleString('en-IN')}, {l.installmentCount} EMIs)
-                </option>
-              ))}
-            </select>
+            <CustomSelect value={targetLoanId} onChange={setTargetLoanId} options={loans.map((loan) => ({ value: loan.id, label: `${loan.id} · ${loan.customerName} (₹${loan.totalAmount.toLocaleString('en-IN')}, ${loan.installmentCount} EMIs)` }))} buttonClassName="w-full rounded-xl border-[#E6E1D6] bg-[#FBF9F5] px-3.5 py-2.5 text-xs text-slate-900" menuClassName="min-w-full" size="md" />
           </div>
 
           {/* Source Loan Selector */}
@@ -160,18 +153,7 @@ export const MergeLoansModal: React.FC<MergeLoansModalProps> = ({ isOpen, onClos
             <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 font-mono block mb-1.5">
               2. Source Loan (Will be merged into Target and removed)
             </label>
-            <select
-              value={sourceLoanId}
-              onChange={(e) => setSourceLoanId(e.target.value)}
-              className="w-full bg-[#FBF9F5] border border-[#E6E1D6] rounded-xl px-3.5 py-2.5 text-xs text-slate-900 font-semibold focus:outline-hidden focus:border-[#701A35] cursor-pointer"
-            >
-              <option value="">-- Select Source Loan to Merge --</option>
-              {availableSourceLoans.map((l) => (
-                <option key={l.id} value={l.id}>
-                  {l.id} · {l.customerName} (₹{l.totalAmount.toLocaleString('en-IN')}, {l.installmentCount} EMIs)
-                </option>
-              ))}
-            </select>
+            <CustomSelect value={sourceLoanId} onChange={setSourceLoanId} options={[{ value: '', label: '-- Select Source Loan to Merge --' }, ...availableSourceLoans.map((loan) => ({ value: loan.id, label: `${loan.id} · ${loan.customerName} (₹${loan.totalAmount.toLocaleString('en-IN')}, ${loan.installmentCount} EMIs)` }))]} buttonClassName="w-full rounded-xl border-[#E6E1D6] bg-[#FBF9F5] px-3.5 py-2.5 text-xs text-slate-900" menuClassName="min-w-full" size="md" />
           </div>
 
           {/* Preview Card */}
@@ -230,6 +212,6 @@ export const MergeLoansModal: React.FC<MergeLoansModalProps> = ({ isOpen, onClos
           </button>
         </div>
       </div>
-    </div>
+    </ModalFrame>
   );
 };

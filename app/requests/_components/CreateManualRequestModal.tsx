@@ -1,10 +1,13 @@
 'use client';
 
+import { ModalFrame } from '@/components/ui/ModalFrame';
+
 import React, { useState } from 'react';
 import { ChangeType, RoleId } from '@/lib/types';
 import { useApp } from '@/lib/store';
 import { X, PlusCircle, ShieldCheck } from 'lucide-react';
 import { evaluateApprovalAction } from '@/lib/utils/approvalRouting';
+import { CustomSelect } from '@/components/ui/CustomSelect';
 
 interface CreateManualRequestModalProps {
   isOpen: boolean;
@@ -66,7 +69,7 @@ export const CreateManualRequestModal: React.FC<CreateManualRequestModalProps> =
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+    <ModalFrame onClose={onClose} dismissible={!(isSubmitting)} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
       <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-lg w-full overflow-hidden motion-modal">
         {/* Header */}
         <div className="bg-[#1A0A13] text-white px-6 py-4 flex items-center justify-between border-b border-[#2C1420]">
@@ -92,19 +95,7 @@ export const CreateManualRequestModal: React.FC<CreateManualRequestModalProps> =
             <label className="block text-xs font-bold text-slate-700 mb-1.5">
               Change / Workflow Category <span className="text-rose-500">*</span>
             </label>
-            <select
-              value={changeType}
-              onChange={(e) => setChangeType(e.target.value as ChangeType)}
-              className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-[#701A35] font-medium text-slate-800"
-            >
-              <option value="Loan Update">Loan Update / Restructuring</option>
-              <option value="Loan Split">Loan Split / Extraction</option>
-              <option value="Loan Merge">Loan Merge / Consolidation</option>
-              <option value="Historical Correction">Historical July Receipt Correction</option>
-              <option value="Collection Correction">Collection Receipt Adjustment</option>
-              <option value="Customer Update">Customer KYC / Bank Amendment</option>
-              <option value="Role Change">Role Elevation / Access Assignment</option>
-            </select>
+            <CustomSelect value={changeType} onChange={(value) => setChangeType(value as ChangeType)} options={[{ value: 'Loan Update', label: 'Loan Update / Restructuring' }, { value: 'Loan Split', label: 'Loan Split / Extraction' }, { value: 'Loan Merge', label: 'Loan Merge / Consolidation' }, { value: 'Historical Correction', label: 'Historical July Receipt Correction' }, { value: 'Collection Correction', label: 'Collection Receipt Adjustment' }, { value: 'Customer Update', label: 'Customer KYC / Bank Amendment' }, { value: 'Role Change', label: 'Role Elevation / Access Assignment' }]} buttonClassName="w-full rounded-xl border-slate-200 bg-slate-50 px-3.5 py-2 text-xs text-slate-800" menuClassName="min-w-full" size="md" />
           </div>
 
           <div>
@@ -183,6 +174,6 @@ export const CreateManualRequestModal: React.FC<CreateManualRequestModalProps> =
           </div>
         </form>
       </div>
-    </div>
+    </ModalFrame>
   );
 };

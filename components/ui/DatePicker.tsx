@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
+import { ModalFrame } from './ModalFrame';
 import {
   CalendarDays,
   ChevronLeft,
@@ -199,22 +200,6 @@ export const DatePicker: React.FC<DatePickerProps> = ({
     }
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isOpen]);
-
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setIsOpen(false);
-    };
-    document.addEventListener('keydown', handleEscape);
-
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      document.removeEventListener('keydown', handleEscape);
     };
   }, [isOpen]);
 
@@ -457,7 +442,7 @@ export const DatePicker: React.FC<DatePickerProps> = ({
 
       {/* Popover Calendar Container */}
       {isOpen && typeof document !== 'undefined' && createPortal(
-        <div
+        <ModalFrame onClose={() => setIsOpen(false)}
           className="fixed inset-0 z-[1000] flex items-center justify-center bg-slate-950/30 p-4 backdrop-blur-[2px] animate-in fade-in duration-120"
           onMouseDown={(event) => {
             if (event.target === event.currentTarget) setIsOpen(false);
@@ -764,7 +749,7 @@ export const DatePicker: React.FC<DatePickerProps> = ({
             </button>
           </div>
           </div>
-        </div>,
+        </ModalFrame>,
         document.body
       )}
     </div>

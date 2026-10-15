@@ -1,10 +1,13 @@
 'use client';
 
+import { ModalFrame } from '@/components/ui/ModalFrame';
+
 import React, { useState } from 'react';
 import { ChangeType, RoleId } from '@/lib/types';
 import { useApp } from '@/lib/store';
 import { X, PlusCircle, ShieldCheck } from 'lucide-react';
 import { RoleBadge } from '@/components/ui/RoleBadge';
+import { CustomSelect } from '@/components/ui/CustomSelect';
 
 interface AddApprovalRuleModalProps {
   isOpen: boolean;
@@ -51,7 +54,7 @@ export const AddApprovalRuleModal: React.FC<AddApprovalRuleModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+    <ModalFrame onClose={onClose} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
       <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-xl w-full overflow-hidden motion-modal">
         {/* Header */}
         <div className="bg-[#1A0A13] text-white px-6 py-4 flex items-center justify-between border-b border-[#2C1420]">
@@ -77,18 +80,7 @@ export const AddApprovalRuleModal: React.FC<AddApprovalRuleModalProps> = ({
             <label className="block text-xs font-bold text-slate-700 mb-1.5">
               Change / Transaction Type <span className="text-rose-500">*</span>
             </label>
-            <select
-              value={changeType}
-              onChange={(e) => setChangeType(e.target.value as ChangeType)}
-              className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium text-slate-800"
-            >
-              <option value="Loan Update">Loan Update (Principal / Interest / Tenure)</option>
-              <option value="Collection Correction">Collection Correction (Receipt edit / reversal)</option>
-              <option value="Expense Edit">Expense Edit (Voucher / Branch Expense)</option>
-              <option value="Salary Change">Salary Change (Base pay / Special allowance)</option>
-              <option value="Customer Update">Customer Update (KYC / Bank details)</option>
-              <option value="Role Change">Role Change (Elevated permissions)</option>
-            </select>
+            <CustomSelect value={changeType} onChange={(value) => setChangeType(value as ChangeType)} options={[{ value: 'Loan Update', label: 'Loan Update (Principal / Interest / Tenure)' }, { value: 'Collection Correction', label: 'Collection Correction (Receipt edit / reversal)' }, { value: 'Expense Edit', label: 'Expense Edit (Voucher / Branch Expense)' }, { value: 'Salary Change', label: 'Salary Change (Base pay / Special allowance)' }, { value: 'Customer Update', label: 'Customer Update (KYC / Bank details)' }, { value: 'Role Change', label: 'Role Change (Elevated permissions)' }]} buttonClassName="w-full rounded-xl border-slate-200 bg-slate-50 px-3.5 py-2 text-xs text-slate-800" menuClassName="min-w-full" size="md" />
           </div>
 
           <div>
@@ -135,19 +127,7 @@ export const AddApprovalRuleModal: React.FC<AddApprovalRuleModalProps> = ({
               <label className="block text-xs font-bold text-slate-700 mb-1.5">
                 Minimum Approver Role Level <span className="text-rose-500">*</span>
               </label>
-              <select
-                value={whoMustApprove}
-                onChange={(e) => setWhoMustApprove(Number(e.target.value) as RoleId)}
-                className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium text-slate-800"
-              >
-                {roles
-                  .filter((r) => r.id <= 3) // Only managers and above
-                  .map((r) => (
-                    <option key={r.id} value={r.id}>
-                      Role {r.id} · {r.name} (and higher)
-                    </option>
-                  ))}
-              </select>
+              <CustomSelect value={String(whoMustApprove)} onChange={(value) => setWhoMustApprove(Number(value) as RoleId)} options={roles.filter((role) => role.id <= 3).map((role) => ({ value: String(role.id), label: `Role ${role.id} · ${role.name} (and higher)` }))} buttonClassName="w-full rounded-xl border-slate-200 bg-slate-50 px-3.5 py-2 text-xs text-slate-800" menuClassName="min-w-full" size="md" />
             </div>
 
             <div>
@@ -217,6 +197,6 @@ export const AddApprovalRuleModal: React.FC<AddApprovalRuleModalProps> = ({
           </div>
         </form>
       </div>
-    </div>
+    </ModalFrame>
   );
 };

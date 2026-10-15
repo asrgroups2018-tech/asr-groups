@@ -1,10 +1,13 @@
 'use client';
 
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import { ModalFrame } from '@/components/ui/ModalFrame';
+
+import React, { useState, useMemo, useRef } from 'react';
 import { useApp } from '@/lib/store';
 import { Landmark, X, User, IndianRupee, CalendarDays, Search, Check } from 'lucide-react';
 import { DatePicker, toIsoDate } from '@/components/ui/DatePicker';
 import { numberToWordsINR } from '@/lib/utils/formatCurrency';
+import { FloatingPopover } from '@/components/ui/FloatingPopover';
 
 interface AddChequeModalProps {
   isOpen: boolean;
@@ -28,7 +31,6 @@ export const AddChequeModal: React.FC<AddChequeModalProps> = ({
 
   // Autocomplete state
   const [showDropdown, setShowDropdown] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Filter customers for autocomplete
@@ -46,22 +48,6 @@ export const AddChequeModal: React.FC<AddChequeModalProps> = ({
       )
       .slice(0, 8);
   }, [customers, customerName]);
-
-  // Click outside listener for autocomplete dropdown
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node) &&
-        inputRef.current &&
-        !inputRef.current.contains(event.target as Node)
-      ) {
-        setShowDropdown(false);
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
 
   if (!isOpen) return null;
 
@@ -129,7 +115,7 @@ export const AddChequeModal: React.FC<AddChequeModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
+    <ModalFrame onClose={onClose} dismissible={!(isSubmitting)} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
       <div className="bg-white rounded-2xl border border-[#E6E1D6] shadow-2xl max-w-lg w-full overflow-hidden flex flex-col motion-modal">
         {/* Header */}
         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-[#FAF8F5]">
@@ -198,9 +184,11 @@ export const AddChequeModal: React.FC<AddChequeModalProps> = ({
 
             {/* Autocomplete Dropdown */}
             {showDropdown && (
-              <div
-                ref={dropdownRef}
-                className="absolute z-20 left-0 right-0 top-full mt-1 bg-white rounded-xl border border-slate-200 shadow-xl max-h-52 overflow-y-auto divide-y divide-slate-100 animate-in fade-in zoom-in-95 duration-100"
+              <FloatingPopover
+                anchorRef={inputRef}
+                open={showDropdown}
+                onClose={() => setShowDropdown(false)}
+                className="bg-white rounded-xl border border-slate-200 shadow-xl divide-y divide-slate-100"
               >
                 <div className="px-3 py-1.5 bg-slate-50 text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center justify-between">
                   <span>Customer Directory Lookup</span>
@@ -239,7 +227,7 @@ export const AddChequeModal: React.FC<AddChequeModalProps> = ({
                     No matching customer in directory. Custom name will be used.
                   </div>
                 )}
-              </div>
+              </FloatingPopover>
             )}
             <span className="text-[10px] text-slate-400 mt-1 block">
               Read-only directory lookup. Type custom name or pick from existing borrowers.
@@ -321,6 +309,6 @@ export const AddChequeModal: React.FC<AddChequeModalProps> = ({
           </div>
         </form>
       </div>
-    </div>
+    </ModalFrame>
   );
 };
