@@ -56,6 +56,11 @@ export const AmountInput: React.FC<AmountInputProps> = ({
     return formatIndianCommas(value);
   });
 
+  const clampValue = (amount: number) =>
+    Math.min(max ?? Number.POSITIVE_INFINITY, Math.max(min ?? Number.NEGATIVE_INFINITY, amount));
+
+  const formatValue = (amount: number) => (amount === 0 ? '' : formatIndianCommas(amount));
+
   // Synchronize when external value changes
   useEffect(() => {
     if (value === null || value === undefined || value === '' || value === 0) {
@@ -82,16 +87,26 @@ export const AmountInput: React.FC<AmountInputProps> = ({
       return;
     }
 
-    const formatted = formatIndianCommas(cleanDigits);
-    setDisplayValue(formatted);
-    if (!deferChange) onChange(num);
+    if (deferChange) {
+      setDisplayValue(formatIndianCommas(cleanDigits));
+    } else {
+      const clamped = clampValue(num);
+      setDisplayValue(formatValue(clamped));
+      onChange(clamped);
+    }
   };
 
   const commitDeferredValue = () => {
-    if (deferChange) onChange(parseFormattedNumber(displayValue));
+    if (deferChange) {
+      const clamped = clampValue(parseFormattedNumber(displayValue));
+      setDisplayValue(formatValue(clamped));
+      onChange(clamped);
+    }
   };
 
   const currentNum = parseFormattedNumber(displayValue);
+  const validationError =
+    error || (max !== undefined && currentNum > max ? `Amount cannot exceed ${formatIndianCommas(max)}.` : null);
   const words = showWords && currentNum > 0 ? numberToIndianWords(currentNum) : '';
 
   const isDark = theme === 'dark';
@@ -151,7 +166,7 @@ export const AmountInput: React.FC<AmountInputProps> = ({
             isDark
               ? 'bg-[#160810] border border-[#3D1A2C] text-[#EED8A1] placeholder-slate-500 focus:border-[#C5A059] focus:bg-[#1A0A13]'
               : 'bg-white border border-slate-300 text-slate-900 placeholder-slate-400 focus:border-[#701A35] focus:ring-1 focus:ring-[#701A35]'
-          } ${error ? 'border-rose-500! focus:border-rose-500!' : ''} ${
+          } ${validationError ? 'border-rose-500! focus:border-rose-500!' : ''} ${
             disabled ? 'opacity-50 cursor-not-allowed' : ''
           } ${inputClassName}`}
         />
@@ -169,9 +184,9 @@ export const AmountInput: React.FC<AmountInputProps> = ({
       )}
 
       {/* Inline Validation Error */}
-      {error && (
+      {validationError && (
         <p className="text-[11px] font-medium text-rose-500 flex items-center gap-1 mt-0.5">
-          <span>⚠️</span> {error}
+          <span>⚠️</span> {validationError}
         </p>
       )}
 

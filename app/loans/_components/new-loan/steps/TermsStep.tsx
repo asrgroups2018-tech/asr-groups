@@ -21,10 +21,6 @@ interface TermsStepProps {
   setInstallmentCount: (count: number) => void;
   startDate: string;
   setStartDate: (date: string) => void;
-  chequeNumber: string;
-  setChequeNumber: (chequeNumber: string) => void;
-  depositDate: string;
-  setDepositDate: (date: string) => void;
 }
 
 export const TermsStep: React.FC<TermsStepProps> = ({
@@ -40,10 +36,6 @@ export const TermsStep: React.FC<TermsStepProps> = ({
   setInstallmentCount,
   startDate,
   setStartDate,
-  chequeNumber,
-  setChequeNumber,
-  depositDate,
-  setDepositDate,
 }) => {
   const frequencyOptions: { label: string; value: RepaymentFrequency; subtitle?: string }[] = [
     { label: 'Monthly', value: 'Monthly' },
@@ -65,6 +57,8 @@ export const TermsStep: React.FC<TermsStepProps> = ({
             setTotalAmount(val);
             if (interestAmount > 0 && val > interestAmount) {
               setDisbursedAmount(val - interestAmount);
+            } else if (disbursedAmount > val) {
+              setDisbursedAmount(val);
             }
           }}
           placeholder="e.g. 1,00,000"
@@ -77,39 +71,11 @@ export const TermsStep: React.FC<TermsStepProps> = ({
             setTotalAmount(val);
             if (interestAmount > 0 && val > interestAmount) {
               setDisbursedAmount(val - interestAmount);
+            } else if (disbursedAmount > val) {
+              setDisbursedAmount(val);
             }
           }}
         />
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-          <label className="block text-xs font-mono uppercase text-slate-300 font-bold">
-            Cheque No. <span className="normal-case font-normal text-slate-500">(Optional)</span>
-            <input
-              type="text"
-              value={chequeNumber}
-              onChange={(event) => setChequeNumber(event.target.value)}
-              placeholder="Enter cheque number"
-              className="mt-1.5 w-full rounded-xl border border-[#3D1A2C] bg-[#160810] px-3 py-2.5 text-sm font-mono font-normal normal-case text-slate-100 outline-none focus:border-[#C5A059]"
-            />
-          </label>
-          <div>
-            <label className="mb-1.5 block text-xs font-mono font-bold uppercase text-slate-300">
-              Deposit Date <span className="normal-case font-normal text-slate-500">(Optional)</span>
-            </label>
-            <DatePicker
-              value={depositDate || null}
-              onChange={setDepositDate}
-              theme="dark"
-              size="md"
-              placeholder="Select deposit date"
-              className="w-full"
-              buttonClassName="w-full h-10"
-              showPresets={false}
-            />
-          </div>
-        </div>
-        <p className="text-[11px] text-slate-400">
-          Cheque is added to the Cheques page only when both details are entered.
-        </p>
       </div>
 
       {/* Disbursed Amount & Upfront Interest (ASR Earnings) */}
@@ -121,15 +87,15 @@ export const TermsStep: React.FC<TermsStepProps> = ({
           <AmountInput
             value={disbursedAmount}
             onChange={(val) => {
-              setDisbursedAmount(val);
-              if (totalAmount > 0 && val <= totalAmount) {
-                setInterestAmount(totalAmount - val);
-              }
+              const cappedAmount = Math.min(val, totalAmount);
+              setDisbursedAmount(cappedAmount);
+              if (totalAmount > 0) setInterestAmount(totalAmount - cappedAmount);
             }}
             placeholder="e.g. 8,50,000"
             theme="dark"
             size="md"
             showWords={true}
+            max={totalAmount}
             deferChange
           />
           <span className="text-[11px] text-slate-400 block">

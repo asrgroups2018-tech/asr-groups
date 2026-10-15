@@ -12,8 +12,10 @@ import { BorrowerStep } from './steps/BorrowerStep';
 import { TermsStep } from './steps/TermsStep';
 import { CompaniesStep } from './steps/CompaniesStep';
 import { ScheduleStep, ScheduleStepRow } from './steps/ScheduleStep';
+import { ChequesStep, LoanChequeRow } from './steps/ChequesStep';
 import { ReviewStep } from './steps/ReviewStep';
 import { RepaymentFrequency } from '@/lib/types';
+import { parseDateString, toIsoDate } from '@/components/ui/DatePicker';
 
 interface NewLoanModalProps {
   isOpen: boolean;
@@ -40,10 +42,8 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
   const [frequency, setFrequency] = useState<RepaymentFrequency>('Monthly');
   const [installmentCount, setInstallmentCount] = useState<number>(5);
   const [startDate, setStartDate] = useState<string>(() => {
-    return new Date().toISOString().slice(0, 10);
+    return toIsoDate(new Date());
   });
-  const [chequeNumber, setChequeNumber] = useState('');
-  const [depositDate, setDepositDate] = useState('');
 
   // Step 3: Companies & Overall Split
   const [selectedCompanyIds, setSelectedCompanyIds] = useState<string[]>([]);
@@ -53,6 +53,7 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
 
   // Step 4: Schedule Rows (Installment-level grid)
   const [scheduleRows, setScheduleRows] = useState<ScheduleStepRow[]>([]);
+  const [chequeRows, setChequeRows] = useState<LoanChequeRow[]>([]);
 
   // Reset on open
   useEffect(() => {
@@ -69,10 +70,9 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
       setInterestAmount(0);
       setFrequency('Monthly');
       setInstallmentCount(5);
-      setStartDate(new Date().toISOString().slice(0, 10));
-      setChequeNumber('');
-      setDepositDate('');
+      setStartDate(toIsoDate(new Date()));
       setScheduleRows([]);
+      setChequeRows([]);
 
       // Pick default active ASR companies (exclude INE and INS)
       const activeAsr = companies.filter(
@@ -133,7 +133,7 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
     const equalEmi = Math.round(totalAmount / count);
 
     for (let i = 0; i < count; i++) {
-      const d = new Date(startDate || new Date().toISOString().slice(0, 10));
+      const d = parseDateString(startDate) || new Date();
       if (frequency === 'Weekly') {
         d.setDate(d.getDate() + i * 7);
       } else if (frequency === 'Bi-Weekly') {
@@ -141,7 +141,7 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
       } else {
         d.setMonth(d.getMonth() + i);
       }
-      const dueDate = d.toISOString().slice(0, 10);
+      const dueDate = toIsoDate(d);
 
       const splits: Record<string, number> = {};
       let allocated = 0;
@@ -221,6 +221,102 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
 
   const areAllRowsBalanced = rowBalances.every((b) => b.isBalanced);
   const isStep4Valid = isScheduledTotalBalanced && areAllRowsBalanced;
+  const hasChequeDetails = chequeRows.some((row) => row.isUsed || row.chequeNumber.trim());
+  const allocatedChequeAmount = chequeRows.reduce((sum, row) => sum + (Number(row.amount) || 0), 0);
+  const areChequeRowsComplete = chequeRows.every(
+    (row) => row.chequeNumber.trim() && row.depositDate && row.amount > 0
+  );
+  const isChequeStepValid =
+    !hasChequeDetails ||
+    (areChequeRowsComplete && Math.abs(allocatedChequeAmount - totalAmount) < 1);
+
+  const getTermsSchedule = () => {
+    const count = Math.max(1, installmentCount);
+    const equalAmount = Math.round(totalAmount / count);
+    const initialDate = parseDateString(startDate) || new Date();
+    return Array.from({ length: count }, (_, index) => {
+      const dueDate = new Date(initialDate);
+      if (frequency === 'Weekly') {
+        dueDate.setDate(dueDate.getDate() + index * 7);
+      } else if (frequency === 'Bi-Weekly') {
+        dueDate.setDate(dueDate.getDate() + index * 14);
+      } else {
+        dueDate.setMonth(dueDate.getMonth() + index);
+      }
+      return {
+        seqNo: index + 1,
+        dueDate: toIsoDate(dueDate),
+        amountDue: index === count - 1 ? totalAmount - equalAmount * (count - 1) : equalAmount,
+      };
+    });
+  };
+
+  const prepareChequeRows = (
+    scheduledRows: Pick<ScheduleStepRow, 'seqNo' | 'dueDate' | 'amountDue'>[]
+  ) => {
+    setChequeRows((currentRows) => {
+      const nextRows = scheduledRows.map((scheduleRow) => {
+        const existing = currentRows.find((row) => row.scheduleSeqNo === scheduleRow.seqNo);
+        return {
+          id: existing?.id ?? `emi-${scheduleRow.seqNo}`,
+          scheduleSeqNo: scheduleRow.seqNo,
+          chequeNumber: existing?.chequeNumber ?? '',
+          depositDate:
+            existing && !existing.followsScheduleDate
+              ? existing.depositDate
+              : scheduleRow.dueDate,
+          amount:
+            existing && !existing.followsScheduleAmount
+              ? existing.amount
+              : scheduleRow.amountDue,
+          followsScheduleDate: existing?.followsScheduleDate ?? true,
+          followsScheduleAmount: existing?.followsScheduleAmount ?? true,
+          isUsed: existing?.isUsed ?? false,
+        };
+      });
+      const extraRows = currentRows.filter((row) => row.scheduleSeqNo === null);
+      return [...nextRows, ...extraRows];
+    });
+  };
+
+  const prepareChequeRowsFromTerms = () => {
+    prepareChequeRows(getTermsSchedule());
+  };
+
+  const clearChequeEntries = () => {
+    setChequeRows(
+      getTermsSchedule().map((row) => ({
+        id: `emi-${row.seqNo}`,
+        scheduleSeqNo: row.seqNo,
+        chequeNumber: '',
+        depositDate: row.dueDate,
+        amount: row.amountDue,
+        followsScheduleDate: true,
+        followsScheduleAmount: true,
+        isUsed: false,
+      }))
+    );
+  };
+
+  const addChequeRow = () => {
+    setChequeRows((rows) => [
+      ...rows,
+      {
+        id: crypto.randomUUID(),
+        scheduleSeqNo: null,
+        chequeNumber: '',
+        depositDate: '',
+        amount: 0,
+        followsScheduleDate: false,
+        followsScheduleAmount: false,
+        isUsed: true,
+      },
+    ]);
+  };
+
+  const removeChequeRow = (id: string) => {
+    setChequeRows((rows) => rows.filter((row) => row.id !== id));
+  };
 
   // Handle row amount change -> recalculates that row's company cells automatically
   const handleRowAmountChange = (seqNo: number, newAmt: number) => {
@@ -306,8 +402,19 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
         showToast('Validation Error', 'Number of EMIs must be at least 1.', 'warning');
         return;
       }
+      prepareChequeRowsFromTerms();
       setCurrentStep(3);
     } else if (currentStep === 3) {
+      if (!isChequeStepValid) {
+        showToast(
+          'Cheque Details Incomplete',
+          'Complete every cheque row and make the cheque amounts equal the loan total, or clear the cheque entries to continue without cheques.',
+          'warning'
+        );
+        return;
+      }
+      setCurrentStep(4);
+    } else if (currentStep === 4) {
       if (!isStep3Valid) {
         showToast(
           'Split Mismatch',
@@ -317,8 +424,8 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
         return;
       }
       generateInitialSchedule();
-      setCurrentStep(4);
-    } else if (currentStep === 4) {
+      setCurrentStep(5);
+    } else if (currentStep === 5) {
       if (!isStep4Valid) {
         showToast(
           'Balance Error',
@@ -327,7 +434,8 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
         );
         return;
       }
-      setCurrentStep(5);
+      prepareChequeRows(scheduleRows);
+      setCurrentStep(6);
     }
   };
 
@@ -371,18 +479,26 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
     });
 
     if (result) {
-      if (chequeNumber.trim() && depositDate) {
+      if (hasChequeDetails && isChequeStepValid) {
         const customerName =
           customers.find((customer) => customer.id === selectedCustomerId)?.name ||
           newCustomerName.trim() ||
           customerSearch.trim();
-        await createCheque({
-          chequeNumber: chequeNumber.trim(),
-          customerId: selectedCustomerId,
-          customerName,
-          amount: totalAmount,
-          depositDate,
-        });
+        for (const row of chequeRows) {
+          await createCheque({
+            chequeNumber: row.chequeNumber.trim(),
+            customerId: selectedCustomerId,
+            customerName,
+            amount: row.amount,
+            depositDate: row.depositDate,
+          });
+        }
+      } else if (hasChequeDetails) {
+        showToast(
+          'Loan Created',
+          'The loan was saved, but cheque details were incomplete and no cheques were added.',
+          'warning'
+        );
       }
       onClose();
     }
@@ -402,14 +518,16 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
               Create New Loan
             </h2>
             <p className="text-[11px] sm:text-xs text-slate-400 truncate">
-              Step {currentStep} of 5 —{' '}
+              Step {currentStep} of 6 —{' '}
               {currentStep === 1
                 ? 'Borrower Details'
                 : currentStep === 2
                 ? 'Loan Amount & Terms'
                 : currentStep === 3
-                ? 'Funding Companies'
+                ? 'Cheque Details'
                 : currentStep === 4
+                ? 'Funding Companies'
+                : currentStep === 5
                 ? 'EMI Schedule'
                 : 'Review & Save'}
             </p>
@@ -424,13 +542,14 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
         </div>
 
         {/* Progress Stepper */}
-        <div className="grid grid-cols-5 border-b border-[#2C1420] bg-[#160810] text-[10px] sm:text-xs font-mono">
+        <div className="grid grid-cols-6 border-b border-[#2C1420] bg-[#160810] text-[10px] sm:text-xs font-mono">
           {[
             { num: 1, label: '1. Borrower' },
             { num: 2, label: '2. Terms' },
-            { num: 3, label: '3. Companies' },
-            { num: 4, label: '4. Schedule' },
-            { num: 5, label: '5. Review' },
+            { num: 3, label: '3. Cheques' },
+            { num: 4, label: '4. Companies' },
+            { num: 5, label: '5. Schedule' },
+            { num: 6, label: '6. Review' },
           ].map((s) => {
             const isActive = currentStep === s.num;
             const isDone = currentStep > s.num;
@@ -487,14 +606,24 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
               setInstallmentCount={setInstallmentCount}
               startDate={startDate}
               setStartDate={setStartDate}
-              chequeNumber={chequeNumber}
-              setChequeNumber={setChequeNumber}
-              depositDate={depositDate}
-              setDepositDate={setDepositDate}
             />
           )}
 
           {currentStep === 3 && (
+            <ChequesStep
+              rows={chequeRows}
+              onChange={setChequeRows}
+              onAddRow={addChequeRow}
+              onRemoveRow={removeChequeRow}
+              onClearEntries={clearChequeEntries}
+              totalAmount={totalAmount}
+              allocatedAmount={allocatedChequeAmount}
+              hasChequeDetails={hasChequeDetails}
+              isValid={isChequeStepValid}
+            />
+          )}
+
+          {currentStep === 4 && (
             <CompaniesStep
               companies={companies}
               selectedCompanyIds={selectedCompanyIds}
@@ -513,7 +642,7 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
             />
           )}
 
-          {currentStep === 4 && (
+          {currentStep === 5 && (
             <ScheduleStep
               scheduleRows={scheduleRows}
               setScheduleRows={setScheduleRows}
@@ -529,7 +658,7 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
             />
           )}
 
-          {currentStep === 5 && (
+          {currentStep === 6 && (
             <ReviewStep
               targetCustomer={targetCustomer}
               customerSearch={customerSearch}
@@ -537,6 +666,7 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
               installmentCount={installmentCount}
               frequency={frequency}
               startDate={startDate}
+              chequeRows={hasChequeDetails ? chequeRows : []}
               selectedCompanies={selectedCompanies}
               companyPcts={companyPcts}
               companyManualAmounts={companyManualAmounts}
@@ -567,17 +697,19 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
               Cancel
             </button>
 
-            {currentStep < 5 ? (
+            {currentStep < 6 ? (
               <button
                 type="button"
                 onClick={handleNext}
                 disabled={
-                  (currentStep === 3 && !isStep3Valid) ||
-                  (currentStep === 4 && !isStep4Valid)
+                  (currentStep === 3 && !isChequeStepValid) ||
+                  (currentStep === 4 && !isStep3Valid) ||
+                  (currentStep === 5 && !isStep4Valid)
                 }
                 className={`px-4 sm:px-5 py-2.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all btn-press whitespace-nowrap ${
-                  (currentStep === 3 && !isStep3Valid) ||
-                  (currentStep === 4 && !isStep4Valid)
+                  (currentStep === 3 && !isChequeStepValid) ||
+                  (currentStep === 4 && !isStep3Valid) ||
+                  (currentStep === 5 && !isStep4Valid)
                     ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700'
                     : 'bg-[#C5A059] text-slate-950 hover:bg-[#D4AF37] font-bold shadow-lg cursor-pointer'
                 }`}

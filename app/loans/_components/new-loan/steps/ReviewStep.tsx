@@ -5,6 +5,7 @@ import { CheckCircle2, Building2 } from 'lucide-react';
 import { Customer, Company, RepaymentFrequency } from '@/lib/types';
 import { MoneyDisplay } from '@/components/ui/MoneyDisplay';
 import { numberToIndianWords } from '@/lib/utils/numberToWords';
+import { LoanChequeRow } from './ChequesStep';
 
 interface ReviewStepProps {
   targetCustomer: Customer | undefined;
@@ -13,6 +14,7 @@ interface ReviewStepProps {
   installmentCount: number;
   frequency: RepaymentFrequency;
   startDate: string;
+  chequeRows: LoanChequeRow[];
   selectedCompanies: Company[];
   companyPcts: Record<string, number>;
   companyManualAmounts: Record<string, number>;
@@ -25,6 +27,7 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({
   installmentCount,
   frequency,
   startDate,
+  chequeRows,
   selectedCompanies,
   companyPcts,
   companyManualAmounts,
@@ -68,6 +71,34 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({
             <span className="font-bold text-slate-100 text-sm">{startDate}</span>
           </div>
         </div>
+
+        {chequeRows.length > 0 && (
+          <div className="space-y-2">
+            <h4 className="text-xs font-bold uppercase tracking-wide text-slate-300">
+              Cheques ({chequeRows.length})
+            </h4>
+            <div className="overflow-x-auto rounded-lg border border-[#3D1A2C]">
+              <table className="w-full min-w-[440px] text-left text-xs">
+                <thead className="bg-[#160810] text-slate-400">
+                  <tr>
+                    <th className="px-3 py-2">Cheque No.</th>
+                    <th className="px-3 py-2">Deposit Date</th>
+                    <th className="px-3 py-2 text-right">Amount</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#2C1420]">
+                  {chequeRows.map((row) => (
+                    <tr key={row.id}>
+                      <td className="px-3 py-2 font-mono">{row.chequeNumber.trim()}</td>
+                      <td className="px-3 py-2">{row.depositDate}</td>
+                      <td className="px-3 py-2 text-right">₹{row.amount.toLocaleString('en-IN')}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
 
         {/* Company Funding Summary */}
         <div className="space-y-2.5 pt-2">
