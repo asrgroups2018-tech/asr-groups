@@ -128,7 +128,10 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
+  // Public authentication routes do not need session or permission checks.
+  // Excluding them here also prevents Vercel from loading the full database
+  // authorization module during a cold login request.
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|api/auth(?:/|$)|login(?:/|$)).*)'],
 };
 
 function isPublicAsset(pathname: string) {

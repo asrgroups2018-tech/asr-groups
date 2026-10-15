@@ -273,7 +273,37 @@ export const SCHEMA_STATEMENTS = [
   `CREATE INDEX IF NOT EXISTS idx_cheques_customer_name ON cheques(customer_name);`,
 ];
 
+const AUTH_SCHEMA_STATEMENTS = [
+  `CREATE TABLE IF NOT EXISTS auth_sessions (
+    token_hash TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    created_at TEXT NOT NULL,
+    expires_at TEXT NOT NULL,
+    revoked_at TEXT
+  );`,
+  `CREATE INDEX IF NOT EXISTS idx_auth_sessions_user ON auth_sessions(user_id);`,
+  `CREATE INDEX IF NOT EXISTS idx_auth_sessions_expires ON auth_sessions(expires_at);`,
+];
+
 let schemaInitialization: Promise<void> | null = null;
+let authSchemaInitialization: Promise<void> | null = null;
+
+/**
+ * The login path only needs the session table. Keeping this separate from the
+ * full application migration prevents a cold Vercel function from running
+ * every application DDL statement before it can return a session.
+ */
+export function initializeAuthSchema(client: Client): Promise<void> {
+  if (!authSchemaInitialization) {
+    authSchemaInitialization = client.batch(AUTH_SCHEMA_STATEMENTS)
+      .then(() => undefined)
+      .catch((error) => {
+        authSchemaInitialization = null;
+        throw error;
+      });
+  }
+  return authSchemaInitialization;
+}
 
 /**
  * Initializes the database schema once per server process. A shared promise

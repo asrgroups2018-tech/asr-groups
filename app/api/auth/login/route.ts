@@ -1,6 +1,9 @@
 import { randomUUID } from 'node:crypto';
-import { NextRequest, NextResponse } from 'next/server';
+import { after, NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/server/db';
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
   try {
@@ -37,23 +40,25 @@ export async function POST(request: NextRequest) {
       new Date(Date.now() + maxAge * 1000).toISOString(),
     );
 
-    // Authentication must not fail after a valid session is created just
-    // because an audit write is temporarily unavailable.
-    try {
-      await db.logAudit({
-        actorId: user.id,
-        actorName: user.name,
-        actorRoleId: user.primaryRoleId,
-        action: 'Login',
-        target: `${user.name} (${user.id})`,
-        afterVal: `Signed in using ${user.loginMethod === 'email' ? 'email address' : 'username'}.`,
-        isSensitive: false,
-        ipAddress: request.headers.get('x-forwarded-for') || '127.0.0.1',
-        device: (request.headers.get('user-agent') || 'Browser Client').slice(0, 80),
-      });
-    } catch (auditError) {
-      console.warn('Login audit write skipped:', auditError);
-    }
+    // Authentication must not wait for an optional audit write. `after` keeps
+    // the audit side effect reliable on Vercel without delaying the response.
+    after(async () => {
+      try {
+        await db.logAudit({
+          actorId: user.id,
+          actorName: user.name,
+          actorRoleId: user.primaryRoleId,
+          action: 'Login',
+          target: `${user.name} (${user.id})`,
+          afterVal: `Signed in using ${user.loginMethod === 'email' ? 'email address' : 'username'}.`,
+          isSensitive: false,
+          ipAddress: request.headers.get('x-forwarded-for') || '127.0.0.1',
+          device: (request.headers.get('user-agent') || 'Browser Client').slice(0, 80),
+        });
+      } catch (auditError) {
+        console.warn('Login audit write skipped:', auditError);
+      }
+    });
 
     const response = NextResponse.json({
       success: true,

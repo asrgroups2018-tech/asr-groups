@@ -1,6 +1,6 @@
 import { createHash, randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
 import { getTursoClient } from './turso';
-import { initializeSchema } from './schema';
+import { initializeAuthSchema, initializeSchema } from './schema';
 import {
   User,
   Role,
@@ -19,53 +19,57 @@ import {
   MODULES_DATA,
 } from '@/lib/seedData';
 
-let schemaInitialized = false;
+let dbInitialization: Promise<void> | null = null;
+let authDbInitialization: Promise<void> | null = null;
 
-async function ensureDbInitialized() {
-  if (schemaInitialized) return;
-  const client = getTursoClient();
-  try {
-    await initializeSchema(client);
-    const tableInfo = await client.execute('PRAGMA table_info(users)');
-    const hasCustomerId = tableInfo.rows.some((row) => String(row.name) === 'customer_id');
-    if (!hasCustomerId) {
-      await client.execute('ALTER TABLE users ADD COLUMN customer_id TEXT REFERENCES customers(id)');
-    }
-    const customerTableInfo = await client.execute('PRAGMA table_info(customers)');
-    if (!customerTableInfo.rows.some((row) => String(row.name) === 'code_no')) {
-      await client.execute('ALTER TABLE customers ADD COLUMN code_no TEXT');
-    }
-    await backfillAuditContext(client);
-    schemaInitialized = true;
-  } catch (err) {
-    console.error('Turso Schema initialization warning:', err);
+async function ensureAuthDbInitialized() {
+  // Production databases are provisioned before deployment. Running DDL from
+  // a serverless request adds several seconds to cold login requests.
+  if (process.env.NODE_ENV === 'production') return;
+
+  if (!authDbInitialization) {
+    authDbInitialization = (async () => {
+      await initializeAuthSchema(getTursoClient());
+    })().catch((error) => {
+      authDbInitialization = null;
+      throw error;
+    });
   }
+
+  const initialization = authDbInitialization;
+  if (initialization) await initialization;
 }
 
-async function backfillAuditContext(client: ReturnType<typeof getTursoClient>) {
-  const result = await client.execute(`
-    SELECT id, action, target, page_id, page_name, entity_type, entity_id, related_user_id, request_id
-    FROM audit_logs
-    WHERE page_id IS NULL OR page_name IS NULL OR entity_type IS NULL
-      OR entity_id IS NULL OR related_user_id IS NULL OR request_id IS NULL
-  `);
+async function ensureDbInitialized() {
+  // Production databases are provisioned before deployment. Keep migrations
+  // available for local development without putting them on every cold start.
+  if (process.env.NODE_ENV === 'production') return;
 
-  for (const row of result.rows) {
-    const context = resolveAuditContext({
-      action: String(row.action),
-      target: String(row.target),
-      pageId: row.page_id ? String(row.page_id) : undefined,
-      pageName: row.page_name ? String(row.page_name) : undefined,
-      entityType: row.entity_type ? String(row.entity_type) : undefined,
-      entityId: row.entity_id ? String(row.entity_id) : undefined,
-      relatedUserId: row.related_user_id ? String(row.related_user_id) : undefined,
-      requestId: row.request_id ? String(row.request_id) : undefined,
-    });
-    await client.execute({
-      sql: `UPDATE audit_logs SET page_id = ?, page_name = ?, entity_type = ?, entity_id = ?, related_user_id = ?, request_id = ? WHERE id = ?`,
-      args: [context.pageId, context.pageName, context.entityType, context.entityId || null, context.relatedUserId || null, context.requestId || null, String(row.id)],
+  if (!dbInitialization) {
+    dbInitialization = (async () => {
+      const client = getTursoClient();
+      await initializeSchema(client);
+
+      const tableInfo = await client.execute('PRAGMA table_info(users)');
+      const hasCustomerId = tableInfo.rows.some((row) => String(row.name) === 'customer_id');
+      if (!hasCustomerId) {
+        await client.execute('ALTER TABLE users ADD COLUMN customer_id TEXT REFERENCES customers(id)');
+      }
+
+      const customerTableInfo = await client.execute('PRAGMA table_info(customers)');
+      if (!customerTableInfo.rows.some((row) => String(row.name) === 'code_no')) {
+        await client.execute('ALTER TABLE customers ADD COLUMN code_no TEXT');
+      }
+
+      // Audit backfills are maintenance work and must not run on the login
+      // critical path. New audit entries already store their full context.
+    })().catch((error) => {
+      dbInitialization = null;
+      throw error;
     });
   }
+
+  await dbInitialization;
 }
 
 function parseJson<T>(value: any, fallback: T): T {
@@ -210,7 +214,7 @@ export async function getUserById(id: string): Promise<User | null> {
 
 /** Authenticate against the database-backed user credentials. */
 export async function authenticateUser(identifier: string, password: string): Promise<User | null> {
-  await ensureDbInitialized();
+  await ensureAuthDbInitialized();
   const client = getTursoClient();
   const normalizedIdentifier = identifier.trim().toLowerCase();
 
@@ -282,14 +286,10 @@ export async function createAuthSession(
   token: string,
   expiresAt: string,
 ): Promise<void> {
-  await ensureDbInitialized();
+  await ensureAuthDbInitialized();
   const client = getTursoClient();
   const now = new Date().toISOString();
 
-  await client.execute({
-    sql: 'DELETE FROM auth_sessions WHERE expires_at <= ? OR revoked_at IS NOT NULL',
-    args: [now],
-  });
   await client.execute({
     sql: `INSERT INTO auth_sessions (token_hash, user_id, created_at, expires_at)
       VALUES (?, ?, ?, ?)`,
@@ -299,7 +299,7 @@ export async function createAuthSession(
 
 export async function getUserBySessionToken(token: string | undefined): Promise<User | null> {
   if (!token) return null;
-  await ensureDbInitialized();
+  await ensureAuthDbInitialized();
   const client = getTursoClient();
   const now = new Date().toISOString();
   const result = await client.execute({
@@ -318,7 +318,7 @@ export async function getUserBySessionToken(token: string | undefined): Promise<
 
 export async function revokeAuthSession(token: string | undefined): Promise<void> {
   if (!token) return;
-  await ensureDbInitialized();
+  await ensureAuthDbInitialized();
   const client = getTursoClient();
   await client.execute({
     sql: 'UPDATE auth_sessions SET revoked_at = ? WHERE token_hash = ? AND revoked_at IS NULL',
