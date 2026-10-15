@@ -6,6 +6,7 @@ import { DataTable, ColumnDef } from '@/components/ui/DataTable';
 import { MoneyDisplay } from '@/components/ui/MoneyDisplay';
 import { StatusPill } from '@/components/ui/StatusPill';
 import { Calendar, AlertCircle, CheckCircle2, DollarSign, Clock, Filter } from 'lucide-react';
+import { getTodayIsoDate } from '@/components/ui/DatePicker';
 
 interface InstallmentReportRow {
   id: string;
@@ -30,7 +31,7 @@ export const InstallmentRecoveryReport: React.FC = () => {
 
   const reportData = useMemo(() => {
     const rows: InstallmentReportRow[] = [];
-    const today = new Date().toISOString().slice(0, 10);
+    const today = getTodayIsoDate();
 
     loans.forEach((l) => {
       (l.installments || []).forEach((ins) => {

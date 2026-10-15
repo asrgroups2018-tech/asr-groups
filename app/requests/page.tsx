@@ -1,36 +1,42 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useApp } from '@/lib/store';
+import { AccessRequest } from '@/lib/types';
 import { AppShell } from '@/components/layout/AppShell';
-import {
-  Inbox,
-  Clock,
-  CheckCircle2,
-  XCircle,
-  Zap,
-  ShieldCheck,
-  PlusCircle,
-  ExternalLink,
-  SlidersHorizontal,
-} from 'lucide-react';
+import { PlusCircle, ShieldCheck, SlidersHorizontal } from 'lucide-react';
 import { RequestsQueueTable } from './_components/RequestsQueueTable';
 import { CreateManualRequestModal } from './_components/CreateManualRequestModal';
-import { AccessRequestsTab } from '@/app/administration/_components/AccessRequestsTab';
 import Link from 'next/link';
 
 export default function RequestsPage() {
-  const { setActiveMainTab, approvalRequests, approvalRules, currentActor } = useApp();
+  const { setActiveMainTab, approvalRequests, approvalRules } = useApp();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [accessRequests, setAccessRequests] = useState<AccessRequest[]>([]);
 
   useEffect(() => {
     setActiveMainTab('requests');
   }, [setActiveMainTab]);
 
-  const pendingCount = approvalRequests.filter((r) => r.status === 'Pending').length;
-  const approvedCount = approvalRequests.filter((r) => r.status === 'Approved').length;
-  const autoApprovedCount = approvalRequests.filter((r) => r.status === 'Auto-Approved').length;
-  const rejectedCount = approvalRequests.filter((r) => r.status === 'Rejected').length;
+  const loadAccessRequests = useCallback(async () => {
+    try {
+      const response = await fetch('/api/access-requests', { cache: 'no-store' });
+      const json = await response.json();
+      if (json.success) setAccessRequests(json.data || []);
+    } catch (error) {
+      console.error('Failed to load access requests:', error);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadAccessRequests();
+  }, [loadAccessRequests]);
+
+  const allRequests = [...approvalRequests, ...accessRequests];
+  const pendingCount = allRequests.filter((r) => r.status === 'Pending').length;
+  const approvedCount = allRequests.filter((r) => r.status === 'Approved').length;
+  const autoApprovedCount = allRequests.filter((r) => r.status === 'Auto-Approved').length;
+  const rejectedCount = allRequests.filter((r) => r.status === 'Rejected').length;
   const activeRulesCount = approvalRules.filter((r) => r.isActive).length;
 
   return (
@@ -80,11 +86,11 @@ export default function RequestsPage() {
             </span>
             <div className="mt-1">
               <h3 className="text-[#701A35] font-black text-xl tracking-tight font-mono">
-                {approvalRequests.length}
+                {allRequests.length}
               </h3>
             </div>
             <span className="text-[10px] text-slate-600 font-medium mt-0.5 block">
-              Across all operational workflows
+              Across all page and operational requests
             </span>
           </div>
 
@@ -117,10 +123,11 @@ export default function RequestsPage() {
           </div>
         </div>
 
-        <AccessRequestsTab />
-
         {/* Requests Queue Table */}
-        <RequestsQueueTable />
+        <RequestsQueueTable
+          accessRequests={accessRequests}
+          onAccessRequestChanged={() => void loadAccessRequests()}
+        />
 
         {/* Manual Request Modal */}
         <CreateManualRequestModal

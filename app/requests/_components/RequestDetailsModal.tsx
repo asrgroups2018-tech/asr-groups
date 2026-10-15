@@ -21,6 +21,7 @@ import {
 import { RoleBadge } from '@/components/ui/RoleBadge';
 import { StatusPill } from '@/components/ui/StatusPill';
 import { MoneyDisplay } from '@/components/ui/MoneyDisplay';
+import { formatExactDateTime } from '@/lib/dateFormat';
 
 interface RequestDetailsModalProps {
   request: ApprovalRequest | null;
@@ -146,7 +147,7 @@ export const RequestDetailsModal: React.FC<RequestDetailsModalProps> = ({
 
             <div>
               <p className="text-[10px] font-mono uppercase text-slate-400 font-bold">Created Timestamp</p>
-              <p className="text-xs text-slate-700 font-mono mt-1">{request.createdAt}</p>
+              <p className="text-xs text-slate-700 font-mono mt-1">{formatExactDateTime(request.createdAt)}</p>
             </div>
           </div>
 

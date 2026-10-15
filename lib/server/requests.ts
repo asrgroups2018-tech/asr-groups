@@ -86,7 +86,18 @@ export async function getApprovalRequests(filters?: {
   sql += ' ORDER BY created_at DESC, id DESC';
 
   const res = await client.execute({ sql, args });
-  return res.rows.map(mapApprovalRequestRow);
+  const requests = res.rows.map(mapApprovalRequestRow);
+  const pendingTargets = new Set<string>();
+
+  // Older deployments may already contain duplicate pending submissions. Keep
+  // the newest one visible while preserving resolved request history.
+  return requests.filter((request) => {
+    if (request.status !== 'Pending') return true;
+    const targetKey = [request.requesterId, request.changeType, request.entityType, request.entityId].join(':');
+    if (pendingTargets.has(targetKey)) return false;
+    pendingTargets.add(targetKey);
+    return true;
+  });
 }
 
 export async function getApprovalRequestById(id: string): Promise<ApprovalRequest | null> {
@@ -120,10 +131,18 @@ export async function createApprovalRequest(data: {
   await ensureDbInitialized();
   const client = getTursoClient();
 
+  const existingPending = await client.execute({
+    sql: `SELECT * FROM approval_requests
+      WHERE requester_id = ? AND change_type = ? AND entity_type = ? AND entity_id = ? AND status = 'Pending'
+      ORDER BY created_at DESC, id DESC LIMIT 1`,
+    args: [data.requesterId, data.changeType, data.entityType, data.entityId],
+  });
+  if (existingPending.rows.length > 0) return mapApprovalRequestRow(existingPending.rows[0]);
+
   const countRes = await client.execute('SELECT COUNT(*) as count FROM approval_requests');
   const count = Number(countRes.rows[0].count);
   const nowDate = new Date();
-  const now = nowDate.toISOString().slice(0, 16).replace('T', ' ');
+  const now = nowDate.toISOString();
   const reqId = `REQ-${nowDate.getUTCFullYear()}-${String(1000 + count + 1).padStart(4, '0')}`;
 
   const status = data.status || 'Pending';

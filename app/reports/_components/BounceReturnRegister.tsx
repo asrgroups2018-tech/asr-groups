@@ -18,6 +18,7 @@ import { useApp } from '@/lib/store';
 import { APP_BRAND } from '@/lib/branding';
 import { formatINR } from '@/lib/utils/formatCurrency';
 import { Loan } from '@/lib/types';
+import { DateRangePicker } from '@/components/ui/DateRangePicker';
 
 // Statuses that indicate instrument was returned/bounced
 const BOUNCE_STATUSES = new Set(['RET', 'RET NEFT', 'RET PASS', 'BOUNCE', 'RETURNED']);
@@ -313,14 +314,14 @@ export const BounceReturnRegister: React.FC = () => {
               <option value="All">All Types</option>
               {allTypes.map((t) => <option key={t} value={t}>{t}</option>)}
             </select>
-            <label className="block text-[9px] font-bold uppercase tracking-[0.1em] text-slate-500">
-              From<input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)}
-                className="mt-1 block rounded-xl border border-slate-200 bg-[#FCFBF9] px-2.5 py-2 text-xs text-slate-700 outline-none focus:border-[#C5A059]" />
-            </label>
-            <label className="block text-[9px] font-bold uppercase tracking-[0.1em] text-slate-500">
-              To<input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)}
-                className="mt-1 block rounded-xl border border-slate-200 bg-[#FCFBF9] px-2.5 py-2 text-xs text-slate-700 outline-none focus:border-[#C5A059]" />
-            </label>
+            <DateRangePicker
+              label="Bounce Date Range"
+              value={{ startDate: fromDate || null, endDate: toDate || null, presetLabel: 'custom' }}
+              onChange={(range) => {
+                setFromDate(range.startDate || '');
+                setToDate(range.endDate || '');
+              }}
+            />
             {hasFilters && (
               <button type="button" onClick={clearFilters} className="inline-flex items-center gap-1 text-[11px] font-bold text-[#701A35] hover:underline self-end pb-0.5">
                 <X className="h-3.5 w-3.5" /> Clear

@@ -3,7 +3,6 @@
 import React, { useMemo, useState } from 'react';
 import {
   AlertTriangle,
-  Clock,
   FileSpreadsheet,
   FileText,
   Search,
@@ -14,6 +13,7 @@ import * as XLSX from 'xlsx';
 import { useApp } from '@/lib/store';
 import { formatINR } from '@/lib/utils/formatCurrency';
 import { Loan, Installment } from '@/lib/types';
+import { DatePicker, getTodayIsoDate } from '@/components/ui/DatePicker';
 
 const PAID_STATUSES = new Set(['PASS', 'NEFT', 'CASH', 'CLS', 'PAID']);
 const isPaid = (s: string) => PAID_STATUSES.has(String(s || '').trim().toUpperCase());
@@ -144,7 +144,7 @@ interface BucketSummary {
 
 export const AgeingReport: React.FC = () => {
   const { loans, isLoading, showToast } = useApp();
-  const today = new Date().toISOString().slice(0, 10);
+  const today = getTodayIsoDate();
   const [asOfDate, setAsOfDate] = useState(today);
   const [query, setQuery] = useState('');
 
@@ -296,18 +296,7 @@ export const AgeingReport: React.FC = () => {
 
           {/* As-of date & search */}
           <div className="flex flex-wrap items-end gap-3 border-t border-[#EEE8DE] pt-4">
-            <label className="block min-w-[160px] text-[9px] font-bold uppercase tracking-[0.1em] text-slate-500">
-              As of Date
-              <span className="relative mt-1 block">
-                <Clock className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
-                <input
-                  type="date"
-                  value={asOfDate}
-                  onChange={(e) => setAsOfDate(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-[#FCFBF9] px-3 py-2.5 pl-9 text-xs font-semibold normal-case tracking-normal text-slate-700 outline-none focus:border-[#C5A059]"
-                />
-              </span>
-            </label>
+            <DatePicker label="As of Date" value={asOfDate} onChange={setAsOfDate} />
             <div className="relative min-w-64">
               <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <input

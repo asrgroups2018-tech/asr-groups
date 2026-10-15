@@ -14,6 +14,7 @@ import { useApp } from '@/lib/store';
 import { formatINR } from '@/lib/utils/formatCurrency';
 import { numberToWordsINR } from '@/lib/utils/formatCurrency';
 import { Loan } from '@/lib/types';
+import { DatePicker, getTodayIsoDate } from '@/components/ui/DatePicker';
 
 const PAID_STATUSES = new Set(['PASS', 'NEFT', 'CASH', 'CLS', 'PAID']);
 const isPaid = (s: string) => PAID_STATUSES.has(String(s || '').trim().toUpperCase());
@@ -48,7 +49,7 @@ interface ForeclosureCalc {
 }
 
 function calcForeclosure(loan: Loan, asOfDate: string, rebateType: 'none' | 'percent' | 'fixed', rebateValue: number): ForeclosureCalc {
-  const today = asOfDate || new Date().toISOString().slice(0, 10);
+  const today = asOfDate || getTodayIsoDate();
   const insts = [...(loan.installments || [])].sort((a, b) =>
     dateKey(a.dueDate).localeCompare(dateKey(b.dueDate))
   );
@@ -94,7 +95,7 @@ export const ForeclosureStatement: React.FC = () => {
   const [loanSearch, setLoanSearch] = useState('');
   const [selectedLoanId, setSelectedLoanId] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
-  const [asOfDate, setAsOfDate] = useState(new Date().toISOString().slice(0, 10));
+  const [asOfDate, setAsOfDate] = useState(getTodayIsoDate);
   const [rebateType, setRebateType] = useState<'none' | 'percent' | 'fixed'>('none');
   const [rebateValue, setRebateValue] = useState('');
   const [showAllInst, setShowAllInst] = useState(false);
@@ -269,13 +270,7 @@ export const ForeclosureStatement: React.FC = () => {
             </div>
 
             {/* Foreclosure Date */}
-            <div>
-              <label className="block text-[9px] font-bold uppercase tracking-[0.12em] text-slate-500 mb-1.5">
-                Foreclosure Date *
-              </label>
-              <input type="date" value={asOfDate} onChange={(e) => setAsOfDate(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-[#FCFBF9] px-3 py-2.5 text-xs text-slate-700 outline-none focus:border-[#C5A059]" />
-            </div>
+            <DatePicker label="Foreclosure Date *" value={asOfDate} onChange={setAsOfDate} />
 
             {/* Rebate */}
             <div>

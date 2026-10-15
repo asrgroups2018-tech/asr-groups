@@ -44,6 +44,8 @@ interface DataTableProps<T> {
   emptyStateMessage?: string;
   footerTotals?: React.ReactNode;
   mobileCardRender?: (item: T) => React.ReactNode;
+  fitViewport?: boolean;
+  compact?: boolean;
 }
 
 export function DataTable<T>({
@@ -62,6 +64,8 @@ export function DataTable<T>({
   emptyStateMessage = 'No matching records found.',
   footerTotals,
   mobileCardRender,
+  fitViewport = false,
+  compact = false,
 }: DataTableProps<T>) {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortKey, setSortKey] = useState<string | null>(null);
@@ -253,8 +257,8 @@ export function DataTable<T>({
       </div>
 
       {/* Desktop Spreadsheet Table View */}
-      <div className="overflow-x-auto hidden md:block">
-        <table className="w-full text-left text-xs border-collapse">
+      <div className={`${fitViewport ? 'overflow-x-hidden' : 'overflow-x-auto'} hidden md:block`}>
+        <table className={`w-full text-left text-xs border-collapse ${fitViewport ? 'table-fixed' : ''}`}>
           <thead>
             <tr className="bg-slate-100 border-b-2 border-slate-200 text-[11px] font-mono font-bold text-slate-700 uppercase tracking-wider select-none sticky top-0 z-10">
               {selectedKeys && onToggleSelect && (
@@ -271,7 +275,7 @@ export function DataTable<T>({
                 <th
                   key={col.key}
                   onClick={() => col.sortable !== false && handleSort(col.key)}
-                  className={`px-5 py-3.5 font-bold uppercase tracking-wider text-[11px] text-slate-700 select-none ${
+                    className={`${compact ? 'px-3 py-2.5' : 'px-5 py-3.5'} font-bold uppercase tracking-wider text-[11px] text-slate-700 select-none ${
                     col.sortable !== false ? 'cursor-pointer hover:text-slate-950' : ''
                   } ${
                     col.align === 'center'
@@ -387,7 +391,7 @@ export function DataTable<T>({
                       return (
                         <td
                           key={col.key}
-                          className={`px-4 py-3 text-slate-700 ${
+                          className={`${compact ? 'px-3 py-2' : 'px-4 py-3'} text-slate-700 ${
                             col.align === 'center'
                               ? 'text-center'
                               : col.align === 'right'

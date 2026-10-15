@@ -14,7 +14,7 @@ import {
 import { DataTable, ColumnDef } from '@/components/ui/DataTable';
 import { StatusPill } from '@/components/ui/StatusPill';
 import { MoneyDisplay } from '@/components/ui/MoneyDisplay';
-import { formatDisplayDate, parseDateString } from '@/components/ui/DatePicker';
+import { formatDisplayDate, parseDateString, toIsoDate } from '@/components/ui/DatePicker';
 import { DateRangePicker, DateRangeValue } from '@/components/ui/DateRangePicker';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { AddChequeModal } from './AddChequeModal';
@@ -98,7 +98,7 @@ export const ChequesListView: React.FC = () => {
         if (!c.depositDate) return false;
         const d = parseDateString(c.depositDate) || new Date(c.depositDate);
         if (isNaN(d.getTime())) return false;
-        const iso = d.toISOString().slice(0, 10);
+        const iso = toIsoDate(d);
         if (dateRange.startDate && iso < dateRange.startDate) return false;
         if (dateRange.endDate && iso > dateRange.endDate) return false;
         return true;

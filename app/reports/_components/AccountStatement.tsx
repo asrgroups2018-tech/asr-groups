@@ -13,6 +13,7 @@ import autoTable from 'jspdf-autotable';
 import { useApp } from '@/lib/store';
 import { formatINR, numberToWordsINR } from '@/lib/utils/formatCurrency';
 import { Customer, Loan, Installment } from '@/lib/types';
+import { DateRangePicker } from '@/components/ui/DateRangePicker';
 
 const PAID_STATUSES = new Set(['PASS', 'NEFT', 'CASH', 'CLS', 'PAID']);
 const isPaid = (s: string) => PAID_STATUSES.has(String(s || '').trim().toUpperCase());
@@ -376,25 +377,14 @@ export const AccountStatement: React.FC = () => {
               )}
             </div>
 
-            {/* Period */}
-            <label className="block min-w-[140px] text-[9px] font-bold uppercase tracking-[0.1em] text-slate-500">
-              From Date
-              <input
-                type="date"
-                value={fromDate}
-                onChange={(e) => setFromDate(e.target.value)}
-                className="mt-1 w-full rounded-xl border border-slate-200 bg-[#FCFBF9] px-3 py-2.5 text-xs text-slate-700 outline-none focus:border-[#C5A059]"
-              />
-            </label>
-            <label className="block min-w-[140px] text-[9px] font-bold uppercase tracking-[0.1em] text-slate-500">
-              To Date
-              <input
-                type="date"
-                value={toDate}
-                onChange={(e) => setToDate(e.target.value)}
-                className="mt-1 w-full rounded-xl border border-slate-200 bg-[#FCFBF9] px-3 py-2.5 text-xs text-slate-700 outline-none focus:border-[#C5A059]"
-              />
-            </label>
+            <DateRangePicker
+              label="Statement Date Range"
+              value={{ startDate: fromDate || null, endDate: toDate || null, presetLabel: 'custom' }}
+              onChange={(range) => {
+                setFromDate(range.startDate || '');
+                setToDate(range.endDate || '');
+              }}
+            />
 
             <div className="flex gap-2 self-end">
               <button

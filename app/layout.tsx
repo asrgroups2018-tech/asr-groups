@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Ubuntu } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 
 const ubuntu = Ubuntu({
@@ -35,9 +36,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" data-theme="light" suppressHydrationWarning className={`h-full antialiased ${ubuntu.variable}`}>
+    <html lang="en" suppressHydrationWarning className={`h-full antialiased ${ubuntu.variable}`}>
       <head>
-        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+        <Script
+          id="theme-init"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{ __html: themeInitScript }}
+        />
       </head>
       <body className="min-h-full flex flex-col bg-[#F8F6F1] text-slate-900 font-sans">
         <ClientProviders>

@@ -4,6 +4,7 @@ import { getTursoClient } from './turso';
 import { initializeSchema } from './schema';
 import { getPermissionMatrix, logAudit, updatePermissionMatrix } from './administration';
 import { MODULES_DATA } from '@/lib/seedData';
+import { formatPermissionRequestReason } from '@/lib/permissions';
 
 let initialized = false;
 
@@ -31,15 +32,36 @@ export async function getAccessRequests(userId?: string): Promise<AccessRequest[
   const result = userId
     ? await client.execute({ sql: 'SELECT * FROM access_requests WHERE user_id = ? ORDER BY created_at DESC', args: [userId] })
     : await client.execute('SELECT * FROM access_requests ORDER BY created_at DESC');
-  return result.rows.map(mapRow);
+  const requests = result.rows.map(mapRow);
+  const pendingTargets = new Set<string>();
+  return requests.filter((request) => {
+    if (request.status !== 'Pending') return true;
+    const targetKey = [request.userId, request.moduleId, request.action].join(':');
+    if (pendingTargets.has(targetKey)) return false;
+    pendingTargets.add(targetKey);
+    return true;
+  });
 }
 
 export async function createAccessRequest(data: { userId: string; userName: string; roleId: RoleId; moduleId: string; action: ModuleAction; reason: string }): Promise<AccessRequest> {
   await ensureInitialized();
   const client = getTursoClient();
-  const pending = await client.execute({ sql: 'SELECT * FROM access_requests WHERE user_id = ? AND module_id = ? AND action = ? AND status = \'Pending\' LIMIT 1', args: [data.userId, data.moduleId, data.action] });
-  if (pending.rows.length > 0) return mapRow(pending.rows[0]);
-  const request: AccessRequest = { ...data, id: `AR-${randomUUID()}`, reason: data.reason.trim(), status: 'Pending', createdAt: new Date().toISOString() };
+  const latest = await client.execute({
+    sql: 'SELECT * FROM access_requests WHERE user_id = ? AND module_id = ? AND action = ? ORDER BY created_at DESC LIMIT 1',
+    args: [data.userId, data.moduleId, data.action],
+  });
+  if (latest.rows.length > 0) {
+    const existing = mapRow(latest.rows[0]);
+    if (existing.status === 'Pending' || existing.status === 'Approved') return existing;
+  }
+
+  const request: AccessRequest = {
+    ...data,
+    id: `AR-${randomUUID()}`,
+    reason: formatPermissionRequestReason(data.moduleId, data.action, data.reason),
+    status: 'Pending',
+    createdAt: new Date().toISOString(),
+  };
   await client.execute({ sql: `INSERT INTO access_requests (id, user_id, user_name, role_id, module_id, action, reason, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`, args: [request.id, request.userId, request.userName, request.roleId, request.moduleId, request.action, request.reason, request.status, request.createdAt] });
   await logAudit({
     actorId: request.userId,

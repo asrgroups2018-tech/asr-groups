@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { formatINR, numberToWordsINR } from '@/lib/utils/formatCurrency';
 
 export interface MoneyDisplayProps {
@@ -15,7 +15,7 @@ export interface MoneyDisplayProps {
   align?: 'left' | 'center' | 'right';
 }
 
-export const MoneyDisplay: React.FC<MoneyDisplayProps> = ({
+export const MoneyDisplay = React.memo<MoneyDisplayProps>(({
   amount,
   size = 'md',
   className = '',
@@ -23,8 +23,6 @@ export const MoneyDisplay: React.FC<MoneyDisplayProps> = ({
   prefix = '',
   suffix = '',
   showTooltip = true,
-  tooltipPosition,
-  align,
 }) => {
   const num = Number(amount || 0);
   const formattedAmount = formatINR(num);
@@ -32,7 +30,6 @@ export const MoneyDisplay: React.FC<MoneyDisplayProps> = ({
 
   const containerRef = useRef<HTMLSpanElement>(null);
   const [isOpen, setIsOpen] = useState(false);
-  const [tooltipCoords, setTooltipCoords] = useState({ top: 0, left: 0 });
 
   const sizeClasses: Record<string, string> = {
     '2xs': 'text-[10px]',
@@ -46,69 +43,11 @@ export const MoneyDisplay: React.FC<MoneyDisplayProps> = ({
     custom: '',
   };
 
-  const updatePosition = useCallback((el: HTMLElement) => {
-    if (typeof window === 'undefined') return;
-
-    const rect = el.getBoundingClientRect();
-    const viewportPadding = 12;
-    const tooltipWidth = Math.min(280, Math.max(180, window.innerWidth - viewportPadding * 2));
-    const estimatedHeight = 72;
-    const rightSpace = window.innerWidth - rect.right;
-    const leftSpace = rect.left;
-
-    const nextAlign = align || (rightSpace < tooltipWidth / 2 + viewportPadding
-      ? 'right'
-      : leftSpace < tooltipWidth / 2 + viewportPadding
-        ? 'left'
-        : 'center');
-    const idealLeft = nextAlign === 'left'
-      ? rect.left
-      : nextAlign === 'right'
-        ? rect.right - tooltipWidth
-        : rect.left + (rect.width - tooltipWidth) / 2;
-    const left = Math.min(
-      Math.max(viewportPadding, idealLeft),
-      Math.max(viewportPadding, window.innerWidth - tooltipWidth - viewportPadding),
-    );
-
-    const forcedPosition = tooltipPosition;
-    const canOpenAbove = rect.top >= estimatedHeight + viewportPadding;
-    const canOpenBelow = rect.bottom + estimatedHeight + viewportPadding <= window.innerHeight;
-    const nextPos = forcedPosition || (canOpenAbove || !canOpenBelow ? 'top' : 'bottom');
-    const top = nextPos === 'top'
-      ? Math.max(viewportPadding, rect.top - estimatedHeight - 10)
-      : Math.min(window.innerHeight - estimatedHeight - viewportPadding, rect.bottom + 10);
-
-    setTooltipCoords({ top, left });
-  }, [align, tooltipPosition]);
-
-  const handleMouseEnter = () => {
-    if (containerRef.current) {
-      updatePosition(containerRef.current);
-    }
-  };
-
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!showTooltip || !words) return;
-    if (containerRef.current) {
-      updatePosition(containerRef.current);
-    }
     setIsOpen((prev) => !prev);
   };
-
-  useEffect(() => {
-    if (!isOpen) return;
-    const reposition = () => {
-      if (containerRef.current) updatePosition(containerRef.current);
-    };
-    window.addEventListener('resize', reposition);
-    window.addEventListener('scroll', reposition, true);
-    return () => {
-      window.removeEventListener('resize', reposition);
-      window.removeEventListener('scroll', reposition, true);
-    };
-  }, [isOpen, updatePosition]);
 
   // Close on outside click
   useEffect(() => {
@@ -130,7 +69,8 @@ export const MoneyDisplay: React.FC<MoneyDisplayProps> = ({
     <>
       <span
         ref={containerRef}
-        onMouseEnter={handleMouseEnter}
+        data-amount-words={showTooltip ? 'true' : 'false'}
+        data-amount-words-value={showTooltip ? String(num) : undefined}
         onClick={handleClick}
         role="button"
         tabIndex={0}
@@ -145,38 +85,8 @@ export const MoneyDisplay: React.FC<MoneyDisplayProps> = ({
           {suffix}
         </span>
 
-        {/* ─── Desktop Hover/Click Tooltip (Hidden on Mobile) ─── */}
-        {showTooltip && words && (
-          <span
-            role="tooltip"
-            className={`hidden sm:block sm:fixed z-[150] transition-opacity duration-150 ${
-              isOpen
-                ? 'opacity-100 pointer-events-auto'
-                : 'opacity-0 group-hover/money:opacity-100 pointer-events-none'
-            }`}
-            style={{
-              top: tooltipCoords.top,
-              left: tooltipCoords.left,
-              minWidth: '180px',
-              maxWidth: 'min(280px, calc(100vw - 24px))',
-              width: 'max-content',
-              maxHeight: 'calc(100vh - 24px)',
-              overflowY: 'auto',
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Main Card Content */}
-            <div className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 shadow-xl text-left">
-              <span className="block text-[9px] font-semibold uppercase tracking-wider text-slate-400">
-                Amount in words
-              </span>
-              <p className="mt-1 text-xs font-semibold leading-snug text-white whitespace-normal break-words select-text">
-                {words}
-              </p>
-            </div>
-          </span>
-        )}
       </span>
+
 
       {/* ─── Mobile Touch Bottom Sheet Modal (Shown only when tapped on Mobile) ─── */}
       {showTooltip && words && isOpen && (
@@ -228,5 +138,7 @@ export const MoneyDisplay: React.FC<MoneyDisplayProps> = ({
       )}
     </>
   );
-};
+});
+
+MoneyDisplay.displayName = 'MoneyDisplay';
 

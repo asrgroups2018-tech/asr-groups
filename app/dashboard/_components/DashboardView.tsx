@@ -22,7 +22,6 @@ import {
 } from 'lucide-react';
 import { StatusPill } from '@/components/ui/StatusPill';
 import { MoneyDisplay } from '@/components/ui/MoneyDisplay';
-import { numberToWordsINR } from '@/lib/utils/formatCurrency';
 import { toIsoDate } from '@/components/ui/DatePicker';
 
 // Helper to parse dates formatted as '1-Jul-2026', '2026-07-01', '13-Sep-2026', etc.
@@ -917,12 +916,16 @@ export const DashboardView: React.FC = () => {
                     <div
                       style={{ height: `${disHeight}px` }}
                       className="w-4 sm:w-6 bg-[#701A35] rounded-t-sm"
-                      title={`${m.month} Disbursed: ₹${m.disbursed.toLocaleString('en-IN')} (${numberToWordsINR(m.disbursed)})`}
+                      data-amount-words="true"
+                      data-amount-words-value={String(m.disbursed)}
+                      aria-label={`${m.month} Disbursed`}
                     />
                     <div
                       style={{ height: `${colHeight}px` }}
                       className="w-4 sm:w-6 bg-emerald-500 rounded-t-sm"
-                      title={`${m.month} Collected: ₹${m.collected.toLocaleString('en-IN')} (${numberToWordsINR(m.collected)})`}
+                      data-amount-words="true"
+                      data-amount-words-value={String(m.collected)}
+                      aria-label={`${m.month} Collected`}
                     />
                   </div>
                   <span className="text-[10px] text-slate-500 font-mono text-center block truncate w-full mt-1">

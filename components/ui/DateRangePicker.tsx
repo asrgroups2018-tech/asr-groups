@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import {
   CalendarDays,
   ChevronLeft,
@@ -10,6 +11,7 @@ import {
   ArrowRight,
   Layers,
   Check,
+  X,
 } from 'lucide-react';
 
 export interface DateRangeValue {
@@ -82,10 +84,11 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
   value,
   onChange,
   className = '',
+  label = 'Date Range',
 }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [popoverPlacement, setPopoverPlacement] = useState<'bottom' | 'top'>('bottom');
   const containerRef = useRef<HTMLDivElement>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
 
   // Tab mode: 'presets' | 'calendar' | 'month-year'
   const [activeTab, setActiveTab] = useState<'presets' | 'calendar' | 'month-year'>('presets');
@@ -107,9 +110,8 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
     return getCurrentMonthRange().end;
   });
   const [activePreset, setActivePreset] = useState<string>(() => {
-    if (value.presetLabel) return value.presetLabel;
     if (!value.startDate && !value.endDate) return 'all';
-    return 'curr_month';
+    return value.presetLabel || 'custom';
   });
 
   const syncWorkingRangeFromValue = () => {
@@ -119,13 +121,15 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
     setTempStart(nextStart);
     setTempEnd(nextEnd);
     setCalendarAnchor(new Date(nextStart.getFullYear(), nextStart.getMonth(), 1));
-    setActivePreset(value.presetLabel || (!value.startDate && !value.endDate ? 'all' : 'custom'));
+    setActivePreset(!value.startDate && !value.endDate ? 'all' : value.presetLabel || 'custom');
   };
 
-  // Click outside listener
+  // Click outside listener. The popover is portaled so it is not clipped by
+  // table/card overflow or moved by nested scrolling containers.
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+      const target = event.target as Node;
+      if (!containerRef.current?.contains(target) && !popoverRef.current?.contains(target)) {
         setIsOpen(false);
       }
     }
@@ -137,26 +141,20 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
     };
   }, [isOpen]);
 
-  const updatePopoverPlacement = useCallback(() => {
-    if (!containerRef.current || typeof window === 'undefined') return;
-    const triggerRect = containerRef.current.getBoundingClientRect();
-    const estimatedHeight = Math.min(640, window.innerHeight - 80);
-    const roomBelow = window.innerHeight - triggerRect.bottom;
-    const roomAbove = triggerRect.top;
-    setPopoverPlacement(roomBelow < estimatedHeight && roomAbove > roomBelow ? 'top' : 'bottom');
-  }, []);
-
   useEffect(() => {
     if (!isOpen) return;
-    const update = () => updatePopoverPlacement();
-    update();
-    window.addEventListener('resize', update);
-    window.addEventListener('scroll', update, true);
-    return () => {
-      window.removeEventListener('resize', update);
-      window.removeEventListener('scroll', update, true);
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setIsOpen(false);
     };
-  }, [isOpen, updatePopoverPlacement]);
+    document.addEventListener('keydown', handleEscape);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [isOpen]);
 
   const handlePresetClick = (presetId: string) => {
     const now = new Date();
@@ -331,7 +329,7 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
       {/* Trigger Button */}
       <div className="flex flex-col">
         <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 font-mono mb-1">
-          Date Range
+          {label}
         </label>
         <button
           type="button"
@@ -340,7 +338,6 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
               syncWorkingRangeFromValue();
               setActiveTab('presets');
               setActiveSegment('start');
-              updatePopoverPlacement();
             }
             setIsOpen((open) => !open);
           }}
@@ -354,8 +351,20 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
       </div>
 
       {/* Popover Modal (Smooth, Lag-free, Responsive Enterprise Layout) */}
-      {isOpen && (
-        <div className={`absolute left-0 z-50 w-[min(420px,calc(100vw-2rem))] max-h-[calc(100vh-5rem)] overflow-y-auto overscroll-contain rounded-2xl border border-[#E6E1D6] bg-white p-4 shadow-2xl space-y-3.5 motion-popover select-none ${popoverPlacement === 'top' ? 'bottom-full mb-2' : 'top-full mt-2'}`}>
+      {isOpen && typeof document !== 'undefined' && createPortal(
+        <div
+          className="fixed inset-0 z-[1000] flex items-center justify-center bg-slate-950/25 p-4 backdrop-blur-[2px] motion-popover"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setIsOpen(false);
+          }}
+        >
+          <div
+            ref={popoverRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Date range filter"
+            className="relative max-h-[calc(100dvh-2rem)] w-full max-w-[420px] overflow-y-auto overscroll-contain rounded-2xl border border-[#E6E1D6] bg-white p-4 shadow-2xl space-y-3.5 select-none"
+          >
           {/* Header */}
           <div className="flex items-center justify-between pb-2.5 border-b border-[#EDE8DF]">
             <div className="flex items-center gap-2">
@@ -383,6 +392,15 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
                 className="px-3.5 py-1 bg-[#701A35] hover:bg-[#5C142B] text-white text-xs font-bold rounded-lg shadow-2xs transition-all duration-120 cursor-pointer btn-press"
               >
                 Done
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsOpen(false)}
+                aria-label="Close date range filter"
+                title="Close"
+                className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition-colors hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700 cursor-pointer"
+              >
+                <X className="h-3.5 w-3.5" />
               </button>
             </div>
           </div>
@@ -770,7 +788,9 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
             </span>
             <span className="text-slate-400">Click Done to apply</span>
           </div>
-        </div>
+          </div>
+        </div>,
+        document.body
       )}
     </div>
   );

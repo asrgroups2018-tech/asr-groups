@@ -16,6 +16,7 @@ import * as XLSX from 'xlsx';
 import { useApp } from '@/lib/store';
 import { formatINR } from '@/lib/utils/formatCurrency';
 import { Loan } from '@/lib/types';
+import { DateRangePicker } from '@/components/ui/DateRangePicker';
 
 const PAID_STATUSES = new Set(['PASS', 'NEFT', 'CASH', 'CLS', 'PAID']);
 const isPaid = (s: string) => PAID_STATUSES.has(String(s || '').trim().toUpperCase());
@@ -304,18 +305,16 @@ export const LoanLedger: React.FC = () => {
                 <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
               </span>
             </label>
-            <label className="block min-w-[130px] text-[9px] font-bold uppercase tracking-[0.1em] text-slate-500">
-              Entries From
-              <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)}
-                className="mt-1 w-full rounded-xl border border-slate-200 bg-[#FCFBF9] px-3 py-2.5 text-xs text-slate-700 outline-none focus:border-[#C5A059]" />
-            </label>
-            <label className="block min-w-[130px] text-[9px] font-bold uppercase tracking-[0.1em] text-slate-500">
-              Entries To
-              <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)}
-                className="mt-1 w-full rounded-xl border border-slate-200 bg-[#FCFBF9] px-3 py-2.5 text-xs text-slate-700 outline-none focus:border-[#C5A059]" />
-            </label>
+            <DateRangePicker
+              label="Entry Date Range"
+              value={{ startDate: fromDate || null, endDate: toDate || null, presetLabel: 'custom' }}
+              onChange={(range) => {
+                setFromDate(range.startDate || '');
+                setToDate(range.endDate || '');
+              }}
+            />
             {hasFilters && (
-              <button type="button" onClick={() => { setQuery(''); setStatusFilter('All'); }}
+              <button type="button" onClick={() => { setQuery(''); setStatusFilter('All'); setFromDate(''); setToDate(''); }}
                 className="inline-flex items-center gap-1 self-end pb-2.5 text-[11px] font-bold text-[#701A35] hover:underline">
                 <X className="h-3.5 w-3.5" /> Clear
               </button>

@@ -87,6 +87,10 @@ export function toIsoDate(d: Date): string {
   return `${y}-${m}-${day}`;
 }
 
+export function getTodayIsoDate(): string {
+  return toIsoDate(new Date());
+}
+
 export function formatDisplayDate(dateStr: string | null | undefined): string {
   if (!dateStr) return '';
   const d = parseDateString(dateStr);
@@ -132,14 +136,11 @@ export const DatePicker: React.FC<DatePickerProps> = ({
   disabled = false,
   className = '',
   buttonClassName = '',
-  align = 'left',
   showPresets = true,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-  const triggerRef = useRef<HTMLButtonElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
-  const [popoverPosition, setPopoverPosition] = useState<{ top: number; left: number } | null>(null);
 
   // Active viewing month & year
   const initialDate = useMemo(() => {
@@ -191,7 +192,6 @@ export const DatePicker: React.FC<DatePickerProps> = ({
         !popoverRef.current?.contains(target)
       ) {
         setIsOpen(false);
-        setPopoverPosition(null);
       }
     };
     if (isOpen) {
@@ -205,50 +205,18 @@ export const DatePicker: React.FC<DatePickerProps> = ({
   useEffect(() => {
     if (!isOpen) return;
 
-    let frame = 0;
-    const updatePosition = () => {
-      cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(() => {
-        const trigger = triggerRef.current;
-        const popover = popoverRef.current;
-        if (!trigger || !popover) return;
-
-        const triggerRect = trigger.getBoundingClientRect();
-        const popoverRect = popover.getBoundingClientRect();
-        const margin = 8;
-        const gap = 6;
-        const maxLeft = Math.max(margin, window.innerWidth - popoverRect.width - margin);
-        const desiredLeft =
-          align === 'right' ? triggerRect.right - popoverRect.width : triggerRect.left;
-        const left = Math.min(Math.max(margin, desiredLeft), maxLeft);
-        const spaceBelow = window.innerHeight - triggerRect.bottom - gap - margin;
-        const spaceAbove = triggerRect.top - gap - margin;
-        const top =
-          spaceBelow >= popoverRect.height || spaceBelow >= spaceAbove
-            ? triggerRect.bottom + gap
-            : Math.max(margin, triggerRect.top - popoverRect.height - gap);
-
-        setPopoverPosition((current) =>
-          current?.top === top && current.left === left ? current : { top, left }
-        );
-      });
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setIsOpen(false);
     };
-
-    updatePosition();
-    window.addEventListener('resize', updatePosition);
-    window.addEventListener('scroll', updatePosition, true);
-    const resizeObserver = popoverRef.current
-      ? new ResizeObserver(updatePosition)
-      : null;
-    if (popoverRef.current && resizeObserver) resizeObserver.observe(popoverRef.current);
+    document.addEventListener('keydown', handleEscape);
 
     return () => {
-      cancelAnimationFrame(frame);
-      window.removeEventListener('resize', updatePosition);
-      window.removeEventListener('scroll', updatePosition, true);
-      resizeObserver?.disconnect();
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener('keydown', handleEscape);
     };
-  }, [align, isOpen, calendarView, mode, showPresets]);
+  }, [isOpen]);
 
   const isDark = theme === 'dark';
 
@@ -445,7 +413,6 @@ export const DatePicker: React.FC<DatePickerProps> = ({
 
       {/* Trigger Button */}
       <button
-        ref={triggerRef}
         type="button"
         disabled={disabled}
         onClick={() => {
@@ -453,7 +420,6 @@ export const DatePicker: React.FC<DatePickerProps> = ({
           if (isOpen) {
             setIsOpen(false);
           } else {
-            setPopoverPosition(null);
             openCalendar();
           }
         }}
@@ -492,18 +458,22 @@ export const DatePicker: React.FC<DatePickerProps> = ({
       {/* Popover Calendar Container */}
       {isOpen && typeof document !== 'undefined' && createPortal(
         <div
-          ref={popoverRef}
-          style={{
-            top: popoverPosition?.top ?? 0,
-            left: popoverPosition?.left ?? 0,
-            visibility: popoverPosition ? 'visible' : 'hidden',
+          className="fixed inset-0 z-[1000] flex items-center justify-center bg-slate-950/30 p-4 backdrop-blur-[2px] animate-in fade-in duration-120"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setIsOpen(false);
           }}
-          className={`fixed z-[1000] w-[min(320px,calc(100vw-16px))] rounded-2xl shadow-2xl border p-3 sm:p-4 backdrop-blur-md animate-in fade-in zoom-in-95 duration-120 select-none ${
-            isDark
-              ? 'bg-[#1D0C17] border-[#4A233A] text-slate-100 shadow-black/80'
-              : 'bg-white border-slate-200 text-slate-900 shadow-slate-400/30'
-          }`}
         >
+          <div
+            ref={popoverRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label={label || 'Date picker'}
+            className={`max-h-[calc(100dvh-2rem)] w-full max-w-[320px] overflow-y-auto rounded-2xl shadow-2xl border p-3 sm:p-4 backdrop-blur-md animate-in zoom-in-95 duration-120 select-none ${
+              isDark
+                ? 'bg-[#1D0C17] border-[#4A233A] text-slate-100 shadow-black/80'
+                : 'bg-white border-slate-200 text-slate-900 shadow-slate-400/30'
+            }`}
+          >
           {/* Header with Month & Year navigation and interactive selector buttons */}
           <div className="flex items-center justify-between pb-3 mb-2 border-b border-white/10">
             <button
@@ -567,20 +537,33 @@ export const DatePicker: React.FC<DatePickerProps> = ({
               </button>
             </div>
 
-            <button
-              type="button"
-              onClick={() => {
-                if (calendarView === 'days') handleNextMonth();
-                else if (calendarView === 'months') setViewYear((y) => y + 1);
-                else if (calendarView === 'years') setYearPage((p) => p + 12);
-              }}
-              className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
-                isDark ? 'hover:bg-white/10 text-slate-300' : 'hover:bg-slate-100 text-slate-700'
-              }`}
-              title="Next"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => {
+                  if (calendarView === 'days') handleNextMonth();
+                  else if (calendarView === 'months') setViewYear((y) => y + 1);
+                  else if (calendarView === 'years') setYearPage((p) => p + 12);
+                }}
+                className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                  isDark ? 'hover:bg-white/10 text-slate-300' : 'hover:bg-slate-100 text-slate-700'
+                }`}
+                title="Next"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsOpen(false)}
+                aria-label="Close date picker"
+                title="Close"
+                className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                  isDark ? 'hover:bg-white/10 text-slate-300' : 'hover:bg-slate-100 text-slate-700'
+                }`}
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
           </div>
 
           {/* VIEW MODE: MONTHS SELECTOR GRID */}
@@ -779,6 +762,7 @@ export const DatePicker: React.FC<DatePickerProps> = ({
             >
               Clear
             </button>
+          </div>
           </div>
         </div>,
         document.body

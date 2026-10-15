@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ModuleAction, User } from '@/lib/types';
-import { resolveRoutePermission } from '@/lib/permissions';
+import { getPermissionActionLabel, getPermissionModuleLabel, getPermissionRequestReason, resolveRoutePermission } from '@/lib/permissions';
 import { db } from './db';
 
 export const SUPER_ADMIN_ROLE_ID = 0;
@@ -39,17 +39,21 @@ export async function authorizeRequest(
     const matrix = await db.getPermissionMatrix();
     const allowed = user.assignedRoleIds.some((roleId) => Boolean(matrix[module]?.[action]?.[roleId]));
     if (!allowed) {
+      const actionLabel = getPermissionActionLabel(action).toLowerCase();
+      const moduleLabel = getPermissionModuleLabel(module);
       let accessRequestSubmitted = false;
       try {
-        await db.createAccessRequest({
-          userId: user.id,
-          userName: user.name,
-          roleId: user.primaryRoleId,
-          moduleId: module,
-          action,
-          reason: `Requested ${action} access for ${module} through ${request.method} ${request.nextUrl.pathname}.`,
-        });
-        accessRequestSubmitted = true;
+        if (action !== 'view') {
+          const accessRequest = await db.createAccessRequest({
+            userId: user.id,
+            userName: user.name,
+            roleId: user.primaryRoleId,
+            moduleId: module,
+            action,
+            reason: getPermissionRequestReason(module, action),
+          });
+          accessRequestSubmitted = accessRequest.status === 'Pending';
+        }
       } catch (error) {
         console.error('Failed to record access request:', error);
       }
@@ -61,7 +65,7 @@ export async function authorizeRequest(
               success: true,
               queued: true,
               accessRequestSubmitted: true,
-              message: `Your ${action} access request for ${module} was submitted for approval.`,
+              message: `Your ${actionLabel} access request for the ${moduleLabel} page was submitted for approval.`,
             },
             { status: 202 },
           ),
@@ -72,7 +76,7 @@ export async function authorizeRequest(
         response: NextResponse.json(
           {
             success: false,
-            error: `Permission required: ${action} ${module}.`,
+            error: `Permission required: ${actionLabel} access for the ${moduleLabel} page.`,
             accessRequestSubmitted,
           },
           { status: 403 },

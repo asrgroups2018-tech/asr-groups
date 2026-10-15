@@ -30,6 +30,7 @@ import { EditLoanExcelModal } from './EditLoanExcelModal';
 import { ImportReviewModal } from './ImportReviewModal';
 import { exportLoansToExcel, exportLoansToPDF } from '@/lib/utils/exportLoansLedger';
 import { DateRangePicker, DateRangeValue, getCurrentMonthRange } from '@/components/ui/DateRangePicker';
+import { getTodayIsoDate } from '@/components/ui/DatePicker';
 import { MoneyDisplay } from '@/components/ui/MoneyDisplay';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { getAuthorizedLoansForExport, requestLoanExportAccess } from '@/lib/exportAuthorization';
@@ -76,10 +77,15 @@ function isDateInRange(value: string | null | undefined, startDate: string | nul
   return Boolean(dateKey && startDate && endDate && dateKey >= startDate && dateKey <= endDate);
 }
 
+const PAID_INSTALLMENT_STATUSES = new Set([
+  'CLEARED', 'NEFT', 'RTGS', 'CASH', 'PASS', 'CLS', 'CS', 'PAID',
+  'CLOSED', 'SETTLED', 'RET NEFT', 'RET PASS',
+]);
+
 type SortField = 'customerName' | 'id' | 'startDate' | 'totalCollected' | 'interestAmount' | 'totalAmount' | 'installmentCount' | 'fundedBy' | 'nextDueDate' | 'status';
 type SortDirection = 'asc' | 'desc';
 
-export function getDerivedLoanStatus(loan: Loan): 'Active' | 'Closed' | 'Overdue' | 'Pending' {
+export function getDerivedLoanStatus(loan: Loan, todayIso = getTodayIsoDate()): 'Active' | 'Closed' | 'Overdue' | 'Pending' {
   const normSaved = String(loan.status || '').trim().toUpperCase();
   const insts = loan.installments || [];
 
@@ -87,9 +93,7 @@ export function getDerivedLoanStatus(loan: Loan): 'Active' | 'Closed' | 'Overdue
   const isAllPaid =
     insts.length > 0 &&
     insts.every((i) =>
-      ['CLEARED', 'NEFT', 'RTGS', 'CASH', 'PASS', 'CLS', 'CS', 'PAID', 'CLOSED', 'SETTLED'].includes(
-        String(i.status || '').trim().toUpperCase()
-      )
+      PAID_INSTALLMENT_STATUSES.has(String(i.status || '').trim().toUpperCase())
     );
   const isFullyCollected = (loan.totalCollected || 0) >= (loan.totalAmount || 0) && (loan.totalAmount || 0) > 0;
 
@@ -98,12 +102,9 @@ export function getDerivedLoanStatus(loan: Loan): 'Active' | 'Closed' | 'Overdue
   }
 
   // 2. If explicitly marked Overdue or has past-due unpaid installments
-  const nowStr = new Date().toISOString().slice(0, 10);
   const hasOverdueInst = insts.some((i) => {
-    const isPaid = ['CLEARED', 'NEFT', 'RTGS', 'CASH', 'PASS', 'CLS', 'CS', 'PAID', 'CLOSED', 'SETTLED'].includes(
-      String(i.status || '').trim().toUpperCase()
-    );
-    return !isPaid && i.dueDate && i.dueDate < nowStr;
+    const isPaid = PAID_INSTALLMENT_STATUSES.has(String(i.status || '').trim().toUpperCase());
+    return !isPaid && i.dueDate && i.dueDate < todayIso;
   });
 
   if (normSaved === 'OVERDUE' || hasOverdueInst) {
@@ -160,6 +161,11 @@ export const LoansListView: React.FC = () => {
 
   // Accordion state - all collapsed by default
   const [expandedLoanIds, setExpandedLoanIds] = useState<Set<string>>(new Set());
+
+  const derivedStatusById = useMemo(() => {
+    const todayIso = getTodayIsoDate();
+    return new Map(loans.map((loan) => [loan.id, getDerivedLoanStatus(loan, todayIso)]));
+  }, [loans]);
 
   // Close dropdowns on outside click
   useEffect(() => {
@@ -243,7 +249,7 @@ export const LoansListView: React.FC = () => {
     const filtered = loans.filter((loan) => {
       // 1. Status Filter (ALL, Active, Overdue, Closed)
       if (statusFilter !== 'ALL') {
-        const effectiveStatus = getDerivedLoanStatus(loan);
+        const effectiveStatus = derivedStatusById.get(loan.id) || 'Active';
         if (statusFilter === 'Active') {
           if (effectiveStatus !== 'Active' && effectiveStatus !== 'Pending') return false;
         } else if (effectiveStatus !== statusFilter) {
@@ -333,7 +339,7 @@ export const LoansListView: React.FC = () => {
       }
       return sortDirection === 'asc' ? comparison : -comparison;
     });
-  }, [loans, statusFilter, selectedClients, searchQuery, dateRange.startDate, dateRange.endDate, sortField, sortDirection]);
+  }, [loans, derivedStatusById, statusFilter, selectedClients, searchQuery, dateRange.startDate, dateRange.endDate, sortField, sortDirection]);
 
   // Aggregate Metrics based on filtered view
   const totalPortfolioAmount = useMemo(
@@ -1004,7 +1010,7 @@ export const LoansListView: React.FC = () => {
                   : 0;
 
                 const isLoanPaid =
-                  ['CLEARED', 'NEFT', 'RTGS', 'CASH', 'PASS', 'PAID', 'CLOSED', 'SETTLED'].includes(String(loan.status || '').trim().toUpperCase()) ||
+                  PAID_INSTALLMENT_STATUSES.has(String(loan.status || '').trim().toUpperCase()) ||
                   (loan.totalCollected || 0) >= loan.totalAmount;
 
                 return (
@@ -1146,7 +1152,7 @@ export const LoansListView: React.FC = () => {
 
                       {/* Status */}
                       <div className="text-center">
-                        <StatusPill status={getDerivedLoanStatus(loan)} size="sm" />
+                            <StatusPill status={derivedStatusById.get(loan.id) || 'Active'} size="sm" />
                       </div>
 
                       {/* Actions: Edit Excel, View Details, Delete */}
@@ -1189,8 +1195,9 @@ export const LoansListView: React.FC = () => {
                     </div>
 
                     {/* Accordion Expanded Sub-Table: Installments / EMIs */}
-                    <div className={`grid-accordion ${isExpanded ? 'open' : ''}`}>
-                      <div>
+                    {isExpanded && (
+                      <div className="grid-accordion open">
+                        <div>
                         <div className="bg-slate-50/90 px-6 py-4 border-t-2 border-slate-200 space-y-3">
                           <div className="flex items-center justify-between">
                             <span className="text-xs font-mono font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
@@ -1226,7 +1233,7 @@ export const LoansListView: React.FC = () => {
                               </thead>
                               <tbody className="divide-y divide-slate-100">
                                 {loan.installments.map((inst) => {
-                                  const isPaid = ['PASS', 'NEFT', 'RTGS', 'CASH', 'CLEARED', 'PAID', 'CLOSED', 'SETTLED', 'Paid'].includes(inst.status?.trim().toUpperCase());
+                                  const isPaid = PAID_INSTALLMENT_STATUSES.has(inst.status?.trim().toUpperCase() || '');
                                   const isInRange = isDateInRange(inst.dueDate, dateRange.startDate, dateRange.endDate) ||
                                     isDateInRange(inst.recdDate, dateRange.startDate, dateRange.endDate);
 
@@ -1293,7 +1300,7 @@ export const LoansListView: React.FC = () => {
                                             onClick={() =>
                                               updateLoanInstallment(inst.id, {
                                                 status: 'Cleared',
-                                                recdDate: new Date().toISOString().slice(0, 10),
+                                                recdDate: getTodayIsoDate(),
                                               })
                                             }
                                             className="px-2.5 py-1 bg-emerald-700 hover:bg-emerald-600 text-white rounded-md text-[10px] font-bold shadow-2xs cursor-pointer btn-press"
@@ -1311,8 +1318,9 @@ export const LoansListView: React.FC = () => {
                             </table>
                           </div>
                         </div>
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </div>
                 );
               })}
@@ -1327,7 +1335,7 @@ export const LoansListView: React.FC = () => {
               const total = loan.totalAmount || 0;
               const progress = total > 0 ? Math.min(100, Math.round((collected / total) * 100)) : 0;
               const isLoanPaid =
-                ['CLEARED', 'NEFT', 'RTGS', 'CASH', 'PASS', 'PAID', 'CLOSED', 'SETTLED'].includes(String(loan.status || '').trim().toUpperCase()) ||
+                PAID_INSTALLMENT_STATUSES.has(String(loan.status || '').trim().toUpperCase()) ||
                 (loan.totalCollected || 0) >= loan.totalAmount;
 
               return (
@@ -1366,7 +1374,7 @@ export const LoansListView: React.FC = () => {
                       </div>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                      <StatusPill status={getDerivedLoanStatus(loan)} size="sm" />
+                    <StatusPill status={derivedStatusById.get(loan.id) || 'Active'} size="sm" />
                     </div>
                   </div>
 
@@ -1554,8 +1562,9 @@ export const LoansListView: React.FC = () => {
                   </div>
 
                   {/* Accordion Expanded Sub-Table: Installments on Mobile */}
-                  <div className={`grid-accordion ${isExpanded ? 'open' : ''}`}>
-                    <div>
+                  {isExpanded && (
+                    <div className="grid-accordion open">
+                      <div>
                       <div className="bg-[#FAF8F5] p-3 sm:p-4 rounded-xl border border-[#E6E1D6] space-y-2 mt-2">
                         <div className="flex items-center justify-between text-xs font-mono font-bold text-slate-800">
                           <span>Payment Schedule ({loan.installments.length} EMIs)</span>
@@ -1575,7 +1584,7 @@ export const LoansListView: React.FC = () => {
                             </thead>
                             <tbody className="divide-y divide-[#EDE8DF]">
                               {loan.installments.map((inst) => {
-                                const isPaid = ['PASS', 'NEFT', 'RTGS', 'CASH', 'CLEARED', 'PAID', 'CLS', 'CS', 'SETTLED', 'CLOSED', 'RET NEFT', 'RET PASS', 'Paid'].includes(inst.status?.trim().toUpperCase());
+                                const isPaid = PAID_INSTALLMENT_STATUSES.has(inst.status?.trim().toUpperCase() || '');
                                 return (
                                   <tr
                                     key={inst.id}
@@ -1614,7 +1623,7 @@ export const LoansListView: React.FC = () => {
                                           onClick={() =>
                                             updateLoanInstallment(inst.id, {
                                               status: 'Cleared',
-                                              recdDate: new Date().toISOString().slice(0, 10),
+                                              recdDate: getTodayIsoDate(),
                                             })
                                           }
                                           className="px-2.5 py-1 bg-emerald-700 hover:bg-emerald-800 text-white rounded text-[10px] font-bold cursor-pointer btn-press"
@@ -1632,8 +1641,9 @@ export const LoansListView: React.FC = () => {
                           </table>
                         </div>
                       </div>
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               );
             })}

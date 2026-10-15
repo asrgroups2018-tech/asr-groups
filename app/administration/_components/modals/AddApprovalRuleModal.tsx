@@ -5,7 +5,6 @@ import { ChangeType, RoleId } from '@/lib/types';
 import { useApp } from '@/lib/store';
 import { X, PlusCircle, ShieldCheck } from 'lucide-react';
 import { RoleBadge } from '@/components/ui/RoleBadge';
-import { numberToWordsINR } from '@/lib/utils/formatCurrency';
 
 interface AddApprovalRuleModalProps {
   isOpen: boolean;
@@ -174,7 +173,7 @@ export const AddApprovalRuleModal: React.FC<AddApprovalRuleModalProps> = ({
                   Auto-Approve Below Threshold
                 </span>
                 <p className="text-[11px] text-slate-500">
-                  Requests below <strong title={numberToWordsINR(amountThreshold)} className="underline decoration-dotted cursor-help text-slate-700">₹{amountThreshold.toLocaleString('en-IN')}</strong> will auto-pass without manual queue
+                  Requests below <strong className="underline decoration-dotted cursor-help text-slate-700">₹{amountThreshold.toLocaleString('en-IN')}</strong> will auto-pass without manual queue
                 </p>
               </div>
               <input

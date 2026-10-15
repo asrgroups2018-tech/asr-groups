@@ -3,7 +3,6 @@
 import React, { useMemo, useState } from 'react';
 import {
   BookOpen,
-  CalendarDays,
   ChevronLeft,
   ChevronRight,
   Download,
@@ -16,6 +15,7 @@ import * as XLSX from 'xlsx';
 import { useApp } from '@/lib/store';
 import { formatINR } from '@/lib/utils/formatCurrency';
 import { Loan, Installment } from '@/lib/types';
+import { DatePicker, getTodayIsoDate } from '@/components/ui/DatePicker';
 
 const PAID_STATUSES = new Set(['PASS', 'NEFT', 'CASH', 'CLS', 'PAID']);
 const isPaid = (status: string) =>
@@ -106,7 +106,7 @@ export const DayBook: React.FC = () => {
   const { loans, isLoading, showToast } = useApp();
 
   // Default to today
-  const today = new Date().toISOString().slice(0, 10);
+  const today = getTodayIsoDate();
   const [selectedDate, setSelectedDate] = useState(today);
 
   const entries = useMemo(() => buildDayEntries(loans, selectedDate), [loans, selectedDate]);
@@ -253,15 +253,7 @@ export const DayBook: React.FC = () => {
             >
               <ChevronLeft className="h-4 w-4" /> Previous
             </button>
-            <div className="relative">
-              <CalendarDays className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#A07A39]" />
-              <input
-                type="date"
-                value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
-                className="rounded-xl border border-[#D8C9A0] bg-[#FBF8F3] py-2 pl-10 pr-3 text-xs font-bold text-[#701A35] outline-none focus:border-[#C5A059]"
-              />
-            </div>
+            <DatePicker label="Collection Date" value={selectedDate} onChange={setSelectedDate} />
             <button
               type="button"
               onClick={() => moveDate(1)}

@@ -1,8 +1,38 @@
 import { ModuleAction, PermissionMatrixState, RoleId } from './types';
+import { MODULES_DATA } from './seedData';
 
 export interface RoutePermission {
   module: string;
   action: ModuleAction;
+}
+
+export function getPermissionModuleLabel(moduleId: string): string {
+  return MODULES_DATA.find((module) => module.id === moduleId)?.name
+    || moduleId
+      .split('-')
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(' ');
+}
+
+export function getPermissionActionLabel(action: ModuleAction | string): string {
+  return action.charAt(0).toUpperCase() + action.slice(1);
+}
+
+export function getPermissionRequestReason(moduleId: string, action: ModuleAction | string): string {
+  const actionLabel = getPermissionActionLabel(action).toLowerCase();
+  const moduleLabel = getPermissionModuleLabel(moduleId);
+  return `Requested ${actionLabel} access for the ${moduleLabel} page.`;
+}
+
+export function formatPermissionRequestReason(
+  moduleId: string,
+  action: ModuleAction | string,
+  reason?: string,
+): string {
+  if (!reason?.trim() || /\bthrough\s+(GET|POST|PUT|PATCH|DELETE)\s+\/api\//i.test(reason)) {
+    return getPermissionRequestReason(moduleId, action);
+  }
+  return reason.trim();
 }
 
 export const APPLICATION_PAGE_ROUTES: Array<{ module: string; path: string }> = [
@@ -47,7 +77,7 @@ export function resolveRoutePermission(
     return null;
   }
 
-  const module =
+  const resolvedModule =
     path === '/dashboard' || path.startsWith('/dashboard/') || path.startsWith('/api/dashboard')
       ? 'dashboard'
       : path === '/loans' || path.startsWith('/loans/') || path.startsWith('/api/loans')
@@ -78,7 +108,7 @@ export function resolveRoutePermission(
                               ? 'loans'
                               : null;
 
-  if (!module) return null;
+  if (!resolvedModule) return null;
 
   if (path.endsWith('/approve') || path.endsWith('/reject')) {
     return { module: 'requests', action: 'approve' };
@@ -89,7 +119,7 @@ export function resolveRoutePermission(
     searchParams.get('format') === 'csv' ||
     searchParams.get('download') === '1'
   ) {
-    return { module, action: 'export' };
+    return { module: resolvedModule, action: 'export' };
   }
 
   if (method === 'POST') {
@@ -100,20 +130,20 @@ export function resolveRoutePermission(
       path.startsWith('/api/installments/') ||
       path.startsWith('/api/cheques/') && path.endsWith('/deposit')
     ) {
-      return { module, action: 'edit' };
+      return { module: resolvedModule, action: 'edit' };
     }
-    if (path.startsWith('/api/import/commit')) return { module, action: 'create' };
-    if (path.startsWith('/api/import/match')) return { module, action: 'view' };
-    return { module, action: 'create' };
+    if (path.startsWith('/api/import/commit')) return { module: resolvedModule, action: 'create' };
+    if (path.startsWith('/api/import/match')) return { module: resolvedModule, action: 'view' };
+    return { module: resolvedModule, action: 'create' };
   }
 
   if (method === 'PUT' || method === 'PATCH') {
-    return { module, action: 'edit' };
+    return { module: resolvedModule, action: 'edit' };
   }
 
   if (method === 'DELETE') {
-    return { module, action: 'delete' };
+    return { module: resolvedModule, action: 'delete' };
   }
 
-  return { module, action: 'view' };
+  return { module: resolvedModule, action: 'view' };
 }

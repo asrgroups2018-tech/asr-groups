@@ -17,6 +17,7 @@ import * as XLSX from 'xlsx';
 import { useApp } from '@/lib/store';
 import { APP_BRAND } from '@/lib/branding';
 import { formatINR } from '@/lib/utils/formatCurrency';
+import { getTodayIsoDate } from '@/components/ui/DatePicker';
 import { isPaid, isBounce, dateKey } from './CollectionsView';
 import type { DateRange, Period } from './CollectionsView';
 
@@ -72,7 +73,7 @@ export const CollectionSheet: React.FC<{ dateRange: DateRange; period: Period; p
   dateRange, periodLabel,
 }) => {
   const { loans, isLoading, showToast, systemSettings } = useApp();
-  const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const today = useMemo(() => getTodayIsoDate(), []);
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'All' | PayStatus>('All');
   const [modeFilter, setModeFilter] = useState('All');

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { db } from '@/lib/server/db';
 import { CUSTOMER_ROLE_ID } from '@/lib/types';
-import { getFirstPermittedPage, resolveRoutePermission } from '@/lib/permissions';
+import { getFirstPermittedPage, getPermissionActionLabel, getPermissionModuleLabel, getPermissionRequestReason, resolveRoutePermission } from '@/lib/permissions';
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -84,12 +84,14 @@ export async function proxy(request: NextRequest) {
     if (!isDefaultCustomerPage && !hasSavedPageAccess) {
       if (pathname.startsWith('/api/')) {
         if (permission) {
-          await createAutomaticAccessRequest(user, permission.module, permission.action, request);
-          return accessRequestQueuedResponse(permission.module, permission.action);
+          if (permission.action !== 'view') {
+            await createAutomaticAccessRequest(user, permission.module, permission.action);
+            return accessRequestQueuedResponse(permission.module, permission.action);
+          }
+          return accessDeniedResponse(permission.module, permission.action);
         }
         return NextResponse.json({ success: false, error: 'This page is not enabled for the customer account.' }, { status: 403 });
       }
-      if (permission) await createAutomaticAccessRequest(user, permission.module, permission.action, request);
       return NextResponse.redirect(new URL('/dashboard', request.url));
     }
 
@@ -102,12 +104,14 @@ export async function proxy(request: NextRequest) {
     const allowed = user.assignedRoleIds.some((roleId) => Boolean(matrix[permission.module]?.[permission.action]?.[roleId]));
     if (!allowed) {
       if (pathname.startsWith('/api/')) {
-        await createAutomaticAccessRequest(user, permission.module, permission.action, request);
-        return accessRequestQueuedResponse(permission.module, permission.action);
+        if (permission.action !== 'view') {
+          await createAutomaticAccessRequest(user, permission.module, permission.action);
+          return accessRequestQueuedResponse(permission.module, permission.action);
+        }
+        return accessDeniedResponse(permission.module, permission.action);
       }
       const deniedUrl = new URL('/access-denied', request.url);
       if (permission.action === 'view') {
-        await createAutomaticAccessRequest(user, permission.module, permission.action, request);
         const permittedPage = getFirstPermittedPage(matrix, user.assignedRoleIds);
         if (permittedPage && permittedPage !== pathname) {
           return NextResponse.redirect(new URL(permittedPage, request.url));
@@ -135,7 +139,6 @@ async function createAutomaticAccessRequest(
   user: Awaited<ReturnType<typeof db.getUserBySessionToken>>,
   moduleId: string,
   action: NonNullable<ReturnType<typeof resolveRoutePermission>>['action'],
-  request: NextRequest,
 ) {
   if (!user || moduleId === 'admin' || user.assignedRoleIds.includes(0)) return;
   try {
@@ -145,7 +148,7 @@ async function createAutomaticAccessRequest(
       roleId: user.primaryRoleId,
       moduleId,
       action,
-      reason: `Requested ${action} access for ${moduleId} through ${request.method} ${request.nextUrl.pathname}.`,
+      reason: getPermissionRequestReason(moduleId, action),
     });
   } catch (error) {
     console.error('Failed to record automatic access request:', error);
@@ -153,13 +156,28 @@ async function createAutomaticAccessRequest(
 }
 
 function accessRequestQueuedResponse(moduleId: string, action: string) {
+  const actionLabel = getPermissionActionLabel(action).toLowerCase();
+  const moduleLabel = getPermissionModuleLabel(moduleId);
   return NextResponse.json(
     {
       success: true,
       queued: true,
       accessRequestSubmitted: true,
-      message: `Your ${action} access request for ${moduleId} was submitted for approval.`,
+      message: `Your ${actionLabel} access request for the ${moduleLabel} page was submitted for approval.`,
     },
     { status: 202 },
+  );
+}
+
+function accessDeniedResponse(moduleId: string, action: string) {
+  const actionLabel = getPermissionActionLabel(action).toLowerCase();
+  const moduleLabel = getPermissionModuleLabel(moduleId);
+  return NextResponse.json(
+    {
+      success: false,
+      error: `Permission required: ${actionLabel} access for the ${moduleLabel} page.`,
+      accessRequestSubmitted: false,
+    },
+    { status: 403 },
   );
 }

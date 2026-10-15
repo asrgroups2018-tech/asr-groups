@@ -2,7 +2,6 @@
 
 import React, { useState } from 'react';
 import { Building2, ShieldCheck, ExternalLink, Percent, IndianRupee } from 'lucide-react';
-import { numberToWordsINR } from '@/lib/utils/formatCurrency';
 
 export interface CompanySplitData {
   id?: string;
@@ -19,7 +18,7 @@ interface CompanySplitBadgeProps {
   size?: 'xs' | 'sm' | 'md';
 }
 
-export const CompanySplitBadge: React.FC<CompanySplitBadgeProps> = ({
+export const CompanySplitBadge = React.memo<CompanySplitBadgeProps>(({
   split,
   size = 'sm',
 }) => {
@@ -181,7 +180,6 @@ export const CompanySplitBadge: React.FC<CompanySplitBadgeProps> = ({
                 </span>
                 <span
                   className="font-mono font-bold text-[#EED8A1] text-xs block cursor-help"
-                  title={numberToWordsINR(amount)}
                 >
                   ₹{amount.toLocaleString('en-IN')}
                 </span>
@@ -201,4 +199,6 @@ export const CompanySplitBadge: React.FC<CompanySplitBadgeProps> = ({
       )}
     </div>
   );
-};
+});
+
+CompanySplitBadge.displayName = 'CompanySplitBadge';

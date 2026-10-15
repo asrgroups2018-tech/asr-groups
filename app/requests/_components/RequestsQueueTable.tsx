@@ -1,49 +1,102 @@
 'use client';
 
-import React, { useState } from 'react';
-import { ApprovalRequest, ApprovalRequestStatus } from '@/lib/types';
+import React, { useMemo, useState } from 'react';
+import { AccessRequest, ApprovalRequest } from '@/lib/types';
 import { useApp } from '@/lib/store';
 import { DataTable, ColumnDef } from '@/components/ui/DataTable';
 import { StatusPill } from '@/components/ui/StatusPill';
 import { RoleBadge } from '@/components/ui/RoleBadge';
 import { MoneyDisplay } from '@/components/ui/MoneyDisplay';
+import { getPermissionActionLabel, getPermissionModuleLabel } from '@/lib/permissions';
+import { formatExactDateTime } from '@/lib/dateFormat';
 import {
   Eye,
-  CheckCircle2,
-  Clock,
-  Filter,
-  Layers,
-  Split,
-  GitMerge,
-  Shield,
-  FileSpreadsheet,
+  Check,
+  X,
 } from 'lucide-react';
 import { RequestDetailsModal } from './RequestDetailsModal';
 
-export const RequestsQueueTable: React.FC = () => {
-  const { approvalRequests, roles } = useApp();
-  const [selectedRequest, setSelectedRequest] = useState<ApprovalRequest | null>(null);
+type QueueRequest = ApprovalRequest & {
+  source: 'approval' | 'access';
+  accessRequest?: AccessRequest;
+};
+
+interface RequestsQueueTableProps {
+  accessRequests: AccessRequest[];
+  onAccessRequestChanged: () => void;
+}
+
+function normalizeAccessRequest(request: AccessRequest): QueueRequest {
+  return {
+    id: request.id,
+    changeType: 'Role Change',
+    title: `${getPermissionActionLabel(request.action)} access · ${getPermissionModuleLabel(request.moduleId)}`,
+    description: request.reason,
+    entityType: 'user',
+    entityId: request.userId,
+    requesterId: request.userId,
+    requesterName: request.userName,
+    requesterRoleId: request.roleId,
+    approverRoleId: 0,
+    amount: 0,
+    status: request.status,
+    proposedPayload: JSON.stringify({ moduleId: request.moduleId, action: request.action }),
+    createdAt: request.createdAt,
+    resolvedAt: request.resolvedAt,
+    source: 'access',
+    accessRequest: request,
+  };
+}
+
+export const RequestsQueueTable: React.FC<RequestsQueueTableProps> = ({ accessRequests, onAccessRequestChanged }) => {
+  const { approvalRequests, currentActor, showToast } = useApp();
+  const [selectedRequest, setSelectedRequest] = useState<QueueRequest | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [statusTab, setStatusTab] = useState<string>('ALL');
   const [changeTypeFilter, setChangeTypeFilter] = useState<string>('ALL');
 
-  const pendingCount = approvalRequests.filter((r) => r.status === 'Pending').length;
-  const approvedCount = approvalRequests.filter((r) => r.status === 'Approved').length;
-  const autoApprovedCount = approvalRequests.filter((r) => r.status === 'Auto-Approved').length;
-  const rejectedCount = approvalRequests.filter((r) => r.status === 'Rejected').length;
+  const queueRequests = useMemo(() => [
+    ...approvalRequests.map((request) => ({ ...request, source: 'approval' as const })),
+    ...accessRequests.map(normalizeAccessRequest),
+  ].sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime()), [accessRequests, approvalRequests]);
 
-  const filteredRequests = approvalRequests.filter((r) => {
+  const pendingCount = queueRequests.filter((r) => r.status === 'Pending').length;
+  const approvedCount = queueRequests.filter((r) => r.status === 'Approved').length;
+  const autoApprovedCount = queueRequests.filter((r) => r.status === 'Auto-Approved').length;
+  const rejectedCount = queueRequests.filter((r) => r.status === 'Rejected').length;
+
+  const filteredRequests = queueRequests.filter((r) => {
     if (statusTab !== 'ALL' && r.status !== statusTab) return false;
-    if (changeTypeFilter !== 'ALL' && r.changeType !== changeTypeFilter) return false;
+    if (changeTypeFilter === 'ACCESS' && r.source !== 'access') return false;
+    if (changeTypeFilter !== 'ALL' && changeTypeFilter !== 'ACCESS' && (r.source !== 'approval' || r.changeType !== changeTypeFilter)) return false;
     return true;
   });
 
-  const handleOpenDetails = (req: ApprovalRequest) => {
+  const handleOpenDetails = (req: QueueRequest) => {
     setSelectedRequest(req);
     setIsModalOpen(true);
   };
 
-  const getWorkflowBadge = (type: string) => {
+  const decideAccessRequest = async (request: QueueRequest, status: 'Approved' | 'Rejected') => {
+    if (!request.accessRequest) return;
+    const response = await fetch('/api/access-requests', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: request.accessRequest.id, status }),
+    });
+    const json = await response.json().catch(() => ({}));
+    if (response.ok && json.success) {
+      showToast(`Access request ${status.toLowerCase()}`, `${request.requesterName}'s page access request was updated.`, 'success');
+      onAccessRequestChanged();
+    } else {
+      showToast('Access request update failed', json.error || 'The access request could not be updated.', 'error');
+    }
+  };
+
+  const getWorkflowBadge = (type: string, source: QueueRequest['source']) => {
+    if (source === 'access') {
+      return <span className="text-[11px] font-semibold text-[#701A35] bg-[#FBF8F3] px-2 py-0.5 rounded border border-[#E8CFA8]">Page Access</span>;
+    }
     switch (type) {
       case 'Loan Split':
         return <span className="text-[11px] font-semibold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200">Split</span>;
@@ -59,45 +112,39 @@ export const RequestsQueueTable: React.FC = () => {
     }
   };
 
-  const columns: ColumnDef<ApprovalRequest>[] = [
-    {
-      key: 'id',
-      header: 'Request Ref',
-      sortable: true,
-      accessor: (r) => r.id,
-      render: (r) => (
-        <div>
-          <span className="font-mono font-bold text-slate-900 text-xs block">{r.id}</span>
-          <span className="text-[10px] font-mono text-slate-400 block mt-0.5">{r.createdAt}</span>
-        </div>
-      ),
-      exportValue: (r) => `${r.id} (${r.createdAt})`,
-    },
+  const columns: ColumnDef<QueueRequest>[] = [
     {
       key: 'title',
-      header: 'Subject & Target',
+      header: 'What is being requested',
       sortable: true,
       accessor: (r) => r.title,
+      className: 'w-[43%] max-w-0',
       render: (r) => (
-        <div className="max-w-md">
+        <div className="min-w-0">
           <div className="flex items-center gap-1.5 flex-wrap mb-0.5">
-            {getWorkflowBadge(r.changeType)}
-            {r.entityId && r.entityId !== 'MANUAL-ENTRY' && (
+            {getWorkflowBadge(r.changeType, r.source)}
+            {r.source === 'access' ? (
+              <span className="font-mono text-[10px] text-slate-600 font-semibold bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
+                {getPermissionModuleLabel(r.accessRequest?.moduleId || '')} · {getPermissionActionLabel(r.accessRequest?.action || '')}
+              </span>
+            ) : r.entityId && r.entityId !== 'MANUAL-ENTRY' && (
               <span className="font-mono text-[10px] text-slate-600 font-semibold bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
                 {r.entityId}
               </span>
             )}
           </div>
-          <p className="font-semibold text-slate-900 text-xs truncate">{r.title}</p>
+          <p className="truncate font-semibold text-slate-900 text-xs" title={r.title}>{r.title}</p>
+          <p className="mt-0.5 truncate text-[10px] text-slate-400">Requested {formatExactDateTime(r.createdAt)}</p>
         </div>
       ),
-      exportValue: (r) => `${r.changeType}: ${r.title}`,
+      exportValue: (r) => `${r.source === 'access' ? 'Page Access' : r.changeType}: ${r.title}`,
     },
     {
       key: 'requester',
-      header: 'Raised By',
+      header: 'Requested by',
       sortable: true,
       accessor: (r) => r.requesterName,
+      className: 'w-[17%]',
       render: (r) => (
         <div>
           <span className="font-semibold text-slate-900 text-xs block">{r.requesterName}</span>
@@ -109,23 +156,12 @@ export const RequestsQueueTable: React.FC = () => {
       exportValue: (r) => `${r.requesterName} (Role ${r.requesterRoleId})`,
     },
     {
-      key: 'approverRoleId',
-      header: 'Approver Role',
-      sortable: true,
-      accessor: (r) => r.approverRoleId,
-      render: (r) => (
-        <div>
-          <RoleBadge roleId={r.approverRoleId} size="xs" />
-        </div>
-      ),
-      exportValue: (r) => `Role ${r.approverRoleId} (${roles.find((x) => x.id === r.approverRoleId)?.name || ''})`,
-    },
-    {
       key: 'amount',
       header: 'Amount',
       sortable: true,
       align: 'right',
       accessor: (r) => r.amount,
+      className: 'w-[14%]',
       render: (r) => (
         <div className="text-right">
           {r.amount > 0 ? (
@@ -143,46 +179,32 @@ export const RequestsQueueTable: React.FC = () => {
       align: 'center',
       sortable: true,
       accessor: (r) => r.status,
+      className: 'w-[14%]',
       render: (r) => <StatusPill status={r.status as any} size="sm" />,
       exportValue: (r) => r.status,
-    },
-    {
-      key: 'reviewer',
-      header: 'Decision',
-      sortable: false,
-      render: (r) => (
-        <div className="text-xs">
-          {r.status === 'Approved' ? (
-            <div>
-              <span className="text-emerald-700 font-semibold block">Approved · {r.reviewerName || 'Admin'}</span>
-              <span className="text-[10px] text-slate-400 font-mono">{r.resolvedAt}</span>
-            </div>
-          ) : r.status === 'Auto-Approved' ? (
-            <div>
-              <span className="text-indigo-700 font-semibold block">Auto-Approved</span>
-              <span className="text-[10px] text-slate-400 font-mono">Policy</span>
-            </div>
-          ) : r.status === 'Rejected' ? (
-            <div>
-              <span className="text-rose-700 font-semibold block">Rejected · {r.reviewerName || 'Admin'}</span>
-              <span className="text-[10px] text-slate-400 font-mono">{r.resolvedAt}</span>
-            </div>
-          ) : (
-            <span className="text-amber-700 font-medium text-xs">
-              Pending
-            </span>
-          )}
-        </div>
-      ),
-      exportValue: (r) => (r.reviewerName ? `${r.status} by ${r.reviewerName}` : r.status),
     },
     {
       key: 'actions',
       header: 'Action',
       align: 'right',
       sortable: false,
-      render: (r) => (
+      className: 'w-[18%]',
+      render: (r) => r.source === 'access' ? (
+        r.status === 'Pending' && currentActor.assignedRoleIds.includes(0) ? (
+            <div className="flex items-center justify-end gap-1.5">
+              <button type="button" onClick={() => void decideAccessRequest(r, 'Rejected')} className="inline-flex items-center gap-1 rounded-xl border border-rose-200 px-2.5 py-1.5 text-[11px] font-bold text-rose-700">
+                <X className="h-3.5 w-3.5" />Reject
+              </button>
+              <button type="button" onClick={() => void decideAccessRequest(r, 'Approved')} className="inline-flex items-center gap-1 rounded-xl bg-emerald-600 px-2.5 py-1.5 text-[11px] font-bold text-white">
+                <Check className="h-3.5 w-3.5" />Approve
+              </button>
+            </div>
+          ) : (
+            <span className="text-xs font-medium text-slate-500">{r.status === 'Pending' ? 'Pending' : 'View'}</span>
+          )
+      ) : (
         <button
+          type="button"
           onClick={() => handleOpenDetails(r)}
           className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1 ml-auto cursor-pointer shadow-2xs ${
             r.status === 'Pending'
@@ -220,13 +242,14 @@ export const RequestsQueueTable: React.FC = () => {
                 <option value="Historical Correction">Historical Receipt</option>
                 <option value="Customer Update">Customer Profile</option>
                 <option value="Role Change">Role Elevation</option>
+                <option value="ACCESS">Page Access</option>
               </select>
             </div>
           </div>
         </div>
 
         {/* Status Filter Tabs matching Loans page */}
-        <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs font-semibold overflow-x-auto max-w-full">
+        <div className="flex flex-wrap items-center bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs font-semibold max-w-full">
           {(['ALL', 'Pending', 'Approved', 'Auto-Approved', 'Rejected'] as const).map((st) => (
             <button
               key={st}
@@ -238,7 +261,7 @@ export const RequestsQueueTable: React.FC = () => {
               }`}
             >
               {st === 'ALL'
-                ? `All (${approvalRequests.length})`
+                ? `All (${queueRequests.length})`
                 : st === 'Pending'
                 ? `Pending (${pendingCount})`
                 : st === 'Approved'
@@ -255,17 +278,19 @@ export const RequestsQueueTable: React.FC = () => {
       <DataTable
         data={filteredRequests}
         columns={columns}
-        keyExtractor={(r) => r.id}
+        keyExtractor={(r) => `${r.source}:${r.id}`}
         title="Requests & Approvals Queue"
         exportFileName="asr_approval_requests"
-        searchPlaceholder="Search requests by ID, title, requester, or entity..."
+        searchPlaceholder="Search what is requested or who requested it..."
         pageSizeDefault={15}
+        fitViewport
+        compact
         emptyStateMessage="No approval requests match the selected filters."
       />
 
       {/* Details & Diff Modal */}
       <RequestDetailsModal
-        request={selectedRequest}
+        request={selectedRequest?.source === 'approval' ? selectedRequest : null}
         isOpen={isModalOpen}
         onClose={() => {
           setIsModalOpen(false);

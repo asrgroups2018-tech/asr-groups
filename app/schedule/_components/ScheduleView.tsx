@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 import { StatusPill } from '@/components/ui/StatusPill';
 import { MoneyDisplay } from '@/components/ui/MoneyDisplay';
-import { DateRangePicker, DateRangeValue, getCurrentMonthRange } from '@/components/ui/DateRangePicker';
+import { DateRangePicker, DateRangeValue } from '@/components/ui/DateRangePicker';
 import { exportLoansToExcel, exportLoansToPDF } from '@/lib/utils/exportLoansLedger';
 import { getDerivedLoanStatus } from '@/app/loans/_components/LoansListView';
 import { getAuthorizedLoansForExport, requestLoanExportAccess } from '@/lib/exportAuthorization';
@@ -29,6 +29,10 @@ import { getAuthorizedLoansForExport, requestLoanExportAccess } from '@/lib/expo
 function parseToDate(dStr: string | null | undefined): Date | null {
   if (!dStr) return null;
   const trimmed = dStr.trim();
+  const isoMatch = /^(\d{4})-(\d{2})-(\d{2})/.exec(trimmed);
+  if (isoMatch) {
+    return new Date(Number(isoMatch[1]), Number(isoMatch[2]) - 1, Number(isoMatch[3]));
+  }
   const parts = trimmed.split(/[-/]/);
   if (parts.length === 3) {
     const day = parseInt(parts[0], 10);
@@ -105,8 +109,10 @@ export const ScheduleView: React.FC = () => {
   const deferredDateRange = useDeferredValue(dateRange);
 
   const dateTimestamps = useMemo(() => {
-    const startTimestamp = deferredDateRange.startDate ? new Date(deferredDateRange.startDate).setHours(0, 0, 0, 0) : null;
-    const endTimestamp = deferredDateRange.endDate ? new Date(deferredDateRange.endDate).setHours(23, 59, 59, 999) : null;
+    const startDate = parseToDate(deferredDateRange.startDate);
+    const endDate = parseToDate(deferredDateRange.endDate);
+    const startTimestamp = startDate ? new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate()).getTime() : null;
+    const endTimestamp = endDate ? new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate(), 23, 59, 59, 999).getTime() : null;
     return { startTimestamp, endTimestamp };
   }, [deferredDateRange]);
 

@@ -16,6 +16,8 @@ import { CollectionSheet } from './CollectionSheet';
 import { IncomeRegister } from './IncomeRegister';
 import { ExpenseRegister } from './ExpenseRegister';
 import { LedgerSummary } from './LedgerSummary';
+import { DateRangePicker } from '@/components/ui/DateRangePicker';
+import { getTodayIsoDate } from '@/components/ui/DatePicker';
 import type { Loan } from '@/lib/types';
 
 /* ─── Shared helpers (exported for sub-components) ─── */
@@ -54,7 +56,7 @@ function monthEnd(dateStr: string): string {
 }
 
 export function buildStats(loans: Loan[]): CollectionStats {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = getTodayIsoDate();
   const wStart = weekStart(today); const wEnd = addDays(wStart, 6);
   const mStart = monthStart(today); const mEnd = monthEnd(today);
   let dueToday = 0, dueThisWeek = 0, dueThisMonth = 0;
@@ -117,7 +119,7 @@ const TABS: { id: ViewTab; label: string; shortLabel: string; icon: React.ReactN
 
 export const CollectionsView: React.FC = () => {
   const { loans } = useApp();
-  const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const today = useMemo(() => getTodayIsoDate(), []);
 
   // Default: 'all' — show every installment, no mandatory date filter
   const [period, setPeriod] = useState<Period>('all');
@@ -193,13 +195,14 @@ export const CollectionsView: React.FC = () => {
               </div>
             )}
             {period === 'custom' && (
-              <div className="flex items-center gap-1.5">
-                <input type="date" value={customFrom} onChange={(e) => setCustomFrom(e.target.value)}
-                  className="rounded-lg border border-slate-200 bg-[#FCFBF9] px-2 py-1.5 text-xs text-slate-700 outline-none focus:border-[#C5A059]" />
-                <span className="text-slate-400 text-xs">–</span>
-                <input type="date" value={customTo} onChange={(e) => setCustomTo(e.target.value)}
-                  className="rounded-lg border border-slate-200 bg-[#FCFBF9] px-2 py-1.5 text-xs text-slate-700 outline-none focus:border-[#C5A059]" />
-              </div>
+              <DateRangePicker
+                label="Custom Date Range"
+                value={{ startDate: customFrom || null, endDate: customTo || null, presetLabel: 'custom' }}
+                onChange={(range) => {
+                  setCustomFrom(range.startDate || today);
+                  setCustomTo(range.endDate || range.startDate || today);
+                }}
+              />
             )}
           </div>
         </div>

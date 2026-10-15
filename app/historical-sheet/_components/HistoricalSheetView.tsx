@@ -20,7 +20,6 @@ import {
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { MoneyDisplay } from '@/components/ui/MoneyDisplay';
-import { numberToWordsINR } from '@/lib/utils/formatCurrency';
 
 export const HistoricalSheetView: React.FC = () => {
   const { receipts, fetchReceipts, updateHistoricalReceipt, showToast, isSavingReceipt, isLoading } = useApp();
@@ -222,7 +221,7 @@ export const HistoricalSheetView: React.FC = () => {
             </span>
             {mismatchRows.map((m) => (
               <p key={m.sNo} className="text-amber-800 font-mono text-[11px]">
-                • S.NO {m.sNo} ({m.clientName}): Installment Amount = <strong title={numberToWordsINR(m.amount)} className="cursor-help underline decoration-dotted">₹{m.amount.toLocaleString('en-IN')}</strong> vs Company Split Sum = <strong>₹{((m.amount - (m.mismatchDiff || 0))).toLocaleString('en-IN')}</strong> (Diff: ₹{m.mismatchDiff?.toLocaleString('en-IN')})
+                • S.NO {m.sNo} ({m.clientName}): Installment Amount = <strong className="cursor-help underline decoration-dotted">₹{m.amount.toLocaleString('en-IN')}</strong> vs Company Split Sum = <strong>₹{((m.amount - (m.mismatchDiff || 0))).toLocaleString('en-IN')}</strong> (Diff: ₹{m.mismatchDiff?.toLocaleString('en-IN')})
               </p>
             ))}
           </div>
