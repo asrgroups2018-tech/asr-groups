@@ -21,7 +21,7 @@ interface NewLoanModalProps {
 }
 
 export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) => {
-  const { customers, companies, createCustomer, createLoan, showToast } = useApp();
+  const { customers, companies, createCustomer, createLoan, createCheque, showToast } = useApp();
 
   const [currentStep, setCurrentStep] = useState<number>(1);
 
@@ -42,6 +42,8 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
   const [startDate, setStartDate] = useState<string>(() => {
     return new Date().toISOString().slice(0, 10);
   });
+  const [chequeNumber, setChequeNumber] = useState('');
+  const [depositDate, setDepositDate] = useState('');
 
   // Step 3: Companies & Overall Split
   const [selectedCompanyIds, setSelectedCompanyIds] = useState<string[]>([]);
@@ -68,6 +70,8 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
       setFrequency('Monthly');
       setInstallmentCount(5);
       setStartDate(new Date().toISOString().slice(0, 10));
+      setChequeNumber('');
+      setDepositDate('');
       setScheduleRows([]);
 
       // Pick default active ASR companies (exclude INE and INS)
@@ -367,6 +371,19 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
     });
 
     if (result) {
+      if (chequeNumber.trim() && depositDate) {
+        const customerName =
+          customers.find((customer) => customer.id === selectedCustomerId)?.name ||
+          newCustomerName.trim() ||
+          customerSearch.trim();
+        await createCheque({
+          chequeNumber: chequeNumber.trim(),
+          customerId: selectedCustomerId,
+          customerName,
+          amount: totalAmount,
+          depositDate,
+        });
+      }
       onClose();
     }
   };
@@ -470,6 +487,10 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
               setInstallmentCount={setInstallmentCount}
               startDate={startDate}
               setStartDate={setStartDate}
+              chequeNumber={chequeNumber}
+              setChequeNumber={setChequeNumber}
+              depositDate={depositDate}
+              setDepositDate={setDepositDate}
             />
           )}
 

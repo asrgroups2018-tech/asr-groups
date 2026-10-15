@@ -23,6 +23,7 @@ import {
 import { StatusPill } from '@/components/ui/StatusPill';
 import { MoneyDisplay } from '@/components/ui/MoneyDisplay';
 import { numberToWordsINR } from '@/lib/utils/formatCurrency';
+import { toIsoDate } from '@/components/ui/DatePicker';
 
 // Helper to parse dates formatted as '1-Jul-2026', '2026-07-01', '13-Sep-2026', etc.
 function parseDateString(dStr: string | null | undefined): Date | null {
@@ -47,6 +48,12 @@ function parseDateString(dStr: string | null | undefined): Date | null {
   return isNaN(parsed.getTime()) ? null : parsed;
 }
 
+function normalizeChequeDate(dateString: string): string | null {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) return dateString;
+  const date = parseDateString(dateString);
+  return date ? toIsoDate(date) : null;
+}
+
 export const DashboardView: React.FC = () => {
   const router = useRouter();
   const {
@@ -60,6 +67,15 @@ export const DashboardView: React.FC = () => {
   } = useApp();
 
   const [timeFilter, setTimeFilter] = useState<'all' | 'today' | 'week' | 'month' | 'quarter'>('all');
+  const todayChequeDate = toIsoDate(new Date());
+  const pendingChequesToday = useMemo(
+    () => (cheques || []).filter(
+      (cheque) =>
+        cheque.status === 'Pending' &&
+        normalizeChequeDate(cheque.depositDate) === todayChequeDate
+    ),
+    [cheques, todayChequeDate]
+  );
 
   // =========================================================================
   // METRIC CLASS 1: PORTFOLIO-LEVEL (ALL-TIME, NEVER MOVES WITH TIME FILTER)
@@ -412,6 +428,36 @@ export const DashboardView: React.FC = () => {
 
   return (
     <main className="p-4 sm:p-8 max-w-7xl w-full mx-auto space-y-6 animate-in fade-in duration-200">
+      {pendingChequesToday.length > 0 && (
+        <button
+          type="button"
+          onClick={() => {
+            setActiveMainTab('cheques');
+            router.push('/cheques');
+          }}
+          className="flex w-full items-center justify-between gap-3 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-left shadow-sm hover:bg-amber-100"
+        >
+          <span className="flex items-center gap-3">
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-100 text-amber-800">
+              <Landmark className="h-4 w-4" />
+            </span>
+            <span>
+              <span className="block text-xs font-bold text-amber-900">
+                {pendingChequesToday.length} cheque{pendingChequesToday.length === 1 ? '' : 's'} pending to be deposited today
+              </span>
+              <span className="mt-0.5 block text-[11px] text-amber-800">
+                Deposit date: {new Date(`${todayChequeDate}T00:00:00`).toLocaleDateString('en-IN', {
+                  day: 'numeric',
+                  month: 'short',
+                  year: 'numeric',
+                })}
+              </span>
+            </span>
+          </span>
+          <span className="shrink-0 text-xs font-bold text-amber-900">View Cheques</span>
+        </button>
+      )}
+
       {/* ─── Top Brand Header & Filter Bar ─── */}
       <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
