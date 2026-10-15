@@ -87,15 +87,21 @@ export async function getApprovalRequests(filters?: {
 
   const res = await client.execute({ sql, args });
   const requests = res.rows.map(mapApprovalRequestRow);
-  const pendingTargets = new Set<string>();
+  const visibleKeys = new Set<string>();
 
-  // Older deployments may already contain duplicate pending submissions. Keep
-  // the newest one visible while preserving resolved request history.
+  // Prevent only exact duplicate submissions. Different payloads for the
+  // same loan are legitimate separate changes and must remain reviewable.
   return requests.filter((request) => {
     if (request.status !== 'Pending') return true;
-    const targetKey = [request.requesterId, request.changeType, request.entityType, request.entityId].join(':');
-    if (pendingTargets.has(targetKey)) return false;
-    pendingTargets.add(targetKey);
+    const pendingKey = [
+      request.requesterId,
+      request.changeType,
+      request.entityType,
+      request.entityId,
+      request.proposedPayload,
+    ].join(':');
+    if (visibleKeys.has(pendingKey)) return false;
+    visibleKeys.add(pendingKey);
     return true;
   });
 }
@@ -104,7 +110,7 @@ export async function getApprovalRequestById(id: string): Promise<ApprovalReques
   await ensureDbInitialized();
   const client = getTursoClient();
   const res = await client.execute({
-    sql: 'SELECT * FROM approval_requests WHERE id = ?',
+    sql: 'SELECT * FROM approval_requests WHERE LOWER(id) = LOWER(?)',
     args: [id],
   });
   if (res.rows.length === 0) return null;
@@ -130,12 +136,14 @@ export async function createApprovalRequest(data: {
 }): Promise<ApprovalRequest> {
   await ensureDbInitialized();
   const client = getTursoClient();
+  const proposedStr = typeof data.proposedPayload === 'string' ? data.proposedPayload : JSON.stringify(data.proposedPayload);
 
   const existingPending = await client.execute({
     sql: `SELECT * FROM approval_requests
-      WHERE requester_id = ? AND change_type = ? AND entity_type = ? AND entity_id = ? AND status = 'Pending'
+      WHERE requester_id = ? AND change_type = ? AND entity_type = ? AND entity_id = ?
+        AND status = 'Pending' AND proposed_payload = ?
       ORDER BY created_at DESC, id DESC LIMIT 1`,
-    args: [data.requesterId, data.changeType, data.entityType, data.entityId],
+    args: [data.requesterId, data.changeType, data.entityType, data.entityId, proposedStr],
   });
   if (existingPending.rows.length > 0) return mapApprovalRequestRow(existingPending.rows[0]);
 
@@ -147,8 +155,6 @@ export async function createApprovalRequest(data: {
 
   const status = data.status || 'Pending';
   const beforeStr = data.beforePayload ? (typeof data.beforePayload === 'string' ? data.beforePayload : JSON.stringify(data.beforePayload)) : null;
-  const proposedStr = typeof data.proposedPayload === 'string' ? data.proposedPayload : JSON.stringify(data.proposedPayload);
-
   await client.execute({
     sql: `INSERT INTO approval_requests (
       id, rule_id, change_type, title, description, entity_type, entity_id,
@@ -183,6 +189,11 @@ export async function createApprovalRequest(data: {
     actorRoleId: data.requesterRoleId,
     action: status === 'Auto-Approved' ? 'Approved Request' : 'Created Request',
     target: `Approval Request ${reqId}: ${data.title} for ${data.requesterName} (${data.requesterId})`,
+    pageId: 'requests',
+    entityType: data.entityType,
+    entityId: data.entityId,
+    relatedUserId: data.requesterId,
+    requestId: reqId,
     beforeVal: '-',
     afterVal: `Status: ${status}, Amount: ₹${(data.amount || 0).toLocaleString('en-IN')}`,
     isSensitive: data.changeType === 'Role Change' || (data.amount || 0) > 500000,
@@ -324,7 +335,7 @@ export async function approveApprovalRequest(
         reviewer_notes = ?,
         resolved_at = ?
       WHERE id = ?`,
-      args: [reviewer.id, reviewer.name, reviewer.notes || 'Approved', now, id],
+      args: [reviewer.id, reviewer.name, reviewer.notes || 'Approved', now, req.id],
     });
 
     await logAudit({
@@ -333,12 +344,17 @@ export async function approveApprovalRequest(
       actorRoleId: reviewer.roleId,
       action: 'Approved Request',
       target: `Request ${req.id} (${req.title}) for ${req.requesterName} (${req.requesterId})`,
+      pageId: 'requests',
+      entityType: req.entityType,
+      entityId: req.entityId,
+      relatedUserId: req.requesterId,
+      requestId: req.id,
       beforeVal: 'Status: Pending Review',
       afterVal: `Status: Approved by ${reviewer.name}. Notes: ${reviewer.notes || 'None'}`,
       isSensitive: req.changeType === 'Role Change' || req.amount > 500000,
     });
 
-    const updated = await getApprovalRequestById(id);
+    const updated = await getApprovalRequestById(req.id);
     return { success: true, request: updated! };
   } catch (err: any) {
     console.error(`Error executing approved action for ${id}:`, err);
@@ -374,7 +390,7 @@ export async function rejectApprovalRequest(
       reviewer_notes = ?,
       resolved_at = ?
     WHERE id = ?`,
-    args: [reviewer.id, reviewer.name, reviewer.notes || 'Rejected by approver', now, id],
+    args: [reviewer.id, reviewer.name, reviewer.notes || 'Rejected by approver', now, req.id],
   });
 
   await logAudit({
@@ -383,11 +399,16 @@ export async function rejectApprovalRequest(
     actorRoleId: reviewer.roleId,
     action: 'Rejected Request',
     target: `Request ${req.id} (${req.title}) for ${req.requesterName} (${req.requesterId})`,
+    pageId: 'requests',
+    entityType: req.entityType,
+    entityId: req.entityId,
+    relatedUserId: req.requesterId,
+    requestId: req.id,
     beforeVal: 'Status: Pending Review',
     afterVal: `Status: Rejected by ${reviewer.name}. Reason: ${reviewer.notes}`,
     isSensitive: false,
   });
 
-  const updated = await getApprovalRequestById(id);
+  const updated = await getApprovalRequestById(req.id);
   return { success: true, request: updated! };
 }

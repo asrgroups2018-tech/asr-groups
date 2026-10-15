@@ -35,9 +35,36 @@ async function ensureDbInitialized() {
     if (!customerTableInfo.rows.some((row) => String(row.name) === 'code_no')) {
       await client.execute('ALTER TABLE customers ADD COLUMN code_no TEXT');
     }
+    await backfillAuditContext(client);
     schemaInitialized = true;
   } catch (err) {
     console.error('Turso Schema initialization warning:', err);
+  }
+}
+
+async function backfillAuditContext(client: ReturnType<typeof getTursoClient>) {
+  const result = await client.execute(`
+    SELECT id, action, target, page_id, page_name, entity_type, entity_id, related_user_id, request_id
+    FROM audit_logs
+    WHERE page_id IS NULL OR page_name IS NULL OR entity_type IS NULL
+      OR entity_id IS NULL OR related_user_id IS NULL OR request_id IS NULL
+  `);
+
+  for (const row of result.rows) {
+    const context = resolveAuditContext({
+      action: String(row.action),
+      target: String(row.target),
+      pageId: row.page_id ? String(row.page_id) : undefined,
+      pageName: row.page_name ? String(row.page_name) : undefined,
+      entityType: row.entity_type ? String(row.entity_type) : undefined,
+      entityId: row.entity_id ? String(row.entity_id) : undefined,
+      relatedUserId: row.related_user_id ? String(row.related_user_id) : undefined,
+      requestId: row.request_id ? String(row.request_id) : undefined,
+    });
+    await client.execute({
+      sql: `UPDATE audit_logs SET page_id = ?, page_name = ?, entity_type = ?, entity_id = ?, related_user_id = ?, request_id = ? WHERE id = ?`,
+      args: [context.pageId, context.pageName, context.entityType, context.entityId || null, context.relatedUserId || null, context.requestId || null, String(row.id)],
+    });
   }
 }
 
@@ -127,6 +154,12 @@ export function mapAuditLogRow(row: any): AuditLogEntry {
     actorRoleId: Number(row.actor_role_id || 0) as RoleId,
     action: row.action,
     target: String(row.target),
+    pageId: row.page_id ? String(row.page_id) : undefined,
+    pageName: row.page_name ? String(row.page_name) : undefined,
+    entityType: row.entity_type ? String(row.entity_type) : undefined,
+    entityId: row.entity_id ? String(row.entity_id) : undefined,
+    relatedUserId: row.related_user_id ? String(row.related_user_id) : undefined,
+    requestId: row.request_id ? String(row.request_id) : undefined,
     beforeVal: row.before_val ? String(row.before_val) : undefined,
     afterVal: row.after_val ? String(row.after_val) : undefined,
     ipAddress: String(row.ip_address || '127.0.0.1'),
@@ -658,11 +691,69 @@ export async function deleteApprovalRule(id: string): Promise<boolean> {
 // ==========================================
 // Audit Logs
 // ==========================================
-export async function getAuditLogs(): Promise<AuditLogEntry[]> {
+export async function getAuditLogs(filters?: { userId?: string }): Promise<AuditLogEntry[]> {
   await ensureDbInitialized();
   const client = getTursoClient();
+  if (filters?.userId) {
+    const res = await client.execute({
+      sql: `SELECT * FROM audit_logs
+        WHERE actor_id = ? OR related_user_id = ? OR LOWER(target) LIKE LOWER(?)
+        ORDER BY timestamp DESC, id DESC`,
+      args: [filters.userId, filters.userId, `%(${filters.userId})%`],
+    });
+    return res.rows.map(mapAuditLogRow);
+  }
+  // Keep the shared application preload bounded; account activity uses the
+  // user-specific query above so it can still show the complete history.
   const res = await client.execute('SELECT * FROM audit_logs ORDER BY timestamp DESC, id DESC LIMIT 500');
   return res.rows.map(mapAuditLogRow);
+}
+
+function extractAuditId(target: string, pattern: RegExp): string | undefined {
+  const match = target.match(pattern);
+  return match?.[1] || match?.[0];
+}
+
+function inferAuditPageId(action: string, target: string): string {
+  const value = `${action} ${target}`.toLowerCase();
+  if (value.includes('approval request') || value.includes('access request') || value.includes('request ')) return 'requests';
+  if (value.includes('loan') || value.includes('installment') || value.includes('spreadsheet') || value.includes('sheet row')) return 'loans';
+  if (value.includes('cheque')) return 'cheques';
+  if (value.includes('customer')) return 'customers';
+  if (value.includes('company') || value.includes('shareholder')) return 'companies';
+  if (action === 'Login') return 'login';
+  return 'admin';
+}
+
+function resolveAuditContext(entry: {
+  action: string;
+  target: string;
+  pageId?: string;
+  pageName?: string;
+  entityType?: string;
+  entityId?: string;
+  relatedUserId?: string;
+  requestId?: string;
+}) {
+  const pageId = entry.pageId || inferAuditPageId(entry.action, entry.target);
+  const configuredPage = MODULES_DATA.find((module) => module.id === pageId);
+  const pageName = entry.pageName || configuredPage?.name || (pageId === 'login' ? 'Sign in' : 'Administration');
+  const requestId = entry.requestId || extractAuditId(entry.target, /\b(REQ-[A-Z0-9-]+|AR-[A-Z0-9-]+)\b/i);
+  const relatedUserId = entry.relatedUserId || extractAuditId(entry.target, /\b(USR-[A-Z0-9-]+)\b/i);
+  const entityId = entry.entityId || extractAuditId(
+    entry.target,
+    /\b(LN[A-Z0-9-]+|CUST-[A-Z0-9-]+|COMP-[A-Z0-9-]+|CHQ-[A-Z0-9-]+|INST-[A-Z0-9-]+)\b/i,
+  );
+  const entityType = entry.entityType || (
+    entityId?.startsWith('LN') ? 'loan' :
+    entityId?.startsWith('CUST-') ? 'customer' :
+    entityId?.startsWith('COMP-') ? 'company' :
+    entityId?.startsWith('CHQ-') ? 'cheque' :
+    entityId?.startsWith('INST-') ? 'installment' :
+    requestId ? 'request' : 'system'
+  );
+
+  return { pageId, pageName, entityType, entityId, relatedUserId, requestId };
 }
 
 export async function logAudit(
@@ -673,7 +764,8 @@ export async function logAudit(
 ): Promise<AuditLogEntry> {
   await ensureDbInitialized();
   const client = getTursoClient();
-  const now = new Date().toISOString().slice(0, 16).replace('T', ' ');
+  const context = resolveAuditContext(entry);
+  const now = new Date().toISOString();
 
   const newLog: AuditLogEntry = {
     id: `AUD-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`,
@@ -683,6 +775,7 @@ export async function logAudit(
     actorRoleId: entry.actorRoleId ?? 0,
     action: entry.action,
     target: entry.target,
+    ...context,
     beforeVal: entry.beforeVal,
     afterVal: entry.afterVal,
     ipAddress: entry.ipAddress || '127.0.0.1',
@@ -693,11 +786,14 @@ export async function logAudit(
   await client.execute({
     sql: `INSERT INTO audit_logs (
       id, timestamp, actor_id, actor_name, actor_role_id, action, target,
+      page_id, page_name, entity_type, entity_id, related_user_id, request_id,
       before_val, after_val, ip_address, device, is_sensitive
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     args: [
       newLog.id, newLog.timestamp, newLog.actorId, newLog.actorName, newLog.actorRoleId,
-      newLog.action, newLog.target, newLog.beforeVal || null, newLog.afterVal || null,
+      newLog.action, newLog.target, newLog.pageId || null, newLog.pageName || null,
+      newLog.entityType || null, newLog.entityId || null, newLog.relatedUserId || null,
+      newLog.requestId || null, newLog.beforeVal || null, newLog.afterVal || null,
       newLog.ipAddress, newLog.device, newLog.isSensitive ? 1 : 0,
     ],
   });

@@ -9,10 +9,11 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const actorId = searchParams.get('actorId');
+    const userId = searchParams.get('userId');
     const action = searchParams.get('action');
     const sensitiveOnly = searchParams.get('sensitive') === 'true';
 
-    let logs = await db.getAuditLogs();
+    let logs = await db.getAuditLogs(userId ? { userId } : undefined);
 
     if (actorId) {
       logs = logs.filter((l) => l.actorId === actorId);

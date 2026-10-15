@@ -9,6 +9,10 @@ export type AuthorizationResult =
   | { ok: true; user: User }
   | { ok: false; response: NextResponse };
 
+export interface AuthorizationContext {
+  pendingPayload?: unknown;
+}
+
 export async function getRequestUser(request: NextRequest): Promise<User | null> {
   return db.getUserBySessionToken(request.cookies.get('asr_session')?.value);
 }
@@ -17,6 +21,7 @@ export async function authorizeRequest(
   request: NextRequest,
   module?: string,
   action?: ModuleAction,
+  context?: AuthorizationContext,
 ): Promise<AuthorizationResult> {
   const user = await getRequestUser(request);
   if (!user) {
@@ -51,6 +56,7 @@ export async function authorizeRequest(
             moduleId: module,
             action,
             reason: getPermissionRequestReason(module, action),
+            pendingPayload: context?.pendingPayload,
           });
           accessRequestSubmitted = accessRequest.status === 'Pending';
         }
@@ -88,9 +94,9 @@ export async function authorizeRequest(
   return { ok: true, user };
 }
 
-export async function authorizeRouteRequest(request: NextRequest): Promise<AuthorizationResult> {
+export async function authorizeRouteRequest(request: NextRequest, context?: AuthorizationContext): Promise<AuthorizationResult> {
   const permission = resolveRoutePermission(request.nextUrl.pathname, request.method, request.nextUrl.searchParams);
-  return authorizeRequest(request, permission?.module, permission?.action);
+  return authorizeRequest(request, permission?.module, permission?.action, context);
 }
 
 export function isSuperAdmin(user: User): boolean {

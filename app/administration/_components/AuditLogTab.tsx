@@ -58,7 +58,7 @@ export const AuditLogTab: React.FC = () => {
         render: (l) => (
           <div className="font-mono text-[11px] text-slate-700">
             <p className="font-bold">{l.timestamp.slice(0, 10)}</p>
-            <p className="text-slate-500">{l.timestamp.slice(11)}</p>
+            <p className="text-slate-500">{l.timestamp.slice(11, 19)}</p>
           </div>
         ),
         exportValue: (l) => l.timestamp,
@@ -110,10 +110,14 @@ export const AuditLogTab: React.FC = () => {
         sortable: true,
         accessor: (l) => l.target,
         render: (l) => (
-          <span className="font-medium text-slate-800 text-xs truncate max-w-xs block">
-            {l.target}
-          </span>
+          <div className="max-w-xs space-y-1">
+            <span className="inline-flex rounded-full bg-[#F5EEE3] px-2 py-0.5 text-[10px] font-bold text-[#701A35]">
+              {l.pageName || l.pageId || 'System'}
+            </span>
+            <span className="font-medium text-slate-800 text-xs truncate block">{l.target}</span>
+          </div>
         ),
+        exportValue: (l) => `${l.pageName || l.pageId || 'System'}: ${l.target}`,
       },
       {
         key: 'diff',

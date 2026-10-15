@@ -50,6 +50,41 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+html[data-theme='dark'] .app-footer {
+  background: #150810;
+  border-color: #2C1420;
+  color: #94A3B8;
+}
+
+html[data-theme='dark'] .app-footer-brand {
+  color: #EED8A1;
+}
+
+/* Consistent select controls across the application. Components that render
+   their own chevron opt into `appearance-none` and keep their local icon. */
+select:not([class*='appearance-none']) {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%2364758B' stroke-width='1.8'%3E%3Cpath d='m5 7 5 5 5-5'/%3E%3C/svg%3E");
+  background-position: right 0.7rem center;
+  background-repeat: no-repeat;
+  background-size: 1rem;
+  padding-right: 2.25rem;
+}
+
+select:not([class*='appearance-none']) option {
+  background: #ffffff;
+  color: #1e293b;
+}
+
+html[data-theme='dark'] select:not([class*='appearance-none']) {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%23CBD5E1' stroke-width='1.8'%3E%3Cpath d='m5 7 5 5 5-5'/%3E%3C/svg%3E");
+}
+
+html[data-theme='dark'] select:not([class*='appearance-none']) option {
+  background: #171d26;
+  color: #f8fafc;
+}
+
 html[data-theme='light'] body {
   background: #F8F6F1;
   color: #1E293B;
@@ -244,6 +279,24 @@ html[data-theme='dark'] textarea { color-scheme: dark; }
 html[data-theme='dark'] option { background-color: var(--surface) !important; color: var(--foreground) !important; }
 html[data-theme='dark'] input::placeholder,
 html[data-theme='dark'] textarea::placeholder { color: #8291A5 !important; }
+
+/* Spreadsheet editor controls use the active application theme, including
+   the calendar popovers rendered through a portal. */
+html[data-theme='dark'] .loan-spreadsheet-modal [class*='text-emerald-'][class*='/'] {
+  color: #6EE7B7 !important;
+}
+html[data-theme='dark'] .loan-spreadsheet-modal [class*='text-amber-'][class*='/'] {
+  color: #FCD34D !important;
+}
+html[data-theme='dark'] .loan-spreadsheet-modal [class*='text-slate-'][class*='/'] {
+  color: #CBD5E1 !important;
+}
+html[data-theme='dark'] .loan-spreadsheet-modal tbody [class*='bg-emerald-'],
+html[data-theme='dark'] .loan-spreadsheet-modal tbody [class*='bg-amber-'] {
+  /* Keep paid/pending meaning in the text and controls without flooding the
+     dark spreadsheet with bright green or brown row backgrounds. */
+  background-color: var(--surface-raised) !important;
+}
 html[data-theme='dark'] .dark-theme-control {
   background-color: var(--surface) !important;
   border-color: var(--border-strong) !important;

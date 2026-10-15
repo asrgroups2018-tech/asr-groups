@@ -3,6 +3,7 @@ import { AccessRequest, AccessRequestStatus, ModuleAction, RoleId } from '@/lib/
 import { getTursoClient } from './turso';
 import { initializeSchema } from './schema';
 import { getPermissionMatrix, logAudit, updatePermissionMatrix } from './administration';
+import { updateFullLoan } from './loans';
 import { MODULES_DATA } from '@/lib/seedData';
 import { formatPermissionRequestReason } from '@/lib/permissions';
 
@@ -22,6 +23,7 @@ function mapRow(row: any): AccessRequest {
     reviewerId: row.reviewer_id ? String(row.reviewer_id) : undefined,
     reviewerName: row.reviewer_name ? String(row.reviewer_name) : undefined,
     reviewerNotes: row.reviewer_notes ? String(row.reviewer_notes) : undefined,
+    pendingPayload: row.request_payload ? String(row.request_payload) : undefined,
     createdAt: String(row.created_at), resolvedAt: row.resolved_at ? String(row.resolved_at) : undefined,
   };
 }
@@ -43,7 +45,7 @@ export async function getAccessRequests(userId?: string): Promise<AccessRequest[
   });
 }
 
-export async function createAccessRequest(data: { userId: string; userName: string; roleId: RoleId; moduleId: string; action: ModuleAction; reason: string }): Promise<AccessRequest> {
+export async function createAccessRequest(data: { userId: string; userName: string; roleId: RoleId; moduleId: string; action: ModuleAction; reason: string; pendingPayload?: unknown }): Promise<AccessRequest> {
   await ensureInitialized();
   const client = getTursoClient();
   const latest = await client.execute({
@@ -52,23 +54,40 @@ export async function createAccessRequest(data: { userId: string; userName: stri
   });
   if (latest.rows.length > 0) {
     const existing = mapRow(latest.rows[0]);
-    if (existing.status === 'Pending' || existing.status === 'Approved') return existing;
+    if (existing.status === 'Pending') {
+      const pendingPayload = data.pendingPayload ? JSON.stringify(data.pendingPayload) : undefined;
+      if (pendingPayload && pendingPayload !== existing.pendingPayload) {
+        await client.execute({
+          sql: 'UPDATE access_requests SET request_payload = ? WHERE id = ?',
+          args: [pendingPayload, existing.id],
+        });
+        return { ...existing, pendingPayload };
+      }
+      return existing;
+    }
+    if (existing.status === 'Approved') return existing;
   }
 
   const request: AccessRequest = {
     ...data,
     id: `AR-${randomUUID()}`,
     reason: formatPermissionRequestReason(data.moduleId, data.action, data.reason),
+    pendingPayload: data.pendingPayload ? JSON.stringify(data.pendingPayload) : undefined,
     status: 'Pending',
     createdAt: new Date().toISOString(),
   };
-  await client.execute({ sql: `INSERT INTO access_requests (id, user_id, user_name, role_id, module_id, action, reason, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`, args: [request.id, request.userId, request.userName, request.roleId, request.moduleId, request.action, request.reason, request.status, request.createdAt] });
+  await client.execute({ sql: `INSERT INTO access_requests (id, user_id, user_name, role_id, module_id, action, reason, request_payload, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, args: [request.id, request.userId, request.userName, request.roleId, request.moduleId, request.action, request.reason, request.pendingPayload || null, request.status, request.createdAt] });
   await logAudit({
     actorId: request.userId,
     actorName: request.userName,
     actorRoleId: request.roleId,
     action: 'Created Request',
     target: `Access Request ${request.id}: ${request.moduleId} ${request.action}`,
+    pageId: request.moduleId,
+    entityType: 'page-access',
+    entityId: request.moduleId,
+    relatedUserId: request.userId,
+    requestId: request.id,
     beforeVal: '-',
     afterVal: `Status: Pending. Reason: ${request.reason}`,
     isSensitive: false,
@@ -105,6 +124,27 @@ export async function reviewAccessRequest(id: string, status: Exclude<AccessRequ
         },
       },
     });
+
+    // If the denied action carried an operation payload, apply that exact
+    // operation after permission is granted. Page-only requests have no
+    // payload and continue to behave as permission grants only.
+    if (request.pendingPayload) {
+      let pending: { operation?: string; loanId?: string; updateData?: Parameters<typeof updateFullLoan>[1] } = {};
+      try {
+        pending = JSON.parse(request.pendingPayload);
+      } catch {
+        throw new Error('The pending request data is invalid.');
+      }
+
+      if (pending.operation === 'loan-update' && pending.loanId && pending.updateData) {
+        const updated = await updateFullLoan(pending.loanId, pending.updateData, {
+          id: request.userId,
+          name: request.userName,
+          primaryRoleId: request.roleId,
+        });
+        if (!updated) throw new Error('The requested loan could not be updated.');
+      }
+    }
   }
 
   const resolvedAt = new Date().toISOString();
@@ -119,6 +159,11 @@ export async function reviewAccessRequest(id: string, status: Exclude<AccessRequ
     actorRoleId: reviewerRoleId,
     action: status === 'Approved' ? 'Approved Request' : 'Rejected Request',
     target: `Access Request ${request.id}: ${request.moduleId} ${request.action} for ${request.userName} (${request.userId})`,
+    pageId: request.moduleId,
+    entityType: 'page-access',
+    entityId: request.moduleId,
+    relatedUserId: request.userId,
+    requestId: request.id,
     beforeVal: 'Status: Pending',
     afterVal: `Status: ${status}`,
     isSensitive: request.moduleId === 'admin',

@@ -126,6 +126,7 @@ export interface AccessRequest {
   moduleId: string;
   action: ModuleAction;
   reason: string;
+  pendingPayload?: string;
   status: AccessRequestStatus;
   reviewerId?: string;
   reviewerName?: string;
@@ -200,6 +201,13 @@ export interface AuditLogEntry {
   actorRoleId: RoleId;
   action: AuditActionType;
   target: string;
+  /** The application page/resource affected by this event. Stored with the event so historical activity remains readable. */
+  pageId?: string;
+  pageName?: string;
+  entityType?: string;
+  entityId?: string;
+  relatedUserId?: string;
+  requestId?: string;
   beforeVal?: string;
   afterVal?: string;
   ipAddress: string;

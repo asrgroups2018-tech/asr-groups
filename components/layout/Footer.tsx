@@ -5,12 +5,10 @@ import Image from 'next/image';
 
 export const Footer: React.FC = () => {
   return (
-    <footer className="bg-white border-t border-[#EBE7DF] text-slate-500 text-xs py-2 px-4 sm:px-6 md:px-8 w-full shrink-0 select-none z-30 shadow-xs">
-      <div className="flex items-center justify-between gap-2 w-full">
-        
-        {/* Left: Brand Logo & Title */}
+    <footer className="app-footer w-full shrink-0 select-none border-t border-[#EBE7DF] bg-white px-4 py-2.5 text-slate-500 shadow-xs sm:px-6 md:px-8">
+      <div className="flex w-full items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <div className="w-5 h-5 rounded-full overflow-hidden relative shrink-0">
+          <div className="relative h-5 w-5 shrink-0 overflow-hidden rounded-full">
             <Image
               src="/groups-finalized.png"
               alt="ASR GROUP Logo"
@@ -19,16 +17,13 @@ export const Footer: React.FC = () => {
               className="object-cover"
             />
           </div>
-          <span className="font-bold text-slate-800 tracking-tight text-xs font-serif">
+          <span className="app-footer-brand font-serif text-xs font-bold tracking-tight text-slate-800">
             ASR GROUP
           </span>
         </div>
-
-        {/* Right: Copyright Text */}
-        <div className="text-[11px] sm:text-xs text-slate-600 font-normal text-right">
-          Copyright {new Date().getFullYear()} ASR GROUP. All rights reserved.
-        </div>
-
+        <p className="text-right text-[10px] text-slate-500 sm:text-[11px]">
+          © {new Date().getFullYear()} ASR GROUP · All rights reserved
+        </p>
       </div>
     </footer>
   );

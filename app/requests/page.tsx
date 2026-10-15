@@ -4,14 +4,11 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useApp } from '@/lib/store';
 import { AccessRequest } from '@/lib/types';
 import { AppShell } from '@/components/layout/AppShell';
-import { PlusCircle, ShieldCheck, SlidersHorizontal } from 'lucide-react';
+import { ShieldCheck } from 'lucide-react';
 import { RequestsQueueTable } from './_components/RequestsQueueTable';
-import { CreateManualRequestModal } from './_components/CreateManualRequestModal';
-import Link from 'next/link';
 
 export default function RequestsPage() {
-  const { setActiveMainTab, approvalRequests, approvalRules } = useApp();
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const { setActiveMainTab, approvalRequests, fetchApprovalRequests } = useApp();
   const [accessRequests, setAccessRequests] = useState<AccessRequest[]>([]);
 
   useEffect(() => {
@@ -28,17 +25,31 @@ export default function RequestsPage() {
     }
   }, []);
 
+  const refreshQueue = useCallback(async () => {
+    await Promise.all([
+      fetchApprovalRequests(),
+      loadAccessRequests(),
+    ]);
+  }, [fetchApprovalRequests, loadAccessRequests]);
+
   useEffect(() => {
-    void loadAccessRequests();
-  }, [loadAccessRequests]);
+    void refreshQueue();
+
+    const handleWindowFocus = () => void refreshQueue();
+    window.addEventListener('focus', handleWindowFocus);
+    const refreshTimer = window.setInterval(() => void refreshQueue(), 5000);
+
+    return () => {
+      window.removeEventListener('focus', handleWindowFocus);
+      window.clearInterval(refreshTimer);
+    };
+  }, [refreshQueue]);
 
   const allRequests = [...approvalRequests, ...accessRequests];
   const pendingCount = allRequests.filter((r) => r.status === 'Pending').length;
   const approvedCount = allRequests.filter((r) => r.status === 'Approved').length;
   const autoApprovedCount = allRequests.filter((r) => r.status === 'Auto-Approved').length;
   const rejectedCount = allRequests.filter((r) => r.status === 'Rejected').length;
-  const activeRulesCount = approvalRules.filter((r) => r.isActive).length;
-
   return (
     <AppShell>
       <main className="p-4 sm:p-8 max-w-7xl w-full mx-auto space-y-6">
@@ -58,24 +69,6 @@ export default function RequestsPage() {
             </div>
           </div>
 
-          {/* Actions */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <Link
-              href="/administration?tab=rules"
-              className="px-3.5 py-2 text-xs font-bold text-slate-800 bg-white hover:bg-slate-50 border border-slate-300 rounded-xl transition-all shadow-2xs flex items-center gap-1.5 cursor-pointer"
-            >
-              <SlidersHorizontal className="w-4 h-4 text-[#701A35]" />
-              <span>Approval Rules ({activeRulesCount})</span>
-            </Link>
-
-            <button
-              onClick={() => setIsCreateModalOpen(true)}
-              className="px-4 py-2 text-xs font-bold text-slate-950 bg-gradient-to-r from-amber-400 via-amber-300 to-[#C5A059] hover:from-amber-300 hover:to-amber-400 active:scale-98 rounded-xl transition-all shadow-sm flex items-center gap-1.5 cursor-pointer shrink-0"
-            >
-              <PlusCircle className="w-4 h-4 font-bold" />
-              <span>New Request</span>
-            </button>
-          </div>
         </div>
 
         {/* 3 High-Impact KPI Badges matching Loans page */}
@@ -126,14 +119,9 @@ export default function RequestsPage() {
         {/* Requests Queue Table */}
         <RequestsQueueTable
           accessRequests={accessRequests}
-          onAccessRequestChanged={() => void loadAccessRequests()}
+          onAccessRequestChanged={() => void refreshQueue()}
         />
 
-        {/* Manual Request Modal */}
-        <CreateManualRequestModal
-          isOpen={isCreateModalOpen}
-          onClose={() => setIsCreateModalOpen(false)}
-        />
       </main>
     </AppShell>
   );

@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useApp } from '@/lib/store';
+import { useTheme } from '@/components/providers/ThemeProvider';
 import { Loan, Installment, Company, AppStatus, LoanStatus, RepaymentFrequency } from '@/lib/types';
 import { MoneyDisplay } from '@/components/ui/MoneyDisplay';
 import { DatePicker } from '@/components/ui/DatePicker';
@@ -297,6 +298,7 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
   loan,
 }) => {
   const { updateFullLoan, showToast } = useApp();
+  const { theme } = useTheme();
 
   // Top Loan Form Fields
   const [customerName, setCustomerName] = useState('');
@@ -909,7 +911,7 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-1 sm:p-4 bg-black/80 backdrop-blur-xs animate-in fade-in duration-150">
-      <div className="bg-[#FAF8F5] rounded-2xl border border-[#D0C8B8] shadow-2xl w-full max-w-[99vw] h-[98vh] sm:h-[96vh] flex flex-col overflow-hidden motion-modal">
+      <div className="loan-spreadsheet-modal bg-[#FAF8F5] rounded-2xl border border-[#D0C8B8] shadow-2xl w-full max-w-[99vw] h-[98vh] sm:h-[96vh] flex flex-col overflow-hidden motion-modal">
         {/* ─── Excel Modal Top Toolbar ─── */}
         <div className="p-3 sm:p-4 bg-white border-b border-[#D0C8B8] flex flex-col md:flex-row md:items-center justify-between gap-2.5 sm:gap-3 shrink-0">
           <div className="flex items-start sm:items-center gap-2.5 min-w-0">
@@ -1063,7 +1065,7 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
             <DatePicker
               value={startDate}
               onChange={setStartDate}
-              theme="light"
+              theme={theme}
               size="sm"
               className="w-full"
               buttonClassName="w-full py-1.5 text-xs"
@@ -1254,7 +1256,7 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
                       <DatePicker
                         value={row.dueDate}
                         onChange={(d) => handleCellChange(idx, 'dueDate', d)}
-                        theme="light"
+                        theme={theme}
                         size="sm"
                         compact={true}
                         buttonClassName={`w-full text-xs ${isRowPaid ? 'bg-emerald-50/90 text-emerald-950 font-bold border-emerald-300' : ''}`}
@@ -1349,7 +1351,7 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
                       <DatePicker
                         value={row.recdDate}
                         onChange={(d) => handleCellChange(idx, 'recdDate', d)}
-                        theme="light"
+                        theme={theme}
                         size="sm"
                         compact={true}
                         placeholder="—"

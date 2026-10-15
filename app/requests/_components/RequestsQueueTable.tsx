@@ -15,6 +15,7 @@ import {
   X,
 } from 'lucide-react';
 import { RequestDetailsModal } from './RequestDetailsModal';
+import { AccessRequestDetailsModal } from './AccessRequestDetailsModal';
 
 type QueueRequest = ApprovalRequest & {
   source: 'approval' | 'access';
@@ -52,6 +53,7 @@ export const RequestsQueueTable: React.FC<RequestsQueueTableProps> = ({ accessRe
   const { approvalRequests, currentActor, showToast } = useApp();
   const [selectedRequest, setSelectedRequest] = useState<QueueRequest | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedAccessRequest, setSelectedAccessRequest] = useState<AccessRequest | null>(null);
   const [statusTab, setStatusTab] = useState<string>('ALL');
   const [changeTypeFilter, setChangeTypeFilter] = useState<string>('ALL');
 
@@ -77,6 +79,10 @@ export const RequestsQueueTable: React.FC<RequestsQueueTableProps> = ({ accessRe
     setIsModalOpen(true);
   };
 
+  const handleOpenAccessDetails = (request: AccessRequest) => {
+    setSelectedAccessRequest(request);
+  };
+
   const decideAccessRequest = async (request: QueueRequest, status: 'Approved' | 'Rejected') => {
     if (!request.accessRequest) return;
     const response = await fetch('/api/access-requests', {
@@ -88,6 +94,7 @@ export const RequestsQueueTable: React.FC<RequestsQueueTableProps> = ({ accessRe
     if (response.ok && json.success) {
       showToast(`Access request ${status.toLowerCase()}`, `${request.requesterName}'s page access request was updated.`, 'success');
       onAccessRequestChanged();
+      setSelectedAccessRequest(null);
     } else {
       showToast('Access request update failed', json.error || 'The access request could not be updated.', 'error');
     }
@@ -192,6 +199,9 @@ export const RequestsQueueTable: React.FC<RequestsQueueTableProps> = ({ accessRe
       render: (r) => r.source === 'access' ? (
         r.status === 'Pending' && currentActor.assignedRoleIds.includes(0) ? (
             <div className="flex items-center justify-end gap-1.5">
+              <button type="button" onClick={() => handleOpenAccessDetails(r.accessRequest!)} className="inline-flex items-center gap-1 rounded-xl border border-slate-300 px-2.5 py-1.5 text-[11px] font-bold text-slate-700 hover:bg-slate-100">
+                <Eye className="h-3.5 w-3.5" /> View
+              </button>
               <button type="button" onClick={() => void decideAccessRequest(r, 'Rejected')} className="inline-flex items-center gap-1 rounded-xl border border-rose-200 px-2.5 py-1.5 text-[11px] font-bold text-rose-700">
                 <X className="h-3.5 w-3.5" />Reject
               </button>
@@ -200,7 +210,10 @@ export const RequestsQueueTable: React.FC<RequestsQueueTableProps> = ({ accessRe
               </button>
             </div>
           ) : (
-            <span className="text-xs font-medium text-slate-500">{r.status === 'Pending' ? 'Pending' : 'View'}</span>
+            <button type="button" onClick={() => handleOpenAccessDetails(r.accessRequest!)} className="inline-flex items-center gap-1 rounded-xl border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100">
+              <Eye className="h-3.5 w-3.5" />
+              {r.status === 'Pending' ? 'View request' : 'View'}
+            </button>
           )
       ) : (
         <button
@@ -295,6 +308,18 @@ export const RequestsQueueTable: React.FC<RequestsQueueTableProps> = ({ accessRe
         onClose={() => {
           setIsModalOpen(false);
           setSelectedRequest(null);
+        }}
+      />
+
+      <AccessRequestDetailsModal
+        request={selectedAccessRequest}
+        isOpen={Boolean(selectedAccessRequest)}
+        canReview={currentActor.assignedRoleIds.includes(0)}
+        onClose={() => setSelectedAccessRequest(null)}
+        onDecision={(status) => {
+          if (!selectedAccessRequest) return;
+          const queueRequest = normalizeAccessRequest(selectedAccessRequest);
+          void decideAccessRequest(queueRequest, status);
         }}
       />
     </div>

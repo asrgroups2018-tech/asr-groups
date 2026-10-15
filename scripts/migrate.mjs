@@ -102,6 +102,12 @@ async function runMigration() {
     actor_role_id INTEGER NOT NULL DEFAULT 0,
     action TEXT NOT NULL,
     target TEXT NOT NULL,
+    page_id TEXT,
+    page_name TEXT,
+    entity_type TEXT,
+    entity_id TEXT,
+    related_user_id TEXT,
+    request_id TEXT,
     before_val TEXT,
     after_val TEXT,
     ip_address TEXT,
@@ -111,6 +117,17 @@ async function runMigration() {
   await client.execute(`CREATE INDEX IF NOT EXISTS idx_audit_logs_actor_id ON audit_logs(actor_id);`);
   await client.execute(`CREATE INDEX IF NOT EXISTS idx_audit_logs_timestamp ON audit_logs(timestamp);`);
   await client.execute(`CREATE INDEX IF NOT EXISTS idx_audit_logs_action ON audit_logs(action);`);
+  for (const column of [
+    'page_id', 'page_name', 'entity_type', 'entity_id', 'related_user_id', 'request_id',
+  ]) {
+    try {
+      await client.execute(`ALTER TABLE audit_logs ADD COLUMN ${column} TEXT`);
+    } catch {
+      // The column already exists.
+    }
+  }
+  await client.execute(`CREATE INDEX IF NOT EXISTS idx_audit_logs_related_user ON audit_logs(related_user_id);`);
+  await client.execute(`CREATE INDEX IF NOT EXISTS idx_audit_logs_request ON audit_logs(request_id);`);
 
   // 6. System Settings
   await client.execute(`CREATE TABLE IF NOT EXISTS system_settings (

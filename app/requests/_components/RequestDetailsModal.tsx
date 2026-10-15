@@ -23,6 +23,64 @@ import { StatusPill } from '@/components/ui/StatusPill';
 import { MoneyDisplay } from '@/components/ui/MoneyDisplay';
 import { formatExactDateTime } from '@/lib/dateFormat';
 
+const LOAN_CHANGE_FIELDS: Array<{ key: string; label: string }> = [
+  { key: 'customerName', label: 'Borrower' },
+  { key: 'codeNo', label: 'Code number' },
+  { key: 'place', label: 'Place' },
+  { key: 'status', label: 'Loan status' },
+  { key: 'frequency', label: 'Frequency' },
+  { key: 'startDate', label: 'Start date' },
+  { key: 'disbursedAmount', label: 'Paid / disbursed amount' },
+  { key: 'interestAmount', label: 'Interest amount' },
+];
+
+function formatChangeValue(key: string, value: unknown): string {
+  if (value === null || value === undefined || value === '') return '—';
+  if (key === 'disbursedAmount' || key === 'interestAmount' || key === 'amountDue') {
+    return `₹${Number(value).toLocaleString('en-IN')}`;
+  }
+  return String(value);
+}
+
+function getLoanChanges(beforeData: any, proposedData: any): Array<{ label: string; before: string; after: string }> {
+  const proposedLoan = proposedData?.updateData || proposedData || {};
+  const changes: Array<{ label: string; before: string; after: string }> = [];
+
+  LOAN_CHANGE_FIELDS.forEach(({ key, label }) => {
+    const before = beforeData?.[key];
+    const after = proposedLoan?.[key];
+    if (String(before ?? '') !== String(after ?? '')) {
+      changes.push({ label, before: formatChangeValue(key, before), after: formatChangeValue(key, after) });
+    }
+  });
+
+  const beforeInstallments = Array.isArray(beforeData?.installments) ? beforeData.installments : [];
+  const proposedInstallments = Array.isArray(proposedLoan?.installments) ? proposedLoan.installments : [];
+  const beforeById = new Map(beforeInstallments.map((row: any) => [String(row.id || row.seqNo), row]));
+
+  proposedInstallments.forEach((row: any) => {
+    const previous = beforeById.get(String(row.id || row.seqNo)) as any;
+    if (!previous) return;
+    const rowChanges = ([
+      ['Due date', 'dueDate'],
+      ['Amount due', 'amountDue'],
+      ['Status', 'status'],
+      ['Received date', 'recdDate'],
+    ] as Array<[string, string]>).filter(([, key]) => String(previous[key] ?? '') !== String(row[key] ?? ''))
+      .map(([label, key]) => `${label}: ${formatChangeValue(key, previous[key])} → ${formatChangeValue(key, row[key])}`);
+
+    if (rowChanges.length > 0) {
+      changes.push({
+        label: `EMI #${row.seqNo}`,
+        before: rowChanges.map((change) => change.split(' → ')[0]).join(' · '),
+        after: rowChanges.map((change) => change.split(' → ')[1]).join(' · '),
+      });
+    }
+  });
+
+  return changes;
+}
+
 interface RequestDetailsModalProps {
   request: ApprovalRequest | null;
   isOpen: boolean;
@@ -54,6 +112,10 @@ export const RequestDetailsModal: React.FC<RequestDetailsModalProps> = ({
   try {
     if (request.proposedPayload) proposedData = JSON.parse(request.proposedPayload);
   } catch {}
+
+  const loanChanges = request.changeType === 'Loan Update'
+    ? getLoanChanges(beforeData, proposedData)
+    : [];
 
   const handleApprove = async () => {
     setIsSubmitting(true);
@@ -88,7 +150,7 @@ export const RequestDetailsModal: React.FC<RequestDetailsModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-3xl w-full max-h-[92vh] flex flex-col overflow-hidden motion-modal">
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-2xl w-full max-h-[88vh] flex flex-col overflow-hidden motion-modal">
         {/* Modal Header */}
         <div className="bg-[#1A0A13] text-white px-6 py-4 flex items-center justify-between border-b border-[#2C1420] shrink-0">
           <div className="flex items-center gap-3">
@@ -116,7 +178,7 @@ export const RequestDetailsModal: React.FC<RequestDetailsModalProps> = ({
         </div>
 
         {/* Modal Body */}
-        <div className="p-6 overflow-y-auto space-y-6 flex-1 text-slate-800 text-xs">
+        <div className="p-5 overflow-y-auto space-y-4 flex-1 text-slate-800 text-xs">
           {/* Metadata Bar */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-50 p-3.5 rounded-xl border border-slate-200">
             <div>
@@ -161,12 +223,31 @@ export const RequestDetailsModal: React.FC<RequestDetailsModalProps> = ({
             </div>
           )}
 
-          {/* Visual Diff: Before vs Proposed */}
+          {/* Human-readable change summary */}
           <div className="space-y-2">
             <h4 className="text-xs font-bold text-slate-900 uppercase font-mono tracking-wider flex items-center gap-2">
-              <span>Proposed Change Analysis & Audit Diff</span>
+              <span>{request.changeType === 'Loan Update' ? 'What will change' : 'Request details'}</span>
             </h4>
 
+            {request.changeType === 'Loan Update' ? (
+              <div className="overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
+                <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] border-b border-slate-200 bg-white px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                  <span>Column</span>
+                  <span>New value</span>
+                </div>
+                {loanChanges.length > 0 ? loanChanges.map((change) => (
+                  <div key={change.label} className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-3 border-b border-slate-200 px-4 py-2.5 last:border-b-0">
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold text-slate-800">{change.label}</p>
+                      <p className="truncate text-[10px] text-slate-500" title={change.before}>Before: {change.before}</p>
+                    </div>
+                    <p className="self-center break-words text-xs font-bold text-emerald-700" title={change.after}>{change.after}</p>
+                  </div>
+                )) : (
+                  <p className="px-4 py-4 text-xs text-slate-500">No field-level changes were recorded.</p>
+                )}
+              </div>
+            ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {/* Before Box */}
               <div className="border border-slate-200 rounded-xl overflow-hidden bg-slate-50/50">
@@ -216,6 +297,7 @@ export const RequestDetailsModal: React.FC<RequestDetailsModalProps> = ({
                 </div>
               </div>
             </div>
+            )}
           </div>
 
           {/* Historical Resolution Details if already resolved */}

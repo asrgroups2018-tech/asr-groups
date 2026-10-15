@@ -27,6 +27,7 @@ export const SCHEMA_STATEMENTS = [
     reviewer_id TEXT,
     reviewer_name TEXT,
     reviewer_notes TEXT,
+    request_payload TEXT,
     created_at TEXT NOT NULL,
     resolved_at TEXT
   );`,
@@ -193,6 +194,12 @@ export const SCHEMA_STATEMENTS = [
     actor_role_id INTEGER NOT NULL DEFAULT 0,
     action TEXT NOT NULL,
     target TEXT NOT NULL,
+    page_id TEXT,
+    page_name TEXT,
+    entity_type TEXT,
+    entity_id TEXT,
+    related_user_id TEXT,
+    request_id TEXT,
     before_val TEXT,
     after_val TEXT,
     ip_address TEXT,
@@ -303,6 +310,13 @@ export function initializeSchema(client: Client): Promise<void> {
       // Each statement is intentionally idempotent for existing Turso/SQLite databases.
       for (const statement of [
         'ALTER TABLE approval_requests ADD COLUMN requester_email TEXT',
+        'ALTER TABLE access_requests ADD COLUMN request_payload TEXT',
+        'ALTER TABLE audit_logs ADD COLUMN page_id TEXT',
+        'ALTER TABLE audit_logs ADD COLUMN page_name TEXT',
+        'ALTER TABLE audit_logs ADD COLUMN entity_type TEXT',
+        'ALTER TABLE audit_logs ADD COLUMN entity_id TEXT',
+        'ALTER TABLE audit_logs ADD COLUMN related_user_id TEXT',
+        'ALTER TABLE audit_logs ADD COLUMN request_id TEXT',
         'ALTER TABLE cheques ADD COLUMN created_by_id TEXT',
         'ALTER TABLE cheques ADD COLUMN created_by_name TEXT',
         'ALTER TABLE cheques ADD COLUMN created_by_email TEXT',
@@ -316,6 +330,12 @@ export function initializeSchema(client: Client): Promise<void> {
           // The column already exists.
         }
       }
+
+      // Create these only after the idempotent column migrations above. This
+      // keeps upgrades safe for databases created before structured audit
+      // context was introduced.
+      await client.execute('CREATE INDEX IF NOT EXISTS idx_audit_logs_related_user ON audit_logs(related_user_id)');
+      await client.execute('CREATE INDEX IF NOT EXISTS idx_audit_logs_request ON audit_logs(request_id)');
 
       // Preserve actor information for cheque rows created before the actor
       // columns existed by linking the existing audit trail back to the row.

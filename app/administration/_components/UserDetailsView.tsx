@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Activity, ArrowLeft, Check, Grid2X2, Lock, ShieldCheck, UserRound } from 'lucide-react';
 import { useApp } from '@/lib/store';
 import { MODULES_DATA } from '@/lib/seedData';
-import { ModuleAction, PermissionMatrixState, Role, RoleId, User, UserStatus } from '@/lib/types';
+import { AuditLogEntry, ModuleAction, PermissionMatrixState, Role, RoleId, User, UserStatus } from '@/lib/types';
 import { RoleBadge } from '@/components/ui/RoleBadge';
 import { StatusPill } from '@/components/ui/StatusPill';
 import { DeleteUserModal } from './modals/DeleteUserModal';
@@ -43,6 +43,8 @@ export const UserDetailsView: React.FC = () => {
   const [accessRoleId, setAccessRoleId] = useState<RoleId>(0);
   const [draftMatrix, setDraftMatrix] = useState<PermissionMatrixState>(() => cloneMatrix(permissionMatrix));
   const [activityQuery, setActivityQuery] = useState('');
+  const [accountAuditLogs, setAccountAuditLogs] = useState<AuditLogEntry[]>([]);
+  const [accountAuditLoaded, setAccountAuditLoaded] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
 
   useEffect(() => {
@@ -67,19 +69,42 @@ export const UserDetailsView: React.FC = () => {
     if (requested === 'roles' || requested === 'access' || requested === 'activity' || requested === 'profile') setSection(requested);
   }, [searchParams]);
 
+  useEffect(() => {
+    if (!user || section !== 'activity') return;
+    let cancelled = false;
+    const loadAccountActivity = async () => {
+      try {
+        const response = await fetch(`/api/admin/audit?userId=${encodeURIComponent(user.id)}`, { cache: 'no-store' });
+        const result = await response.json();
+        if (!cancelled && result.success && Array.isArray(result.data)) {
+          setAccountAuditLogs(result.data);
+          setAccountAuditLoaded(true);
+        }
+      } catch {
+        // Keep the already-loaded activity available if a refresh is transiently unavailable.
+      }
+    };
+    setAccountAuditLoaded(false);
+    void loadAccountActivity();
+    const refreshTimer = window.setInterval(loadAccountActivity, 5000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(refreshTimer);
+    };
+  }, [section, user?.id]);
+
   if (!user) return <section className="rounded-3xl border border-[#E7DFD2] bg-white p-10 text-center text-sm text-slate-500">This account is no longer available. <button onClick={() => router.push('/administration/users')} className="font-bold text-[#701A35] hover:underline">Return to directory</button></section>;
 
   const hasRoleChanges = JSON.stringify([...draftRoleIds].sort()) !== JSON.stringify([...user.assignedRoleIds].sort()) || draftPrimaryRole !== user.primaryRoleId;
   const hasMatrixChanges = JSON.stringify(draftMatrix) !== JSON.stringify(permissionMatrix);
   const activeRole = roles.find((role) => role.id === accessRoleId);
-  const accountCreatedAt = (user.createdAt || '').replace('T', ' ').slice(0, 16);
   const accountMarker = `(${user.id})`.toLowerCase();
-  const userLogs = auditLogs
-    .filter((log) => log.timestamp >= accountCreatedAt)
+  const activitySource = accountAuditLoaded ? accountAuditLogs : auditLogs;
+  const userLogs = activitySource
     .filter((log) =>
-      log.actorId === user.id || log.target.toLowerCase().includes(accountMarker),
+      log.actorId === user.id || log.relatedUserId === user.id || log.target.toLowerCase().includes(accountMarker),
     )
-    .filter((log) => !activityQuery.trim() || [log.action, log.target, log.actorName, log.timestamp].some((value) => value.toLowerCase().includes(activityQuery.trim().toLowerCase())))
+    .filter((log) => !activityQuery.trim() || [log.action, log.target, log.actorName, log.timestamp, log.pageName || '', log.entityId || '', log.requestId || ''].some((value) => value.toLowerCase().includes(activityQuery.trim().toLowerCase())))
     .sort((a, b) => b.timestamp.localeCompare(a.timestamp));
 
   const goBack = () => { setSelectedUserId(null); router.push('/administration/users'); };
@@ -149,7 +174,7 @@ export const UserDetailsView: React.FC = () => {
         </section>}
         {section === 'roles' && <UserAccessMatrix section="roles" roles={roles} draftRoleIds={draftRoleIds} draftPrimaryRole={draftPrimaryRole} setDraftPrimaryRole={setDraftPrimaryRole} toggleRole={toggleRole} accessRoleId={accessRoleId} setAccessRoleId={setAccessRoleId} activeRole={activeRole} draftMatrix={draftMatrix} togglePermission={togglePermission} hasChanges={hasRoleChanges || hasMatrixChanges} onSave={saveAccess} />}
         {section === 'access' && <UserAccessMatrix section="access" roles={roles} draftRoleIds={draftRoleIds} draftPrimaryRole={draftPrimaryRole} setDraftPrimaryRole={setDraftPrimaryRole} toggleRole={toggleRole} accessRoleId={accessRoleId} setAccessRoleId={setAccessRoleId} activeRole={activeRole} draftMatrix={draftMatrix} togglePermission={togglePermission} hasChanges={hasRoleChanges || hasMatrixChanges} onSave={saveAccess} />}
-        {section === 'activity' && <section className="rounded-3xl border border-[#E7DFD2] bg-white p-5 shadow-sm sm:p-7"><div className="flex flex-col gap-4 border-b border-[#EEE8DE] pb-5 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[#A07A39]">Audit trail</p><h2 className="mt-1 text-lg font-bold text-slate-900">Account activity</h2><p className="mt-1 text-xs text-slate-500">Changes, sign-ins, access updates, and security actions related to this account.</p></div><input value={activityQuery} onChange={(event) => setActivityQuery(event.target.value)} placeholder="Filter activity" className="rounded-xl border border-slate-200 bg-[#FBF8F3] px-3 py-2.5 text-xs outline-none focus:border-[#C5A059]" /></div><div className="mt-5 space-y-3">{userLogs.length === 0 ? <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-10 text-center text-sm text-slate-500">No saved activity for this account yet. Actions taken here will appear in this list.</div> : userLogs.map((log) => <article key={log.id} className="flex gap-3 rounded-2xl border border-slate-200 p-4"><div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#F5EEE3] text-[#701A35]"><Activity className="h-4 w-4" /></div><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center justify-between gap-2"><h3 className="text-xs font-bold text-slate-900">{log.action}</h3><time className="font-mono text-[10px] text-slate-400">{displayDate(log.timestamp)}</time></div><p className="mt-1 text-xs text-slate-600">{log.target}</p><p className="mt-1 text-[10px] text-slate-400">By {log.actorName} · {log.device}</p></div></article>)}</div></section>}
+        {section === 'activity' && <section className="rounded-3xl border border-[#E7DFD2] bg-white p-5 shadow-sm sm:p-7"><div className="flex flex-col gap-4 border-b border-[#EEE8DE] pb-5 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[#A07A39]">Audit trail</p><h2 className="mt-1 text-lg font-bold text-slate-900">Account activity</h2><p className="mt-1 text-xs text-slate-500">Every saved sign-in, page access, edit, approval, and security action for this account.</p></div><input value={activityQuery} onChange={(event) => setActivityQuery(event.target.value)} placeholder="Filter activity" className="rounded-xl border border-slate-200 bg-[#FBF8F3] px-3 py-2.5 text-xs outline-none focus:border-[#C5A059]" /></div><div className="mt-5 space-y-3">{userLogs.length === 0 ? <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-10 text-center text-sm text-slate-500">{accountAuditLoaded ? 'No saved activity for this account yet.' : 'Loading saved activity…'}</div> : userLogs.map((log) => <article key={log.id} className="flex gap-3 rounded-2xl border border-slate-200 p-4"><div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#F5EEE3] text-[#701A35]"><Activity className="h-4 w-4" /></div><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center justify-between gap-2"><div className="flex flex-wrap items-center gap-2"><h3 className="text-xs font-bold text-slate-900">{log.action}</h3>{log.pageName && <span className="rounded-full bg-[#F5EEE3] px-2 py-0.5 text-[10px] font-bold text-[#701A35]">{log.pageName}</span>}</div><time className="font-mono text-[10px] text-slate-400">{displayDate(log.timestamp)}</time></div><p className="mt-1 text-xs font-semibold text-slate-700">{log.target}</p><p className="mt-1 text-[10px] text-slate-500">Page: {log.pageName || log.pageId || 'System'}{log.entityId ? ` · ${log.entityType || 'record'} ${log.entityId}` : ''}</p><p className="mt-1 text-[10px] text-slate-400">By {log.actorName} · {log.device}</p></div></article>)}</div></section>}
       </div>
     </div>
     <DeleteUserModal user={user} isOpen={deleteOpen} onClose={() => setDeleteOpen(false)} onDeleted={goBack} />

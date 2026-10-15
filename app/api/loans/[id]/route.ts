@@ -33,16 +33,17 @@ export async function PUT(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
-  const auth = await authorizeRouteRequest(request);
-  if (!auth.ok) return auth.response;
   try {
+    const { id } = await context.params;
+    const body = await request.json();
+    const auth = await authorizeRouteRequest(request, {
+      pendingPayload: { operation: 'loan-update', loanId: id, updateData: body },
+    });
+    if (!auth.ok) return auth.response;
     const user = auth.user;
     if (user?.isCustomer || user?.primaryRoleId === CUSTOMER_ROLE_ID) {
       return NextResponse.json({ error: 'Customer accounts cannot edit loan records.' }, { status: 403 });
     }
-    const { id } = await context.params;
-    const body = await request.json();
-
     const existing = await db.getLoanById(id);
     if (!existing) {
       return NextResponse.json({ error: 'Loan not found' }, { status: 404 });

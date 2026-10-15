@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { CheckCircle2, Clock, Check, ArrowRightLeft, Banknote, AlertTriangle } from 'lucide-react';
+import { CheckCircle2, Clock, Check, ArrowRightLeft, Banknote, AlertTriangle, XCircle } from 'lucide-react';
 import { AppStatus } from '@/lib/types';
 
 export type AnyStatus = AppStatus | 'Active' | 'Closed' | 'Overdue' | string;
@@ -27,6 +27,41 @@ export const StatusPill: React.FC<StatusPillProps> = ({
         label: 'Closed',
         bg: 'bg-slate-100 text-slate-800 border border-slate-300 font-bold shadow-2xs',
         icon: <Check className="w-3.5 h-3.5 text-slate-700 shrink-0" />,
+      };
+    }
+
+    // Approval workflow statuses are shared by operational and page-access
+    // requests. Keep them distinct from loan-level statuses so a resolved
+    // request can never fall through to the Pending presentation.
+    if (['APPROVED', 'AUTHORIZED'].includes(normalized)) {
+      return {
+        label: 'Approved',
+        bg: 'bg-emerald-100 text-emerald-900 border border-emerald-300 font-bold shadow-2xs',
+        icon: <CheckCircle2 className="w-3.5 h-3.5 text-emerald-700 shrink-0" />,
+      };
+    }
+
+    if (['AUTO-APPROVED', 'AUTO_APPROVED'].includes(normalized)) {
+      return {
+        label: 'Auto-approved',
+        bg: 'bg-teal-100 text-teal-900 border border-teal-300 font-bold shadow-2xs',
+        icon: <CheckCircle2 className="w-3.5 h-3.5 text-teal-700 shrink-0" />,
+      };
+    }
+
+    if (['REJECTED', 'DENIED'].includes(normalized)) {
+      return {
+        label: 'Rejected',
+        bg: 'bg-rose-100 text-rose-950 border border-rose-300 font-bold shadow-2xs',
+        icon: <XCircle className="w-3.5 h-3.5 text-rose-700 shrink-0" />,
+      };
+    }
+
+    if (['PENDING', 'AWAITING APPROVAL', 'PENDING REVIEW'].includes(normalized)) {
+      return {
+        label: 'Pending',
+        bg: 'bg-amber-100 text-amber-950 border border-amber-300 font-bold shadow-2xs',
+        icon: <Clock className="w-3.5 h-3.5 text-amber-700 shrink-0" />,
       };
     }
 
