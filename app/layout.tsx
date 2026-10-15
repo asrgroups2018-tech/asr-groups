@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Ubuntu } from "next/font/google";
-import Script from "next/script";
 import "./globals.css";
 
 const ubuntu = Ubuntu({
@@ -18,16 +17,6 @@ export const metadata: Metadata = {
   },
 };
 
-const themeInitScript = `(() => {
-  try {
-    const storedTheme = window.localStorage.getItem('asr_theme');
-    const theme = storedTheme === 'dark' || storedTheme === 'light'
-      ? storedTheme
-      : (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-    document.documentElement.dataset.theme = theme;
-  } catch {}
-})();`;
-
 import { ClientProviders } from "@/components/providers/ClientProviders";
 
 export default function RootLayout({
@@ -37,13 +26,6 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning className={`h-full antialiased ${ubuntu.variable}`}>
-      <head>
-        <Script
-          id="theme-init"
-          strategy="beforeInteractive"
-          dangerouslySetInnerHTML={{ __html: themeInitScript }}
-        />
-      </head>
       <body className="min-h-full flex flex-col bg-[#F8F6F1] text-slate-900 font-sans">
         <ClientProviders>
           {children}
