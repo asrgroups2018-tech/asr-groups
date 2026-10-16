@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Banknote,
   ChevronDown,
@@ -11,16 +11,20 @@ import {
   Filter,
   Search,
   X,
+  Plus,
+  ReceiptText,
+  Download,
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 import { useApp } from '@/lib/store';
 import { formatINR } from '@/lib/utils/formatCurrency';
-import { Loan } from '@/lib/types';
+import { Loan, ManualReceipt } from '@/lib/types';
 import { DateRangePicker } from '@/components/ui/DateRangePicker';
 import { getTodayIsoDate } from '@/components/ui/DatePicker';
 import { CustomSelect } from '@/components/ui/CustomSelect';
+import { CreateReceiptModal, downloadManualReceiptImage, downloadManualReceiptPdf } from './CreateReceiptModal';
 
 const PAID_STATUSES = new Set(['PASS', 'NEFT', 'CASH', 'CLS', 'PAID']);
 const isPaid = (s: string) => PAID_STATUSES.has(String(s || '').trim().toUpperCase());
@@ -120,8 +124,30 @@ export const CashReceiptBook: React.FC = () => {
   const [modeFilter, setModeFilter] = useState('ALL');
   const [query, setQuery] = useState('');
   const [groupMode, setGroupMode] = useState(false);
+  const [isCreateReceiptOpen, setIsCreateReceiptOpen] = useState(false);
+  const [manualReceipts, setManualReceipts] = useState<ManualReceipt[]>([]);
+  const [isLoadingManualReceipts, setIsLoadingManualReceipts] = useState(true);
 
   const today = getTodayIsoDate();
+
+  const loadManualReceipts = useCallback(async () => {
+    setIsLoadingManualReceipts(true);
+    try {
+      const response = await fetch('/api/manual-receipts', { cache: 'no-store' });
+      const result = await response.json();
+      if (response.ok && result.success) setManualReceipts(result.data || []);
+    } catch {
+      showToast('Saved Receipts Unavailable', 'Unable to load separately saved receipts.', 'warning');
+    } finally {
+      setIsLoadingManualReceipts(false);
+    }
+  }, [showToast]);
+
+  useEffect(() => {
+    // The request synchronizes this client view with the separately persisted receipt store.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void loadManualReceipts();
+  }, [loadManualReceipts]);
 
   const allEntries = useMemo(() => buildReceiptEntries(loans), [loans]);
 
@@ -246,18 +272,23 @@ export const CashReceiptBook: React.FC = () => {
       {/* Header */}
       <section className="rounded-3xl border border-[#E7DFD2] bg-white p-5 shadow-[0_12px_32px_rgba(58,34,22,0.05)] sm:p-7">
         <div className="flex flex-col gap-4">
-          <div>
-            <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#A07A39]">Tally — Cash & Receipt Book</p>
-            <div className="mt-1 flex items-center gap-3">
-              <Banknote className="h-6 w-6 text-[#701A35]" />
-              <h2 className="text-2xl font-bold tracking-tight text-[#24131B]">Cash & Receipt Book</h2>
-              <span className="rounded-full bg-[#F5EEE3] px-2.5 py-1 text-xs font-bold text-[#701A35]">
-                {filtered.length} receipts
-              </span>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#A07A39]">Tally — Cash & Receipt Book</p>
+              <div className="mt-1 flex flex-wrap items-center gap-3">
+                <Banknote className="h-6 w-6 text-[#701A35]" />
+                <h2 className="text-2xl font-bold tracking-tight text-[#24131B]">Cash & Receipt Book</h2>
+                <span className="rounded-full bg-[#F5EEE3] px-2.5 py-1 text-xs font-bold text-[#701A35]">
+                  {filtered.length} receipts
+                </span>
+              </div>
+              <p className="mt-2 max-w-2xl text-sm text-slate-500">
+                All collections filtered by date, mode (CASH/NEFT/PASS/CLS), or customer. Mode-wise subtotals included.
+              </p>
             </div>
-            <p className="mt-2 max-w-2xl text-sm text-slate-500">
-              All collections filtered by date, mode (CASH/NEFT/PASS/CLS), or customer. Mode-wise subtotals included.
-            </p>
+            <button type="button" onClick={() => setIsCreateReceiptOpen(true)} className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-[#701A35] px-4 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-[#5C142B]">
+              <Plus className="h-4 w-4" /> Create New Receipt
+            </button>
           </div>
 
           {/* Filters */}
@@ -330,6 +361,53 @@ export const CashReceiptBook: React.FC = () => {
           )}
         </div>
       </section>
+
+      {/* Separately saved generated receipts */}
+      <section className="overflow-hidden rounded-3xl border border-[#E7DFD2] bg-white shadow-[0_12px_32px_rgba(58,34,22,0.04)]">
+        <div className="flex flex-col gap-3 border-b border-[#E7DFD2] bg-[#FCFBF9] px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h3 className="flex items-center gap-2 text-sm font-bold text-slate-900">
+              <ReceiptText className="h-4 w-4 text-[#701A35]" /> Separately Saved Receipts
+            </h3>
+            <p className="mt-1 text-[11px] text-slate-500">Generated receipts are stored independently from collection transactions.</p>
+          </div>
+          <span className="w-fit rounded-full bg-[#F5EEE3] px-2.5 py-1 text-[10px] font-bold text-[#701A35]">
+            {manualReceipts.length} saved
+          </span>
+        </div>
+        {isLoadingManualReceipts ? (
+          <div className="p-8 text-center text-xs text-slate-500">Loading saved receipts…</div>
+        ) : manualReceipts.length === 0 ? (
+          <div className="p-8 text-center text-xs text-slate-500">No separately saved receipts yet. Create one to see it here.</div>
+        ) : (
+          <div className="divide-y divide-slate-100">
+            {manualReceipts.map((receipt) => (
+              <div key={receipt.id} className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="grid min-w-0 flex-1 grid-cols-2 gap-x-5 gap-y-1 text-xs sm:grid-cols-5">
+                  <div className="col-span-2 min-w-0 sm:col-span-1"><span className="block text-[10px] font-bold uppercase tracking-wide text-slate-400">Receipt</span><span className="block truncate font-mono font-bold text-[#701A35]">{receipt.receiptNumber}</span></div>
+                  <div><span className="block text-[10px] font-bold uppercase tracking-wide text-slate-400">Date</span><span className="font-medium text-slate-700">{fmtDate(receipt.transactionDate)}</span></div>
+                  <div><span className="block text-[10px] font-bold uppercase tracking-wide text-slate-400">Mode</span><span className="font-bold text-slate-700">{receipt.paymentMode}</span></div>
+                  <div><span className="block text-[10px] font-bold uppercase tracking-wide text-slate-400">Amount</span><span className="font-bold text-emerald-700">{formatINR(receipt.transactionAmount)}</span></div>
+                </div>
+                <div className="flex shrink-0 flex-wrap justify-end gap-2">
+                  <button type="button" onClick={() => void downloadManualReceiptPdf(receipt)} className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-50">
+                    <Download className="h-3.5 w-3.5" /> PDF
+                  </button>
+                  <button type="button" onClick={() => void downloadManualReceiptImage(receipt)} className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-50">
+                    <Download className="h-3.5 w-3.5" /> Image
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <CreateReceiptModal
+        isOpen={isCreateReceiptOpen}
+        onClose={() => setIsCreateReceiptOpen(false)}
+        onSaved={(receipt) => setManualReceipts((current) => [receipt, ...current.filter((item) => item.id !== receipt.id)])}
+      />
 
       {/* Table */}
       <section className="overflow-hidden rounded-3xl border border-[#E7DFD2] bg-white shadow-[0_12px_32px_rgba(58,34,22,0.04)]">

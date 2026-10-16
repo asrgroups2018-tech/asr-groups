@@ -36,6 +36,7 @@ interface DataTableProps<T> {
   title?: string;
   exportFileName?: string;
   searchPlaceholder?: string;
+  showSearch?: boolean;
   pageSizeDefault?: number;
   onRowClick?: (item: T) => void;
   selectedKeys?: Set<string>;
@@ -56,6 +57,7 @@ export function DataTable<T>({
   title = 'Data Table',
   exportFileName = 'export',
   searchPlaceholder = 'Search records...',
+  showSearch = true,
   pageSizeDefault = 10,
   onRowClick,
   selectedKeys,
@@ -209,27 +211,33 @@ export function DataTable<T>({
 
         {/* Right: Search & Export */}
         <div className="flex min-w-0 flex-wrap items-center gap-2 flex-1 sm:justify-end w-full sm:w-auto">
-          <div className="relative min-w-0 flex-1 sm:w-64 sm:flex-initial">
-            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                setCurrentPage(1);
-              }}
-              placeholder={searchPlaceholder}
-              className="w-full pl-8 pr-7 py-1.5 text-xs rounded-xl border border-slate-300 bg-white placeholder:text-slate-400 focus:outline-none focus:border-[#701A35] shadow-2xs transition-all font-medium"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery('')}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 cursor-pointer"
-              >
-                <X className="w-3 h-3" />
-              </button>
-            )}
-          </div>
+          {showSearch && (
+            <div className="relative min-w-0 flex-1 sm:w-64 sm:flex-initial">
+              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setCurrentPage(1);
+                }}
+                placeholder={searchPlaceholder}
+                className="w-full pl-8 pr-7 py-1.5 text-xs rounded-xl border border-slate-300 bg-white placeholder:text-slate-400 focus:outline-none focus:border-[#701A35] shadow-2xs transition-all font-medium"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => {
+                    setSearchQuery('');
+                    setCurrentPage(1);
+                  }}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 cursor-pointer"
+                  aria-label="Clear search"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              )}
+            </div>
+          )}
 
           <button
             onClick={() => setShowFilters(!showFilters)}

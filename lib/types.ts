@@ -191,7 +191,8 @@ export type AuditActionType =
   | 'Logged Cheque'
   | 'Deposited Cheque'
   | 'Deleted Cheque'
-  | 'Updated Company';
+  | 'Updated Company'
+  | 'Created Manual Receipt';
 
 export interface AuditLogEntry {
   id: string; // e.g. "AUD-9402"
@@ -468,6 +469,38 @@ export interface HistoricalReceiptRow {
   installmentId?: string;
   isMismatch?: boolean;
   mismatchDiff?: number;
+}
+
+export type ManualReceiptPaymentMode =
+  | 'UPI'
+  | 'NEFT'
+  | 'RTGS'
+  | 'CHEQUE'
+  | 'CASH'
+  | 'IMPS'
+  | 'CARD'
+  | 'OTHER';
+
+export type ManualReceiptDebitCredit = 'DEBIT' | 'CREDIT';
+
+export interface ManualReceipt {
+  id: string;
+  receiptNumber: string;
+  accountNumber: string;
+  transactionDate: string;
+  transactionAmount: number;
+  debitCredit: ManualReceiptDebitCredit;
+  paymentMode: ManualReceiptPaymentMode;
+  chequeNumber: string;
+  transactionDescription: string;
+  transactionId: string;
+  remarks: string;
+  createdAt: string;
+  createdBy?: {
+    id: string;
+    name: string;
+    email: string;
+  } | null;
 }
 
 // Aliases for compatibility

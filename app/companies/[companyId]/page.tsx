@@ -17,7 +17,7 @@ function CompanyDetailContent({ companyId }: { companyId: string }) {
 
   return (
     <main className="p-4 sm:p-8 max-w-7xl w-full mx-auto space-y-6">
-      <CompanyDetailsView />
+      <CompanyDetailsView key={companyId} />
     </main>
   );
 }

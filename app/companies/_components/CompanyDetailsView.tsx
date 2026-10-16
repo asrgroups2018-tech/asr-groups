@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useApp } from '@/lib/store';
 import {
@@ -8,6 +8,8 @@ import {
   ArrowLeft,
   ArrowUpRight,
   TrendingUp,
+  Search,
+  X,
 } from 'lucide-react';
 import { StatusPill } from '@/components/ui/StatusPill';
 import { MoneyDisplay } from '@/components/ui/MoneyDisplay';
@@ -24,6 +26,7 @@ export const CompanyDetailsView: React.FC = () => {
     setActiveMainTab,
     isLoading,
   } = useApp();
+  const [loanSearchQuery, setLoanSearchQuery] = useState('');
 
   const cleanSelectedId = String(selectedCompanyId || '').trim().toLowerCase();
   const company = companies.find(
@@ -74,15 +77,39 @@ export const CompanyDetailsView: React.FC = () => {
     )
   );
 
-  const totalFunded = companyLoans.reduce((sum, l) => {
-    const sp = (l.splits || []).find(
-      (s) =>
-        s.companyId === company.id ||
-        (s.companyCode && s.companyCode.toUpperCase() === company.shortCode.toUpperCase()) ||
-        (s.companyName && s.companyName.toUpperCase() === company.name.toUpperCase())
+  const findCompanySplit = (loan: (typeof loans)[number]) =>
+    (loan.splits || []).find(
+      (split) =>
+        split.companyId === company.id ||
+        split.companyCode?.toUpperCase() === company.shortCode.toUpperCase() ||
+        split.companyName?.toUpperCase() === company.name.toUpperCase()
     );
+
+  const totalFunded = companyLoans.reduce((sum, l) => {
+    const sp = findCompanySplit(l);
     return sum + (sp ? sp.splitAmount : 0);
   }, 0) || company.totalFunded || 0;
+
+  const normalizedLoanSearchQuery = loanSearchQuery.trim().toLowerCase();
+  const filteredCompanyLoans = companyLoans.filter((loan) => {
+    if (!normalizedLoanSearchQuery) return true;
+
+    const companySplit = findCompanySplit(loan);
+    return [
+      loan.id,
+      loan.customerName,
+      loan.codeNo,
+      loan.place,
+      loan.startDate,
+      loan.status,
+      getDerivedLoanStatus(loan),
+      companySplit?.splitAmount,
+      companySplit?.splitAmount?.toLocaleString('en-IN'),
+      companySplit?.splitPercent,
+    ].some((value) =>
+      String(value ?? '').toLowerCase().includes(normalizedLoanSearchQuery)
+    );
+  });
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
@@ -198,24 +225,55 @@ export const CompanyDetailsView: React.FC = () => {
 
         {/* Right: Funded Loans */}
         <div className="lg:col-span-8 bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-4">
-          <div className="flex items-center justify-between pb-2 border-b border-slate-200">
-            <div>
+          <div className="flex flex-col gap-4 border-b border-slate-200 pb-3 lg:flex-row lg:items-start lg:justify-between">
+            <div className="min-w-0 lg:flex-1">
               <h2 className="text-base font-bold text-slate-950 font-serif">
                 Funded Loans Portfolio
               </h2>
-              <p className="text-xs text-slate-600 font-medium mt-0.5">
+              <p className="mt-1 max-w-xl text-xs font-medium leading-4 text-slate-600">
                 All facilities where {company.name} provided syndicate capital
               </p>
             </div>
-            <span className="text-xs font-mono font-bold text-slate-700 bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200">
-              {companyLoans.length} Loans
-            </span>
+            <div className="flex w-full min-w-0 flex-col gap-2 sm:flex-row sm:items-center lg:w-auto lg:max-w-[390px]">
+              <label className="relative min-w-0 flex-1 sm:w-64 sm:flex-none">
+                <span className="sr-only">Search funded loans</span>
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  value={loanSearchQuery}
+                  onChange={(event) => setLoanSearchQuery(event.target.value)}
+                  placeholder="Search funded loans..."
+                  className="h-9 w-full rounded-xl border border-slate-300 bg-white pl-8 pr-8 text-xs font-medium text-slate-800 placeholder:text-slate-400 focus:border-[#701A35] focus:outline-none focus:ring-2 focus:ring-[#701A35]/10"
+                />
+                {loanSearchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setLoanSearchQuery('')}
+                    aria-label="Clear funded loan search"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </label>
+              <span className="inline-flex h-9 shrink-0 items-center justify-center whitespace-nowrap rounded-lg border border-slate-200 bg-slate-100 px-2.5 text-xs font-mono font-bold text-slate-700">
+                {normalizedLoanSearchQuery
+                  ? `${filteredCompanyLoans.length} of ${companyLoans.length}`
+                  : companyLoans.length}{' '}
+                {companyLoans.length === 1 ? 'Loan' : 'Loans'}
+              </span>
+            </div>
           </div>
 
           {companyLoans.length === 0 ? (
             <div className="py-12 text-center text-slate-400 text-xs">
               <Building2 className="w-8 h-8 mx-auto mb-2 text-slate-300" />
               <p>No loan syndications on record for this company.</p>
+            </div>
+          ) : filteredCompanyLoans.length === 0 ? (
+            <div className="py-12 text-center text-slate-400 text-xs">
+              <Search className="w-8 h-8 mx-auto mb-2 text-slate-300" />
+              <p>No funded loans match “{loanSearchQuery.trim()}”.</p>
             </div>
           ) : (
             <div className="overflow-x-auto rounded-xl border border-slate-200">
@@ -231,8 +289,8 @@ export const CompanyDetailsView: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {companyLoans.map((l) => {
-                    const mySplit = (l.splits || []).find((s) => s.companyId === company.id || s.companyCode === company.shortCode);
+                  {filteredCompanyLoans.map((l) => {
+                    const mySplit = findCompanySplit(l);
 
                     return (
                       <tr key={l.id} className="hover:bg-[#FAF5ED]/50 transition-colors">

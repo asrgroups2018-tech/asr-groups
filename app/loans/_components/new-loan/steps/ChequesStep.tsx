@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useRef } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import { AmountInput } from '@/components/ui/AmountInput';
 import { DatePicker } from '@/components/ui/DatePicker';
@@ -40,6 +40,23 @@ export const ChequesStep: React.FC<ChequesStepProps> = ({
   isValid,
 }) => {
   const remainingAmount = totalAmount - allocatedAmount;
+  const chequeNumberRefs = useRef<Record<string, HTMLInputElement | null>>({});
+
+  const handleChequeNumberKeyDown = (
+    event: React.KeyboardEvent<HTMLInputElement>,
+    rowIndex: number
+  ) => {
+    if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return;
+
+    const nextRowIndex = event.key === 'ArrowUp' ? rowIndex - 1 : rowIndex + 1;
+    const nextRow = rows[nextRowIndex];
+    const nextInput = nextRow ? chequeNumberRefs.current[nextRow.id] : null;
+
+    if (nextInput) {
+      event.preventDefault();
+      nextInput.focus();
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -90,6 +107,10 @@ export const ChequesStep: React.FC<ChequesStepProps> = ({
               <input
                 type="text"
                 value={row.chequeNumber}
+                ref={(input) => {
+                  chequeNumberRefs.current[row.id] = input;
+                }}
+                onKeyDown={(event) => handleChequeNumberKeyDown(event, index)}
                 onChange={(event) =>
                   onChange(
                     rows.map((item) =>

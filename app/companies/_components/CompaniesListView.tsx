@@ -9,6 +9,8 @@ import {
   Plus,
   Eye,
   Trash2,
+  Search,
+  X,
 } from 'lucide-react';
 import { DataTable, ColumnDef } from '@/components/ui/DataTable';
 import { AddCompanyModal } from './AddCompanyModal';
@@ -28,6 +30,7 @@ export const CompaniesListView: React.FC = () => {
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [partyFilter, setPartyFilter] = useState<'ALL' | 'ASR' | 'OUTSIDE'>('ALL');
+  const [companySearchQuery, setCompanySearchQuery] = useState('');
   const [companyToDelete, setCompanyToDelete] = useState<Company | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -96,6 +99,22 @@ export const CompaniesListView: React.FC = () => {
       };
     });
   }, [filteredCompanies, loans]);
+
+  const searchableCompanies = useMemo(() => {
+    const query = companySearchQuery.trim().toLowerCase();
+    if (!query) return enrichedCompanies;
+
+    return enrichedCompanies.filter((company) =>
+      [
+        company.shortCode,
+        company.name,
+        company.isOutsideParty ? 'Outside Party' : 'ASR GROUP',
+        company.isOutsideParty ? 'Outside Party Entity' : 'ASR GROUP Internal Entity',
+        company.totalFunded,
+        company.activeLoansCount,
+      ].some((value) => String(value ?? '').toLowerCase().includes(query))
+    );
+  }, [companySearchQuery, enrichedCompanies]);
 
   const totalFundedSum = useMemo(
     () => enrichedCompanies.reduce((acc, c) => acc + (c.totalFunded || 0), 0),
@@ -412,9 +431,32 @@ export const CompaniesListView: React.FC = () => {
           })}
         </div>
 
-        <span className="text-xs text-slate-500 font-mono">
-          Showing <strong className="text-slate-800">{enrichedCompanies.length}</strong> companies
-        </span>
+        <div className="flex w-full min-w-0 flex-col items-stretch gap-2 sm:w-auto sm:flex-row sm:items-center sm:gap-3">
+          <label className="relative min-w-0 w-full sm:w-72">
+            <span className="sr-only">Search companies</span>
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <input
+              type="search"
+              value={companySearchQuery}
+              onChange={(event) => setCompanySearchQuery(event.target.value)}
+              placeholder="Search companies..."
+              className="h-9 w-full rounded-xl border border-slate-300 bg-white pl-9 pr-9 text-xs font-medium text-slate-800 placeholder:text-slate-400 focus:border-[#701A35] focus:outline-none focus:ring-2 focus:ring-[#701A35]/10"
+            />
+            {companySearchQuery && (
+              <button
+                type="button"
+                onClick={() => setCompanySearchQuery('')}
+                aria-label="Clear company search"
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </label>
+          <span className="shrink-0 text-xs text-slate-500 font-mono">
+            Showing <strong className="text-slate-800">{searchableCompanies.length}</strong> companies
+          </span>
+        </div>
       </div>
 
       {/* ─── Companies DataTable ─── */}
@@ -439,11 +481,16 @@ export const CompaniesListView: React.FC = () => {
         </div>
       ) : (
         <DataTable
-          data={enrichedCompanies}
+          data={searchableCompanies}
           columns={columns}
           keyExtractor={(c) => c.id}
           title="Funding & Deposit Companies Registry"
-          searchPlaceholder="Search short code, company name..."
+          showSearch={false}
+          emptyStateMessage={
+            companySearchQuery.trim()
+              ? `No companies match “${companySearchQuery.trim()}”.`
+              : 'No matching companies found.'
+          }
           exportFileName="ASR_Funding_Companies"
           mobileCardRender={renderCompanyMobileCard}
         />

@@ -271,6 +271,27 @@ export const SCHEMA_STATEMENTS = [
   `CREATE INDEX IF NOT EXISTS idx_cheques_status ON cheques(status);`,
   `CREATE INDEX IF NOT EXISTS idx_cheques_deposit_date ON cheques(deposit_date);`,
   `CREATE INDEX IF NOT EXISTS idx_cheques_customer_name ON cheques(customer_name);`,
+
+  // 16. Standalone generated receipts
+  `CREATE TABLE IF NOT EXISTS manual_receipts (
+    id TEXT PRIMARY KEY,
+    receipt_number TEXT NOT NULL UNIQUE,
+    account_number TEXT NOT NULL DEFAULT '',
+    transaction_date TEXT NOT NULL,
+    transaction_amount REAL NOT NULL DEFAULT 0,
+    debit_credit TEXT NOT NULL DEFAULT 'CREDIT',
+    payment_mode TEXT NOT NULL,
+    cheque_number TEXT NOT NULL DEFAULT '',
+    transaction_description TEXT NOT NULL DEFAULT '',
+    transaction_id TEXT NOT NULL DEFAULT '',
+    remarks TEXT NOT NULL DEFAULT '',
+    created_by_id TEXT,
+    created_by_name TEXT,
+    created_by_email TEXT,
+    created_at TEXT NOT NULL
+  );`,
+  `CREATE INDEX IF NOT EXISTS idx_manual_receipts_date ON manual_receipts(transaction_date);`,
+  `CREATE INDEX IF NOT EXISTS idx_manual_receipts_mode ON manual_receipts(payment_mode);`,
 ];
 
 const AUTH_SCHEMA_STATEMENTS = [
