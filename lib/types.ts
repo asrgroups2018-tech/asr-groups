@@ -192,7 +192,9 @@ export type AuditActionType =
   | 'Deposited Cheque'
   | 'Deleted Cheque'
   | 'Updated Company'
-  | 'Created Manual Receipt';
+  | 'Created Manual Receipt'
+  | 'Updated Manual Receipt'
+  | 'Deleted Manual Receipt';
 
 export interface AuditLogEntry {
   id: string; // e.g. "AUD-9402"

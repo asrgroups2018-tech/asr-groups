@@ -21,6 +21,7 @@ interface CreateReceiptModalProps {
 }
 
 type ReceiptFormState = Omit<ManualReceipt, 'id' | 'createdAt' | 'createdBy'>;
+type ReceiptOrientation = 'portrait' | 'landscape';
 
 const PAYMENT_MODE_OPTIONS: Array<{ value: ManualReceiptPaymentMode; label: string }> = [
   { value: 'UPI', label: 'UPI' },
@@ -63,6 +64,16 @@ function paymentModeLabel(mode: ManualReceiptPaymentMode): string {
 }
 
 const RECEIPT_LOGO = '/groups-finalized.png';
+const RECEIPT_COLORS = {
+  page: { hex: '#F1F5F9', rgb: [241, 245, 249] as const },
+  paper: { hex: '#FFFFFF', rgb: [255, 255, 255] as const },
+  maroon: { hex: '#701A35', rgb: [112, 26, 53] as const },
+  gold: { hex: '#EED8A1', rgb: [238, 216, 161] as const },
+  text: { hex: '#172033', rgb: [23, 32, 51] as const },
+  slate: { hex: '#475569', rgb: [71, 85, 105] as const },
+  divider: { hex: '#94A3B8', rgb: [148, 163, 184] as const },
+  subtext: { hex: '#64748B', rgb: [100, 116, 139] as const },
+};
 
 interface ReceiptRow {
   label: string;
@@ -124,43 +135,46 @@ function loadImageElement(source: string): Promise<HTMLImageElement> {
   });
 }
 
-export async function downloadManualReceiptPdf(receipt: ManualReceipt): Promise<void> {
-  const document = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a5' });
+export async function downloadManualReceiptPdf(receipt: ManualReceipt, orientation: ReceiptOrientation = 'portrait'): Promise<void> {
+  const document = new jsPDF({ orientation, unit: 'pt', format: 'a5' });
   const pageWidth = document.internal.pageSize.getWidth();
   const pageHeight = document.internal.pageSize.getHeight();
-  const margin = 28;
+  const margin = orientation === 'landscape' ? 24 : 28;
   const contentWidth = pageWidth - (margin * 2);
-  const labelWidth = 116;
-  let y = margin + 18;
+  let y = margin + 9;
 
-  document.setFillColor(255, 255, 255);
+  document.setFillColor(...RECEIPT_COLORS.page.rgb);
   document.rect(0, 0, pageWidth, pageHeight, 'F');
-  document.setDrawColor(112, 26, 53);
+  document.setFillColor(...RECEIPT_COLORS.paper.rgb);
+  document.roundedRect(margin, margin, contentWidth, pageHeight - (margin * 2), 8, 8, 'F');
+  document.setDrawColor(...RECEIPT_COLORS.maroon.rgb);
   document.setLineWidth(2.5);
   document.roundedRect(margin, margin, contentWidth, pageHeight - (margin * 2), 8, 8, 'S');
+  document.setFillColor(...RECEIPT_COLORS.maroon.rgb);
+  document.rect(margin, margin, contentWidth, 66, 'F');
 
   try {
     const logoDataUrl = await loadImageDataUrl(RECEIPT_LOGO);
     document.addImage(logoDataUrl, 'PNG', margin + 18, y, 48, 48, undefined, 'FAST');
   } catch {
-    document.setFillColor(112, 26, 53);
+    document.setFillColor(...RECEIPT_COLORS.maroon.rgb);
     document.roundedRect(margin + 18, y, 48, 48, 6, 6, 'F');
   }
 
-  document.setTextColor(112, 26, 53);
+  document.setTextColor(...RECEIPT_COLORS.paper.rgb);
   document.setFont('helvetica', 'bold');
   document.setFontSize(16);
   document.text('ASR GROUP', margin + 78, y + 21);
-  document.setTextColor(100, 116, 139);
+  document.setTextColor(...RECEIPT_COLORS.gold.rgb);
   document.setFontSize(7.5);
   document.text('TRANSACTION RECEIPT', margin + 78, y + 35);
-  y += 66;
-  document.setDrawColor(112, 26, 53);
+  y = margin + 66;
+  document.setDrawColor(...RECEIPT_COLORS.gold.rgb);
   document.setLineWidth(1.8);
   document.line(margin + 18, y, pageWidth - margin - 18, y);
   y += 28;
 
-  document.setTextColor(23, 32, 51);
+  document.setTextColor(...RECEIPT_COLORS.text.rgb);
   document.setFontSize(15);
   document.text('Transaction Details', pageWidth / 2, y, { align: 'center' });
   y += 22;
@@ -168,38 +182,42 @@ export async function downloadManualReceiptPdf(receipt: ManualReceipt): Promise<
   const rows = getReceiptRows(receipt);
   const tableX = margin + 18;
   const tableWidth = contentWidth - 36;
+  const labelWidth = tableWidth * (orientation === 'landscape' ? 0.28 : 0.36);
   const valueWidth = tableWidth - labelWidth - 26;
+  const bodyFontSize = orientation === 'landscape' ? 7.5 : 8.5;
+  const lineHeight = orientation === 'landscape' ? 9 : 11;
   const rowHeights = rows.map((row) => {
-    document.setFontSize(row.emphasis === 'words' ? 8.5 : row.emphasis === 'amount' ? 11 : 8.5);
+    document.setFontSize(row.emphasis === 'words' ? bodyFontSize : row.emphasis === 'amount' ? 11 : bodyFontSize);
     const valueLines = document.splitTextToSize(row.value, valueWidth);
     const labelLines = document.splitTextToSize(row.label, labelWidth - 18);
-    return Math.max(valueLines.length, labelLines.length) * 11 + 15;
+    return Math.max(valueLines.length, labelLines.length) * lineHeight + (orientation === 'landscape' ? 11 : 15);
   });
   const tableHeight = rowHeights.reduce((total, height) => total + height, 0);
 
-  document.setDrawColor(71, 85, 105);
+  document.setDrawColor(...RECEIPT_COLORS.slate.rgb);
   document.setLineWidth(1.6);
   document.roundedRect(tableX, y, tableWidth, tableHeight, 5, 5, 'S');
   rows.forEach((row, index) => {
     const rowHeight = rowHeights[index];
     const rowY = y;
     if (index > 0) {
-      document.setDrawColor(148, 163, 184);
+      document.setDrawColor(...RECEIPT_COLORS.divider.rgb);
       document.setLineWidth(0.9);
       document.line(tableX, rowY, tableX + tableWidth, rowY);
     }
-    document.setTextColor(71, 85, 105);
+    document.setTextColor(...RECEIPT_COLORS.slate.rgb);
     document.setFont('helvetica', 'bold');
-    document.setFontSize(8.5);
-    document.text(document.splitTextToSize(row.label, labelWidth - 18), tableX + 10, rowY + 14);
-    document.setTextColor(row.emphasis === 'amount' ? 112 : 23, row.emphasis === 'amount' ? 26 : 32, row.emphasis === 'amount' ? 53 : 51);
+    document.setFontSize(bodyFontSize);
+    document.text(document.splitTextToSize(row.label, labelWidth - 18), tableX + 10, rowY + (orientation === 'landscape' ? 11 : 14));
+    const valueColor = row.emphasis === 'amount' ? RECEIPT_COLORS.maroon.rgb : RECEIPT_COLORS.text.rgb;
+    document.setTextColor(valueColor[0], valueColor[1], valueColor[2]);
     document.setFont('helvetica', 'bold');
-    document.setFontSize(row.emphasis === 'amount' ? 11 : row.emphasis === 'words' ? 8.5 : 8.5);
-    document.text(document.splitTextToSize(row.value, valueWidth), tableX + labelWidth + 8, rowY + 14);
+    document.setFontSize(row.emphasis === 'amount' ? 10 : row.emphasis === 'words' ? bodyFontSize : bodyFontSize);
+    document.text(document.splitTextToSize(row.value, valueWidth), tableX + labelWidth + 8, rowY + (orientation === 'landscape' ? 11 : 14));
     y += rowHeight;
   });
 
-  document.save(`${safeReceiptFileName(receipt)}.pdf`);
+  document.save(`${safeReceiptFileName(receipt)}_${orientation}.pdf`);
 }
 
 function drawWrappedCanvasText(
@@ -227,39 +245,43 @@ function drawWrappedCanvasText(
   return lines.length;
 }
 
-export async function downloadManualReceiptImage(receipt: ManualReceipt): Promise<void> {
+export async function downloadManualReceiptImage(receipt: ManualReceipt, orientation: ReceiptOrientation = 'portrait'): Promise<void> {
   const canvas = document.createElement('canvas');
-  canvas.width = 1240;
-  canvas.height = 1754;
+  canvas.width = orientation === 'landscape' ? 1754 : 1240;
+  canvas.height = orientation === 'landscape' ? 1240 : 1754;
   const context = canvas.getContext('2d');
   if (!context) throw new Error('Unable to create the receipt image.');
 
-  const maroon = '#701A35';
-  const text = '#172033';
-  const slate = '#475569';
-  const border = '#475569';
-  context.fillStyle = '#ffffff';
+  const maroon = RECEIPT_COLORS.maroon.hex;
+  const text = RECEIPT_COLORS.text.hex;
+  const slate = RECEIPT_COLORS.slate.hex;
+  const border = RECEIPT_COLORS.slate.hex;
+  context.fillStyle = RECEIPT_COLORS.page.hex;
   context.fillRect(0, 0, canvas.width, canvas.height);
+  context.fillStyle = RECEIPT_COLORS.paper.hex;
+  context.fillRect(32, 32, canvas.width - 64, canvas.height - 64);
   context.strokeStyle = maroon;
   context.lineWidth = 8;
   context.strokeRect(32, 32, canvas.width - 64, canvas.height - 64);
+  context.fillStyle = maroon;
+  context.fillRect(32, 32, canvas.width - 64, 148);
 
-  let y = 86;
+  let y = 52;
   try {
     const logo = await loadImageElement(RECEIPT_LOGO);
-    context.drawImage(logo, 78, y, 108, 108);
+    context.drawImage(logo, 78, y, 92, 92);
   } catch {
     context.fillStyle = maroon;
-    context.fillRect(78, y, 108, 108);
+    context.fillRect(78, y, 92, 92);
   }
-  context.fillStyle = maroon;
+  context.fillStyle = RECEIPT_COLORS.paper.hex;
   context.font = '700 42px Arial, sans-serif';
-  context.fillText('ASR GROUP', 220, y + 48);
-  context.fillStyle = '#64748b';
+  context.fillText('ASR GROUP', 198, y + 43);
+  context.fillStyle = RECEIPT_COLORS.gold.hex;
   context.font = '700 18px Arial, sans-serif';
-  context.fillText('TRANSACTION RECEIPT', 220, y + 78);
-  y += 148;
-  context.strokeStyle = maroon;
+  context.fillText('TRANSACTION RECEIPT', 198, y + 73);
+  y = 180;
+  context.strokeStyle = RECEIPT_COLORS.gold.hex;
   context.lineWidth = 4;
   context.beginPath();
   context.moveTo(78, y);
@@ -277,11 +299,12 @@ export async function downloadManualReceiptImage(receipt: ManualReceipt): Promis
   const rows = getReceiptRows(receipt);
   const tableX = 78;
   const tableWidth = canvas.width - 156;
-  const labelWidth = 278;
+  const labelWidth = tableWidth * (orientation === 'landscape' ? 0.28 : 0.36);
   const valueX = tableX + labelWidth + 26;
   const valueWidth = tableWidth - labelWidth - 48;
   const rowHeights = rows.map((row) => {
-    context.font = `${row.emphasis === 'amount' ? '700 29px' : '700 24px'} Arial, sans-serif`;
+    const bodyFontSize = orientation === 'landscape' ? 19 : 24;
+    context.font = `${row.emphasis === 'amount' ? '700 27px' : `700 ${bodyFontSize}px`} Arial, sans-serif`;
     const words = row.value.split(/\s+/);
     let current = '';
     let lines = 1;
@@ -292,9 +315,9 @@ export async function downloadManualReceiptImage(receipt: ManualReceipt): Promis
         current = word;
       } else current = next;
     }
-    context.font = '700 22px Arial, sans-serif';
+    context.font = `700 ${orientation === 'landscape' ? 19 : 22}px Arial, sans-serif`;
     const labelLines = context.measureText(row.label).width > labelWidth - 30 ? 2 : 1;
-    return Math.max(lines, labelLines) * 32 + 30;
+    return Math.max(lines, labelLines) * (orientation === 'landscape' ? 25 : 32) + (orientation === 'landscape' ? 20 : 30);
   });
   const tableHeight = rowHeights.reduce((total, height) => total + height, 0);
   context.strokeStyle = border;
@@ -304,7 +327,7 @@ export async function downloadManualReceiptImage(receipt: ManualReceipt): Promis
   rows.forEach((row, index) => {
     const rowHeight = rowHeights[index];
     if (index > 0) {
-      context.strokeStyle = '#94a3b8';
+      context.strokeStyle = RECEIPT_COLORS.divider.hex;
       context.lineWidth = 2;
       context.beginPath();
       context.moveTo(tableX, y);
@@ -312,18 +335,18 @@ export async function downloadManualReceiptImage(receipt: ManualReceipt): Promis
       context.stroke();
     }
     context.fillStyle = slate;
-    context.font = '700 22px Arial, sans-serif';
-    drawWrappedCanvasText(context, row.label, tableX + 18, y + 32, labelWidth - 30, 28);
+    context.font = `700 ${orientation === 'landscape' ? 19 : 22}px Arial, sans-serif`;
+    drawWrappedCanvasText(context, row.label, tableX + 18, y + (orientation === 'landscape' ? 25 : 32), labelWidth - 30, orientation === 'landscape' ? 23 : 28);
     context.fillStyle = row.emphasis === 'amount' ? maroon : text;
-    context.font = `${row.emphasis === 'amount' ? '700 29px' : row.emphasis === 'words' ? '700 24px' : '700 24px'} Arial, sans-serif`;
-    drawWrappedCanvasText(context, row.value, valueX, y + 32, valueWidth, 32);
+    context.font = `${row.emphasis === 'amount' ? '700 27px' : `700 ${orientation === 'landscape' ? 19 : 24}px`} Arial, sans-serif`;
+    drawWrappedCanvasText(context, row.value, valueX, y + (orientation === 'landscape' ? 25 : 32), valueWidth, orientation === 'landscape' ? 23 : 32);
     y += rowHeight;
   });
 
   const blob = await new Promise<Blob>((resolve, reject) => {
     canvas.toBlob((result) => result ? resolve(result) : reject(new Error('Unable to export the receipt image.')), 'image/png');
   });
-  downloadBlob(blob, `${safeReceiptFileName(receipt)}.png`);
+  downloadBlob(blob, `${safeReceiptFileName(receipt)}_${orientation}.png`);
 }
 
 export const CreateReceiptModal: React.FC<CreateReceiptModalProps> = ({ isOpen, onClose, onSaved }) => {
@@ -331,6 +354,7 @@ export const CreateReceiptModal: React.FC<CreateReceiptModalProps> = ({ isOpen, 
   const [form, setForm] = useState<ReceiptFormState>(EMPTY_FORM);
   const [savedReceipt, setSavedReceipt] = useState<ManualReceipt | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [orientation, setOrientation] = useState<ReceiptOrientation>('portrait');
 
   const previewReceipt = useMemo<ManualReceipt>(() => ({
     id: savedReceipt?.id || 'preview',
@@ -358,6 +382,7 @@ export const CreateReceiptModal: React.FC<CreateReceiptModalProps> = ({ isOpen, 
   const close = () => {
     setForm({ ...EMPTY_FORM, transactionDate: getTodayIsoDate() });
     setSavedReceipt(null);
+    setOrientation('portrait');
     onClose();
   };
 
@@ -378,17 +403,19 @@ export const CreateReceiptModal: React.FC<CreateReceiptModalProps> = ({ isOpen, 
 
     setIsSaving(true);
     try {
+      const isEditing = Boolean(savedReceipt?.id);
       const response = await fetch('/api/manual-receipts', {
-        method: 'POST',
+        method: isEditing ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, transactionAmount: Number(form.transactionAmount) }),
+        body: JSON.stringify({ ...form, id: savedReceipt?.id, transactionAmount: Number(form.transactionAmount) }),
       });
       const result = await response.json();
-      if (!response.ok || !result.success) throw new Error(result.error || 'Unable to save receipt.');
+      if (!response.ok || !result.success) throw new Error(result.error || (isEditing ? 'Unable to update receipt.' : 'Unable to save receipt.'));
       setSavedReceipt(result.data);
       setForm((current) => ({ ...current, receiptNumber: result.data.receiptNumber }));
       onSaved(result.data);
-      showToast('Receipt Saved', `${result.data.receiptNumber} was saved separately.`, 'success');
+      showToast(isEditing ? 'Receipt Updated' : 'Receipt Saved', `${result.data.receiptNumber} was saved separately.`, 'success');
+      close();
     } catch (error) {
       showToast('Save Error', error instanceof Error ? error.message : 'Unable to save receipt.', 'error');
     } finally {
@@ -476,10 +503,10 @@ export const CreateReceiptModal: React.FC<CreateReceiptModalProps> = ({ isOpen, 
             <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-4">
               <p className="text-[11px] text-slate-500">The receipt record is saved separately. Download it as a PDF or image.</p>
               <div className="flex flex-wrap justify-end gap-2">
-                <button type="button" onClick={() => void downloadManualReceiptPdf(previewReceipt)} className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-xs font-bold text-slate-700 transition hover:bg-slate-50">
+                <button type="button" onClick={() => void downloadManualReceiptPdf(previewReceipt, orientation)} className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-xs font-bold text-slate-700 transition hover:bg-slate-50">
                   <Download className="h-4 w-4" /> PDF
                 </button>
-                <button type="button" onClick={() => void downloadManualReceiptImage(previewReceipt)} className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-xs font-bold text-slate-700 transition hover:bg-slate-50">
+                <button type="button" onClick={() => void downloadManualReceiptImage(previewReceipt, orientation)} className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-xs font-bold text-slate-700 transition hover:bg-slate-50">
                   <Download className="h-4 w-4" /> Image
                 </button>
                 <button type="submit" disabled={isSaving} className="inline-flex items-center gap-2 rounded-xl bg-[#701A35] px-4 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-[#5C142B] disabled:cursor-not-allowed disabled:opacity-50">
@@ -494,12 +521,24 @@ export const CreateReceiptModal: React.FC<CreateReceiptModalProps> = ({ isOpen, 
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#A07A39]">Live preview</p>
-                  <h3 className="mt-1 text-sm font-bold text-slate-900">Half-A4 receipt</h3>
+                  <h3 className="mt-1 text-sm font-bold text-slate-900">Receipt preview</h3>
                 </div>
-                <span className="rounded-full border border-[#D8C7A6] bg-white px-2.5 py-1 text-[10px] font-bold text-[#701A35]">A5 portrait</span>
+                <div className="flex rounded-lg border border-[#D8C7A6] bg-white p-0.5" role="group" aria-label="Receipt orientation">
+                  {(['portrait', 'landscape'] as const).map((option) => (
+                    <button
+                      key={option}
+                      type="button"
+                      onClick={() => setOrientation(option)}
+                      aria-pressed={orientation === option}
+                      className={`rounded-md px-2 py-1 text-[10px] font-bold capitalize transition ${orientation === option ? 'bg-[#701A35] text-white' : 'text-[#701A35] hover:bg-[#F5EEE3]'}`}
+                    >
+                      {option}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
-            <ReceiptPreview receipt={previewReceipt} />
+            <ReceiptPreview receipt={previewReceipt} orientation={orientation} />
           </aside>
         </div>
       </div>
@@ -516,28 +555,32 @@ function ReceiptField({ label, required, children }: { label: string; required?:
   );
 }
 
-function ReceiptPreview({ receipt }: { receipt: ManualReceipt }) {
+function ReceiptPreview({ receipt, orientation }: { receipt: ManualReceipt; orientation: ReceiptOrientation }) {
   const rows = getReceiptRows(receipt);
+  const isLandscape = orientation === 'landscape';
+  const paperSizeClass = orientation === 'portrait'
+    ? 'h-[min(62vh,500px)] aspect-[148/210] w-auto'
+    : 'aspect-[210/148] w-full';
 
   return (
     <div className="flex w-full max-w-[420px] justify-center rounded-2xl border-2 p-2 shadow-inner" style={{ borderColor: '#701A35', backgroundColor: '#F1F5F9' }}>
-      <div className="flex h-[min(62vh,500px)] aspect-[148/210] w-auto max-w-full flex-col overflow-hidden rounded-lg border-2 shadow-xl" style={{ borderColor: '#701A35', backgroundColor: '#FFFFFF' }}>
-        <div className="flex shrink-0 items-center gap-2 border-b-2 px-4 py-3 text-white" style={{ borderBottomColor: '#EED8A1', backgroundColor: '#701A35' }}>
-          <Image src={RECEIPT_LOGO} alt="ASR GROUP" width={38} height={38} className="h-9 w-9 rounded-lg object-contain p-1.5" style={{ backgroundColor: '#561329' }} />
+      <div className={`flex max-w-full flex-col overflow-hidden rounded-lg border-2 shadow-xl ${paperSizeClass}`} style={{ borderColor: '#701A35', backgroundColor: '#FFFFFF' }}>
+        <div className={`flex shrink-0 items-center gap-2 border-b-2 text-white ${isLandscape ? 'px-3 py-2' : 'px-4 py-3'}`} style={{ borderBottomColor: '#EED8A1', backgroundColor: '#701A35' }}>
+          <Image src={RECEIPT_LOGO} alt="ASR GROUP" width={isLandscape ? 32 : 38} height={isLandscape ? 32 : 38} className={`${isLandscape ? 'h-8 w-8' : 'h-9 w-9'} rounded-lg object-contain p-1.5`} style={{ backgroundColor: '#561329' }} />
           <div>
-            <p className="text-xs font-black tracking-[0.12em]">ASR GROUP</p>
-            <p className="mt-0.5 text-[7px] font-bold uppercase tracking-[0.16em]" style={{ color: '#EED8A1' }}>Transaction Receipt</p>
+            <p className={`${isLandscape ? 'text-[10px]' : 'text-xs'} font-black tracking-[0.12em]`}>ASR GROUP</p>
+            <p className="mt-0.5 text-[6px] font-bold uppercase tracking-[0.16em]" style={{ color: '#EED8A1' }}>Transaction Receipt</p>
           </div>
         </div>
-        <div className="min-h-0 flex-1 overflow-hidden px-4 py-3">
+        <div className={`min-h-0 flex-1 overflow-hidden ${isLandscape ? 'px-3 py-2' : 'px-4 py-3'}`}>
           <div className="text-center">
-            <h4 className="text-xs font-bold" style={{ color: '#172033' }}>Transaction Details</h4>
+            <h4 className={`${isLandscape ? 'text-[10px]' : 'text-xs'} font-bold`} style={{ color: '#172033' }}>Transaction Details</h4>
           </div>
-          <div className="mt-2 overflow-hidden rounded-lg border-2" style={{ borderColor: '#475569' }}>
+          <div className="mt-1 overflow-hidden rounded-lg border-2" style={{ borderColor: '#475569' }}>
             {rows.map((row, index) => (
-              <div key={row.label} className={`grid grid-cols-[42%_58%] gap-1 px-2 py-1.5 text-[7px] leading-3 ${index < rows.length - 1 ? 'border-b' : ''}`} style={index < rows.length - 1 ? { borderBottomColor: '#94A3B8' } : undefined}>
+              <div key={row.label} className={`grid ${isLandscape ? 'grid-cols-[28%_72%] px-2 py-0.5 text-[6px] leading-2.5' : 'grid-cols-[36%_64%] px-2 py-1 text-[7px] leading-3'} gap-1 ${index < rows.length - 1 ? 'border-b' : ''}`} style={index < rows.length - 1 ? { borderBottomColor: '#94A3B8' } : undefined}>
                 <span className="font-bold" style={{ color: '#475569' }}>{row.label}</span>
-                <span className={`min-w-0 break-words font-bold ${row.emphasis === 'amount' ? 'text-[9px]' : row.emphasis === 'words' ? 'text-[7px]' : 'text-[7px]'}`} style={{ color: row.emphasis === 'amount' ? '#701A35' : '#172033' }}>{row.value}</span>
+                <span className={`min-w-0 break-words font-bold ${row.emphasis === 'amount' ? (isLandscape ? 'text-[8px]' : 'text-[9px]') : ''}`} style={{ color: row.emphasis === 'amount' ? '#701A35' : '#172033' }}>{row.value}</span>
               </div>
             ))}
           </div>

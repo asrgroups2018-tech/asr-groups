@@ -14,6 +14,7 @@ import {
   Plus,
   ReceiptText,
   Download,
+  Trash2,
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -148,6 +149,20 @@ export const CashReceiptBook: React.FC = () => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadManualReceipts();
   }, [loadManualReceipts]);
+
+  const handleDeleteManualReceipt = useCallback(async (receipt: ManualReceipt) => {
+    if (!window.confirm(`Delete receipt ${receipt.receiptNumber}? This action cannot be undone.`)) return;
+
+    try {
+      const response = await fetch(`/api/manual-receipts?id=${encodeURIComponent(receipt.id)}`, { method: 'DELETE' });
+      const result = await response.json();
+      if (!response.ok || !result.success) throw new Error(result.error || 'Unable to delete receipt.');
+      setManualReceipts((current) => current.filter((item) => item.id !== receipt.id));
+      showToast('Receipt Deleted', `${receipt.receiptNumber} was deleted.`, 'success');
+    } catch (error) {
+      showToast('Delete Error', error instanceof Error ? error.message : 'Unable to delete receipt.', 'error');
+    }
+  }, [showToast]);
 
   const allEntries = useMemo(() => buildReceiptEntries(loans), [loans]);
 
@@ -395,6 +410,9 @@ export const CashReceiptBook: React.FC = () => {
                   </button>
                   <button type="button" onClick={() => void downloadManualReceiptImage(receipt)} className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-50">
                     <Download className="h-3.5 w-3.5" /> Image
+                  </button>
+                  <button type="button" onClick={() => void handleDeleteManualReceipt(receipt)} className="inline-flex items-center justify-center gap-2 rounded-xl border border-rose-200 bg-white px-3 py-2 text-xs font-bold text-rose-700 transition hover:bg-rose-50" aria-label={`Delete receipt ${receipt.receiptNumber}`}>
+                    <Trash2 className="h-3.5 w-3.5" /> Delete
                   </button>
                 </div>
               </div>

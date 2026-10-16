@@ -15,6 +15,12 @@ export const MANUAL_RECEIPT_PAYMENT_MODES: readonly ManualReceiptPaymentMode[] =
   'OTHER',
 ];
 
+type ManualReceiptInput = Pick<
+  ManualReceipt,
+  'accountNumber' | 'transactionDate' | 'transactionAmount' | 'debitCredit' | 'paymentMode' |
+  'chequeNumber' | 'transactionDescription' | 'transactionId' | 'remarks'
+> & { receiptNumber?: string };
+
 let schemaInitialized = false;
 
 async function ensureDbInitialized() {
@@ -49,20 +55,16 @@ function mapManualReceiptRow(row: Record<string, unknown>): ManualReceipt {
   };
 }
 
-export async function getManualReceipts(): Promise<ManualReceipt[]> {
-  await ensureDbInitialized();
-  const result = await getTursoClient().execute(
-    'SELECT * FROM manual_receipts ORDER BY transaction_date DESC, created_at DESC'
-  );
-  return result.rows.map((row) => mapManualReceiptRow(row as Record<string, unknown>));
+async function getManualReceiptById(id: string): Promise<ManualReceipt | null> {
+  const result = await getTursoClient().execute({
+    sql: 'SELECT * FROM manual_receipts WHERE id = ? LIMIT 1',
+    args: [id],
+  });
+  const row = result.rows[0] as Record<string, unknown> | undefined;
+  return row ? mapManualReceiptRow(row) : null;
 }
 
-export async function createManualReceipt(
-  data: Omit<ManualReceipt, 'id' | 'receiptNumber' | 'createdAt' | 'createdBy'> & { receiptNumber?: string },
-  actor: AuditActor,
-): Promise<ManualReceipt> {
-  await ensureDbInitialized();
-
+function normalizeManualReceiptInput(data: ManualReceiptInput) {
   const accountNumber = String(data.accountNumber || '').trim();
   const transactionDate = String(data.transactionDate || '').trim();
   const transactionAmount = Number(data.transactionAmount || 0);
@@ -80,6 +82,46 @@ export async function createManualReceipt(
   if (!['DEBIT', 'CREDIT'].includes(debitCredit)) throw new Error('Select Debit or Credit.');
   if (!MANUAL_RECEIPT_PAYMENT_MODES.includes(paymentMode)) throw new Error('Select a valid payment mode.');
   if (paymentMode === 'CHEQUE' && !chequeNumber) throw new Error('Cheque number is required for cheque payments.');
+
+  return {
+    accountNumber,
+    transactionDate,
+    transactionAmount,
+    debitCredit,
+    paymentMode,
+    chequeNumber,
+    transactionDescription,
+    transactionId,
+    remarks,
+  };
+}
+
+export async function getManualReceipts(): Promise<ManualReceipt[]> {
+  await ensureDbInitialized();
+  const result = await getTursoClient().execute(
+    'SELECT * FROM manual_receipts ORDER BY transaction_date DESC, created_at DESC'
+  );
+  return result.rows.map((row) => mapManualReceiptRow(row as Record<string, unknown>));
+}
+
+export async function createManualReceipt(
+  data: ManualReceiptInput,
+  actor: AuditActor,
+): Promise<ManualReceipt> {
+  await ensureDbInitialized();
+
+  const normalized = normalizeManualReceiptInput(data);
+  const {
+    accountNumber,
+    transactionDate,
+    transactionAmount,
+    debitCredit,
+    paymentMode,
+    chequeNumber,
+    transactionDescription,
+    transactionId,
+    remarks,
+  } = normalized;
 
   const id = `RCT-${randomUUID()}`;
   const receiptNumber = String(data.receiptNumber || '').trim() ||
@@ -143,4 +185,73 @@ export async function createManualReceipt(
   });
 
   return receipt;
+}
+
+export async function updateManualReceipt(id: string, data: ManualReceiptInput, actor: AuditActor): Promise<ManualReceipt> {
+  await ensureDbInitialized();
+  const existing = await getManualReceiptById(id);
+  if (!existing) throw new Error('Receipt not found.');
+
+  const normalized = normalizeManualReceiptInput(data);
+  await getTursoClient().execute({
+    sql: `UPDATE manual_receipts SET
+      account_number = ?, transaction_date = ?, transaction_amount = ?, debit_credit = ?,
+      payment_mode = ?, cheque_number = ?, transaction_description = ?, transaction_id = ?, remarks = ?
+      WHERE id = ?`,
+    args: [
+      normalized.accountNumber,
+      normalized.transactionDate,
+      normalized.transactionAmount,
+      normalized.debitCredit,
+      normalized.paymentMode,
+      normalized.chequeNumber,
+      normalized.transactionDescription,
+      normalized.transactionId,
+      normalized.remarks,
+      id,
+    ],
+  });
+
+  const updated = await getManualReceiptById(id);
+  if (!updated) throw new Error('Unable to load the updated receipt.');
+  await logAudit({
+    actorId: actor.id,
+    actorName: actor.name,
+    actorRoleId: actor.primaryRoleId,
+    action: 'Updated Manual Receipt',
+    target: `Receipt: ${updated.receiptNumber}`,
+    pageId: 'reports',
+    pageName: 'Receipt Book',
+    entityType: 'manual_receipt',
+    entityId: updated.id,
+    beforeVal: JSON.stringify(existing),
+    afterVal: JSON.stringify(updated),
+    isSensitive: false,
+  });
+  return updated;
+}
+
+export async function deleteManualReceipt(id: string, actor: AuditActor): Promise<void> {
+  await ensureDbInitialized();
+  const existing = await getManualReceiptById(id);
+  if (!existing) throw new Error('Receipt not found.');
+
+  await getTursoClient().execute({
+    sql: 'DELETE FROM manual_receipts WHERE id = ?',
+    args: [id],
+  });
+  await logAudit({
+    actorId: actor.id,
+    actorName: actor.name,
+    actorRoleId: actor.primaryRoleId,
+    action: 'Deleted Manual Receipt',
+    target: `Receipt: ${existing.receiptNumber}`,
+    pageId: 'reports',
+    pageName: 'Receipt Book',
+    entityType: 'manual_receipt',
+    entityId: existing.id,
+    beforeVal: JSON.stringify(existing),
+    afterVal: 'Deleted',
+    isSensitive: false,
+  });
 }
