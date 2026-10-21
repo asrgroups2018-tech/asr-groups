@@ -92,7 +92,7 @@ export function resolveRoutePermission(
                 ? 'collections'
                 : path === '/schedule' || path.startsWith('/schedule/')
                   ? 'schedule'
-                    : path === '/reports' || path.startsWith('/reports/') || path.startsWith('/api/manual-receipts')
+                    : path === '/reports' || path.startsWith('/reports/') || path.startsWith('/api/reports') || path.startsWith('/api/manual-receipts')
                     ? 'reports'
                     : path === '/historical-sheet' || path.startsWith('/historical-sheet/') || path.startsWith('/api/receipts')
                       ? 'historical-sheet'

@@ -292,6 +292,16 @@ export const SCHEMA_STATEMENTS = [
   );`,
   `CREATE INDEX IF NOT EXISTS idx_manual_receipts_date ON manual_receipts(transaction_date);`,
   `CREATE INDEX IF NOT EXISTS idx_manual_receipts_mode ON manual_receipts(payment_mode);`,
+
+  // 17. Editable Tally-style balance sheet
+  `CREATE TABLE IF NOT EXISTS balance_sheet_documents (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    title TEXT NOT NULL,
+    as_of_date TEXT NOT NULL,
+    entries TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    updated_by TEXT
+  );`,
 ];
 
 const AUTH_SCHEMA_STATEMENTS = [

@@ -177,6 +177,7 @@ export type AuditActionType =
   | 'Reset Password'
   | 'Changed Password'
   | 'Updated Settings'
+  | 'Updated Balance Sheet'
   | 'Triggered Backup'
   | 'Modified Shareholder Split'
   | 'Updated Approval Rule'

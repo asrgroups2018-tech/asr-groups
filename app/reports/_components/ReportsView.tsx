@@ -38,6 +38,7 @@ import { LoanLedger } from './LoanLedger';
 import { BounceReturnRegister } from './BounceReturnRegister';
 import { AreaWiseReport } from './AreaWiseReport';
 import { ForeclosureStatement } from './ForeclosureStatement';
+import { BalanceSheet } from './BalanceSheet';
 import { DateRangePicker } from '@/components/ui/DateRangePicker';
 import { CustomSelect } from '@/components/ui/CustomSelect';
 import { ModalFrame } from '@/components/ui/ModalFrame';
@@ -140,10 +141,11 @@ function reportForTransactions(report: CustomerReport, transactions: LedgerRow[]
   };
 }
 
-type ReportTab = 'master' | 'trial-balance' | 'day-book' | 'ageing' | 'monthly' | 'statement' | 'pnl' | 'receipt-book' | 'loan-ledger' | 'bounce-register' | 'area-wise' | 'foreclosure';
+type ReportTab = 'master' | 'balance-sheet' | 'trial-balance' | 'day-book' | 'ageing' | 'monthly' | 'statement' | 'pnl' | 'receipt-book' | 'loan-ledger' | 'bounce-register' | 'area-wise' | 'foreclosure';
 
 const TABS: { id: ReportTab; label: string; icon: React.ReactNode; description: string; dividerBefore?: boolean }[] = [
   { id: 'master', label: 'Master Report', icon: <FileBarChart className="h-3.5 w-3.5" />, description: 'Customer-wise ledger statements' },
+  { id: 'balance-sheet', label: 'Balance Sheet', icon: <Scale className="h-3.5 w-3.5" />, description: 'Editable Tally-style assets and liabilities' },
   { id: 'trial-balance', label: 'Trial Balance', icon: <Scale className="h-3.5 w-3.5" />, description: 'Dr vs Cr balance check' },
   { id: 'day-book', label: 'Day Book', icon: <BookOpen className="h-3.5 w-3.5" />, description: 'Daily collection register' },
   { id: 'ageing', label: 'Ageing Report', icon: <AlertTriangle className="h-3.5 w-3.5" />, description: 'Outstanding receivables' },
@@ -268,6 +270,7 @@ export const ReportsView: React.FC = () => {
     </nav>
 
     {/* Render active tab */}
+    {activeReportTab === 'balance-sheet' && <BalanceSheet />}
     {activeReportTab === 'trial-balance' && <TrialBalance />}
     {activeReportTab === 'day-book' && <DayBook />}
     {activeReportTab === 'ageing' && <AgeingReport />}
