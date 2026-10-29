@@ -310,7 +310,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isSavingReceipt, setIsSavingReceipt] = useState<boolean>(false);
-  const hasLoadedDataRef = React.useRef(false);
+  const loadedDataScopeRef = React.useRef<'core' | 'full' | null>(null);
 
   const resetSessionData = useCallback(() => {
     // These collections are session-scoped. Never allow records loaded for a
@@ -327,7 +327,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setApprovalRequests([]);
     setDashboardData(null);
     setIsLoading(true);
-    hasLoadedDataRef.current = false;
+    loadedDataScopeRef.current = null;
   }, []);
 
   useEffect(() => {
@@ -390,36 +390,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   }, [pathname, authenticatedUser, resetSessionData]);
 
-  // Re-read the persisted session permissions on navigation. This makes an
-  // access approval effective for an already logged-in employee without
-  // requiring a logout, browser restart, or cached page reload.
-  useEffect(() => {
-    if (!authenticatedUser || pathname === '/login') return;
-    const controller = new AbortController();
-    let cancelled = false;
-    fetch('/api/auth/me', { cache: 'no-store', signal: controller.signal })
-      .then((response) => (response.ok ? response.json() : { success: false }))
-      .then((json) => {
-        if (cancelled) return;
-        if (!json.success) {
-          setAuthenticatedUser(null);
-          setAuthReady(false);
-          return;
-        }
-        if (json.permissionMatrix) setPermissionMatrix(json.permissionMatrix);
-        if (json.roles) setRoles(json.roles);
-      })
-      .catch(() => {})
-      .finally(() => {
-        if (!cancelled) setAuthReady(true);
-      });
-
-    return () => {
-      cancelled = true;
-      controller.abort();
-    };
-  }, [pathname, authenticatedUser?.id]);
-
   const hasModulePermission = useCallback(
     (moduleId: string, action: ModuleAction = 'view') => {
       if (!authenticatedUser) return false;
@@ -469,21 +439,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, [authenticatedUser, hasModulePermission]);
 
-  // Fetch all primary datasets
+  // Fetch the datasets shared by the active workspace. Administration-only
+  // collections are deferred until the administration area is opened.
   const refreshAll = useCallback(async (showLoadingState = false) => {
     if (!authenticatedUser) {
       setIsLoading(false);
       return;
     }
 
-    if (showLoadingState || !hasLoadedDataRef.current) {
+    const isCustomerSession = authenticatedUser.isCustomer || authenticatedUser.primaryRoleId === CUSTOMER_ROLE_ID;
+    const isSuperAdminSession = authenticatedUser.assignedRoleIds.includes(0);
+    const loadAdminData = isSuperAdminSession && pathname.startsWith('/administration');
+    if (showLoadingState || loadedDataScopeRef.current === null) {
       setIsLoading(true);
     }
 
-    const isCustomerSession = authenticatedUser.isCustomer || authenticatedUser.primaryRoleId === CUSTOMER_ROLE_ID;
-    const isSuperAdminSession = authenticatedUser.assignedRoleIds.includes(0);
     const canView = (moduleId: string) =>
       isSuperAdminSession || (isCustomerSession && moduleId === 'admin' ? false : hasModulePermission(moduleId));
+    const loadDashboardData = pathname === '/dashboard' && canView('dashboard');
     const requestJson = (url: string, allowed: boolean) =>
       allowed
         ? fetch(url, { cache: 'no-store' }).then((response) => (response.ok ? response.json() : { success: false })).catch(() => ({ success: false }))
@@ -502,20 +475,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         loansRes,
         chequesRes,
         dashRes,
-        reqsRes,
       ] = await Promise.all([
-        requestJson('/api/admin/users', isSuperAdminSession),
-        requestJson('/api/admin/roles', isSuperAdminSession),
-        requestJson('/api/admin/permissions', isSuperAdminSession),
+        requestJson('/api/admin/users', loadAdminData),
+        requestJson('/api/admin/roles', loadAdminData),
+        requestJson('/api/admin/permissions', loadAdminData),
         requestJson('/api/admin/rules', isSuperAdminSession),
-        requestJson('/api/admin/audit', isSuperAdminSession),
+        requestJson('/api/admin/audit', loadAdminData),
         requestJson('/api/admin/settings', isSuperAdminSession),
         requestJson('/api/customers', canView('customers')),
         requestJson('/api/companies', canView('companies')),
         requestJson('/api/loans', canView('loans')),
         requestJson('/api/cheques', canView('cheques')),
-        requestJson('/api/dashboard', canView('dashboard')),
-        requestJson('/api/requests', canView('requests')),
+        requestJson('/api/dashboard', loadDashboardData),
       ]);
 
       if (usersRes.success && usersRes.data) setUsers(usersRes.data);
@@ -529,28 +500,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (loansRes.success && loansRes.data) setLoans(loansRes.data);
       if (chequesRes && chequesRes.success && chequesRes.data) setCheques(chequesRes.data);
       if (dashRes.success && dashRes.data) setDashboardData(dashRes.data);
-      if (reqsRes && reqsRes.success && reqsRes.data) setApprovalRequests(reqsRes.data);
 
-      hasLoadedDataRef.current = true;
-      // Also trigger initial receipt fetch
-      fetchReceipts();
+      loadedDataScopeRef.current = loadAdminData ? 'full' : 'core';
     } catch (err) {
       console.error('Data load error:', err);
     } finally {
       setIsLoading(false);
     }
-  }, [authenticatedUser, fetchReceipts, hasModulePermission]);
+  }, [authenticatedUser, hasModulePermission, pathname]);
 
   useEffect(() => {
     if (!authReady || !authenticatedUser || pathname === '/login') {
       setIsLoading(false);
       return;
     }
-    // Only load initial data once on mount / initial auth
-    if (!hasLoadedDataRef.current) {
+    const needsAdminData = authenticatedUser.assignedRoleIds.includes(0) && pathname.startsWith('/administration');
+    const needsDashboardData = pathname === '/dashboard' && hasModulePermission('dashboard');
+    const hasRequiredData =
+      (loadedDataScopeRef.current === 'full' || (!needsAdminData && loadedDataScopeRef.current === 'core')) &&
+      (!needsDashboardData || dashboardData !== null);
+    if (!hasRequiredData) {
       refreshAll(true);
     }
-  }, [authReady, authenticatedUser, pathname, refreshAll]);
+  }, [authReady, authenticatedUser, dashboardData, hasModulePermission, pathname, refreshAll]);
 
   // Current Actor
   const effectiveRoleId = authenticatedUser

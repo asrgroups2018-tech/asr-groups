@@ -59,15 +59,48 @@ export async function getLoans(query?: string, customerId?: string): Promise<Loa
   }
   sql += ' ORDER BY l.id ASC';
 
-  const loansResult = await client.execute({ sql, args });
+  const childCustomerFilter = customerId
+    ? ' WHERE lcs.loan_id IN (SELECT id FROM loans WHERE customer_id = ?)'
+    : '';
+  const childCustomerArgs = customerId ? [customerId] : [];
+  const installmentCustomerFilter = customerId
+    ? ' WHERE i.loan_id IN (SELECT id FROM loans WHERE customer_id = ?)'
+    : '';
+  const installmentSplitCustomerFilter = customerId
+    ? ' WHERE ics.installment_id IN (SELECT i.id FROM installments i JOIN loans l ON l.id = i.loan_id WHERE l.customer_id = ?)'
+    : '';
 
-  // Fetch all splits
-  const splitsResult = await client.execute(`
-    SELECT lcs.id, lcs.loan_id, lcs.company_id, lcs.split_percent, lcs.split_amount,
-           comp.short_code as company_code, comp.name as company_name, comp.is_outside_party
-    FROM loan_company_splits lcs
-    LEFT JOIN companies comp ON comp.id = lcs.company_id
-  `);
+  // Keep the related loan data consistent while reducing four remote database
+  // round trips to one read batch (important for hosted Turso deployments).
+  const [loansResult, splitsResult, instResult, instSplitsResult] = await client.batch([
+    { sql, args },
+    {
+      sql: `
+        SELECT lcs.id, lcs.loan_id, lcs.company_id, lcs.split_percent, lcs.split_amount,
+               comp.short_code as company_code, comp.name as company_name, comp.is_outside_party
+        FROM loan_company_splits lcs
+        LEFT JOIN companies comp ON comp.id = lcs.company_id${childCustomerFilter}
+      `,
+      args: childCustomerArgs,
+    },
+    {
+      sql: `
+        SELECT i.id, i.loan_id, i.seq_no, i.due_date, i.amount_due, i.status, i.recd_date,
+               i.chq_no, i.place, i.dep_name, i.remarks, i.created_at
+        FROM installments i${installmentCustomerFilter}
+        ORDER BY i.seq_no ASC
+      `,
+      args: childCustomerArgs,
+    },
+    {
+      sql: `
+        SELECT ics.installment_id, ics.company_id, ics.amount, comp.short_code as company_code
+        FROM installment_company_splits ics
+        LEFT JOIN companies comp ON comp.id = ics.company_id${installmentSplitCustomerFilter}
+      `,
+      args: childCustomerArgs,
+    },
+  ], 'read');
 
   const splitsByLoan = new Map<string, LoanCompanySplit[]>();
   splitsResult.rows.forEach((r) => {
@@ -84,20 +117,6 @@ export async function getLoans(query?: string, customerId?: string): Promise<Loa
       splitAmount: Number(r.split_amount || 0),
     });
   });
-
-  // Fetch all installments
-  const instResult = await client.execute(`
-    SELECT id, loan_id, seq_no, due_date, amount_due, status, recd_date, chq_no, place, dep_name, remarks, created_at
-    FROM installments
-    ORDER BY seq_no ASC
-  `);
-
-  // Fetch all installment company splits
-  const instSplitsResult = await client.execute(`
-    SELECT ics.installment_id, ics.company_id, ics.amount, comp.short_code as company_code
-    FROM installment_company_splits ics
-    LEFT JOIN companies comp ON comp.id = ics.company_id
-  `);
 
   const instSplitsMap = new Map<string, Record<string, number>>();
   instSplitsResult.rows.forEach((r) => {

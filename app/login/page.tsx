@@ -27,7 +27,6 @@ const BG_IMAGES = [
 export default function LoginPage() {
   const router = useRouter();
 
-  // Animation state phase: 'intro' (logo coming and going) -> 'reveal'
   const [animPhase, setAnimPhase] = useState<"intro" | "reveal">("intro");
   const [currentBgIndex, setCurrentBgIndex] = useState(0);
 
@@ -42,13 +41,12 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [focusedField, setFocusedField] = useState<"username" | "password" | null>(null);
 
-  // Keep the brand intro brief so the sign-in form is available quickly.
+  // Keep the branded intro visible briefly without making login wait through
+  // the old long animation, and respect reduced-motion preferences.
   useEffect(() => {
-    const delay = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 800;
-    const timer = setTimeout(() => {
-      setAnimPhase("reveal");
-    }, delay);
-    return () => clearTimeout(timer);
+    const introDuration = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 320;
+    const introTimer = window.setTimeout(() => setAnimPhase("reveal"), introDuration);
+    return () => window.clearTimeout(introTimer);
   }, []);
 
   // Background image slideshow rotation every 5 seconds
@@ -116,13 +114,11 @@ export default function LoginPage() {
       storage.setItem("asr_user", JSON.stringify(res.user));
 
       setSuccess(true);
-      setTimeout(() => {
-        const requestedPath = new URLSearchParams(window.location.search).get("next");
-        const target = requestedPath && requestedPath.startsWith("/") && !requestedPath.startsWith("//")
-          ? requestedPath
-          : "/dashboard";
-        router.replace(target);
-      }, 600);
+      const requestedPath = new URLSearchParams(window.location.search).get("next");
+      const target = requestedPath && requestedPath.startsWith("/") && !requestedPath.startsWith("//")
+        ? requestedPath
+        : "/dashboard";
+      router.replace(target);
     } catch (err: unknown) {
       if (err instanceof DOMException && err.name === "AbortError") {
         setError("The sign-in service took too long to respond. Please try again.");

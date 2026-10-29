@@ -25,13 +25,21 @@ export async function getCompanies(): Promise<Company[]> {
   await ensureDbInitialized();
   const client = getTursoClient();
 
-  const compRes = await client.execute('SELECT * FROM companies WHERE (is_active IS NULL OR is_active != 0) ORDER BY is_outside_party ASC, short_code ASC');
-  const splitsRes = await client.execute('SELECT company_id, loan_id, split_amount FROM loan_company_splits');
-  const instSplitsRes = await client.execute(`
-    SELECT ics.company_id, ics.amount, i.status, i.loan_id
-    FROM installment_company_splits ics
-    JOIN installments i ON i.id = ics.installment_id
-  `);
+  const [compRes, splitsRes, instSplitsRes] = await client.batch([
+    {
+      sql: 'SELECT * FROM companies WHERE (is_active IS NULL OR is_active != 0) ORDER BY is_outside_party ASC, short_code ASC',
+      args: [],
+    },
+    { sql: 'SELECT company_id, loan_id, split_amount FROM loan_company_splits', args: [] },
+    {
+      sql: `
+        SELECT ics.company_id, ics.amount, i.status, i.loan_id
+        FROM installment_company_splits ics
+        JOIN installments i ON i.id = ics.installment_id
+      `,
+      args: [],
+    },
+  ], 'read');
 
   const fundedMap = new Map<string, number>();
   const loanSetMap = new Map<string, Set<string>>();

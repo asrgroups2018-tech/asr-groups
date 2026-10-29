@@ -185,6 +185,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpenMobile, onCloseMobile })
                     key={item.id}
                     type="button"
                     onClick={() => handleNavClick(item.id, item.href)}
+                    onMouseEnter={() => router.prefetch(item.href)}
+                    onFocus={() => router.prefetch(item.href)}
                     aria-current={isActive ? 'page' : undefined}
                     className={`card-float w-full flex items-center justify-between rounded-lg px-2.5 py-2 text-[11px] font-semibold transition-all duration-140 ease-out group cursor-pointer btn-press ${
                       isActive

@@ -40,11 +40,13 @@ export async function getCustomers(query?: string): Promise<Customer[]> {
   }
   sql += ' ORDER BY name ASC';
 
-  const custResult = await client.execute({ sql, args });
-
-  // Aggregate statistics across loans and installments for each customer
-  const loansResult = await client.execute('SELECT id, customer_id, total_amount, status FROM loans');
-  const instResult = await client.execute('SELECT loan_id, amount_due, status FROM installments');
+  // Fetch the directory and its aggregates in one read batch to avoid
+  // sequential hosted-database round trips on the customers page.
+  const [custResult, loansResult, instResult] = await client.batch([
+    { sql, args },
+    { sql: 'SELECT id, customer_id, total_amount, status FROM loans', args: [] },
+    { sql: 'SELECT loan_id, amount_due, status FROM installments', args: [] },
+  ], 'read');
 
   const customerLoansMap = new Map<string, any[]>();
   loansResult.rows.forEach((l) => {

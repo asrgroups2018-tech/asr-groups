@@ -141,7 +141,7 @@ body:has(.asr-login-root) {
   justify-content: space-between;
   overflow: hidden;
   opacity: 0;
-  animation: asrPageFadeIn 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.45s forwards;
+  animation: asrPageFadeIn 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.05s forwards;
 }
 
 .asr-theme-toggle {

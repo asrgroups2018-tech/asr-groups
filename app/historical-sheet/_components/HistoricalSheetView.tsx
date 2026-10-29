@@ -29,6 +29,13 @@ export const HistoricalSheetView: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [savingRowId, setSavingRowId] = useState<string | null>(null);
   const [activeEditingCell, setActiveEditingCell] = useState<{ id: string; field: string } | null>(null);
+  const hasLoadedReceipts = useRef(false);
+
+  useEffect(() => {
+    if (hasLoadedReceipts.current) return;
+    hasLoadedReceipts.current = true;
+    void fetchReceipts();
+  }, [fetchReceipts]);
 
   // Pagination for ultra-fast performance with 721 rows
   const [page, setPage] = useState(1);

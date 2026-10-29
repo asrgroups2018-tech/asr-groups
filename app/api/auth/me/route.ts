@@ -12,8 +12,10 @@ export async function GET(request: NextRequest) {
     // The session bootstrap is also the first permission read for staff users.
     // Returning the persisted matrix here keeps navigation and initial data
     // loading aligned with the server before any protected page is rendered.
-    const permissionMatrix = await db.getPermissionMatrix();
-    const roles = await db.getRoles();
+    const [permissionMatrix, roles] = await Promise.all([
+      db.getPermissionMatrix(),
+      db.getRoles(),
+    ]);
     return NextResponse.json({
       success: true,
       data: toPublicUser(user),
