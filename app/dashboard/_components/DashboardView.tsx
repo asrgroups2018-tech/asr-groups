@@ -426,7 +426,7 @@ export const DashboardView: React.FC = () => {
   }
 
   return (
-    <main className="p-4 sm:p-8 max-w-7xl w-full mx-auto space-y-6 animate-in fade-in duration-200">
+    <div className="dashboard-page p-4 sm:p-8 max-w-7xl w-full mx-auto space-y-6 animate-in fade-in duration-200">
       {pendingChequesToday.length > 0 && (
         <button
           type="button"
@@ -458,14 +458,14 @@ export const DashboardView: React.FC = () => {
       )}
 
       {/* ─── Top Brand Header & Filter Bar ─── */}
-      <div className="bg-white p-3 sm:p-5 lg:p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col xl:flex-row xl:items-center justify-between gap-4">
+      <div className="dashboard-heading bg-white p-4 sm:p-5 lg:p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col xl:flex-row xl:items-center justify-between gap-4">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2.5">
             <div className="w-10 h-10 rounded-xl bg-[#701A35] text-[#EED8A1] shadow-sm flex items-center justify-center shrink-0">
               <TrendingUp className="w-5 h-5" />
             </div>
             <div>
-              <h1 className="text-xl font-bold font-serif text-slate-950 tracking-tight">
+              <h1 className="text-xl sm:text-2xl font-bold font-serif text-slate-950 tracking-tight">
                 Executive Financial Command
               </h1>
               <p className="text-xs text-slate-600 font-medium mt-0.5">
@@ -1006,6 +1006,6 @@ export const DashboardView: React.FC = () => {
           </div>
         </div>
       </div>
-    </main>
+    </div>
   );
 };

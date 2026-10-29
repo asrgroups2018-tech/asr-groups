@@ -44,15 +44,17 @@ export default function LoginPage() {
 
   // Keep the brand intro brief so the sign-in form is available quickly.
   useEffect(() => {
+    const delay = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 800;
     const timer = setTimeout(() => {
       setAnimPhase("reveal");
-    }, 800);
+    }, delay);
     return () => clearTimeout(timer);
   }, []);
 
   // Background image slideshow rotation every 5 seconds
   useEffect(() => {
     if (animPhase !== "reveal") return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const bgTimer = setInterval(() => {
       setCurrentBgIndex((prev) => (prev + 1) % BG_IMAGES.length);
     }, 5000);
@@ -223,6 +225,8 @@ export default function LoginPage() {
                     className="asr-input-field"
                     disabled={loading || success}
                     autoComplete="username"
+                    required
+                    aria-invalid={Boolean(error && !form.username.trim())}
                     suppressHydrationWarning
                   />
                 </div>
@@ -250,12 +254,13 @@ export default function LoginPage() {
                     className="asr-input-field"
                     disabled={loading || success}
                     autoComplete="current-password"
+                    required
+                    aria-invalid={Boolean(error && !form.password.trim())}
                   />
                   <button
                     type="button"
                     className="asr-eye-toggle"
                     onClick={() => setShowPassword(!showPassword)}
-                    tabIndex={-1}
                     aria-label={showPassword ? "Hide password" : "Show password"}
                   >
                     {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}

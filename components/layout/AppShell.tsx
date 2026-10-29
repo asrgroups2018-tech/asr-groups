@@ -27,6 +27,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
 
   return (
     <div className="app-shell relative flex h-dvh w-full flex-col overflow-hidden bg-[#F8F6F1]">
+      <a href="#main-content" className="app-skip-link">Skip to main content</a>
       <div className="flex min-h-0 w-full flex-1 overflow-hidden">
         <Sidebar
           isOpenMobile={isMobileSidebarOpen}
@@ -42,7 +43,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
           >
             <Menu className="h-5 w-5" />
           </button>
-          <main className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden pb-6 pt-12 md:pt-0">
+          <main id="main-content" tabIndex={-1} className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden pb-6 pt-12 outline-none md:pt-0">
             {children}
           </main>
           <Footer />

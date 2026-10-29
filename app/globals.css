@@ -50,6 +50,40 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+.app-shell :focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--gold-primary) 88%, white);
+  outline-offset: 2px;
+}
+
+.app-skip-link {
+  position: fixed;
+  top: 0.75rem;
+  left: 0.75rem;
+  z-index: 100;
+  transform: translateY(-160%);
+  border-radius: 0.75rem;
+  background: var(--surface);
+  padding: 0.7rem 1rem;
+  color: var(--foreground);
+  font-size: 0.875rem;
+  font-weight: 700;
+  box-shadow: 0 8px 24px rgb(15 23 42 / 18%);
+}
+
+.app-skip-link:focus-visible {
+  transform: translateY(0);
+}
+
+/* Warm, quiet canvas and a gold edge give the executive dashboard a clearer
+   focal point while keeping the existing ASR palette and card treatment. */
+.dashboard-page {
+  background-image: radial-gradient(ellipse at 12% 0%, rgb(197 160 89 / 9%), transparent 30rem);
+}
+
+.dashboard-heading {
+  box-shadow: inset 3px 0 0 var(--gold-primary), 0 1px 3px rgb(36 19 27 / 6%);
+}
+
 /* Menus live above cards and table scroll containers, using the current theme. */
 .app-popover {
   color: var(--foreground);
@@ -556,7 +590,7 @@ tbody tr {
     z-index: 1;
   }
 
-  /* Page-level cards use shared Tailwind surface classes throughout the app. */
+  /* Keep the established lift treatment for page-level cards. */
   main [class*="rounded-2xl"][class*="bg-white"],
   main [class*="rounded-3xl"][class*="bg-white"],
   main [class*="rounded-xl"][class*="bg-gradient-to"],
@@ -576,6 +610,7 @@ tbody tr {
     position: relative;
     z-index: 1;
   }
+
 }
 
 @media (prefers-reduced-motion: reduce) {

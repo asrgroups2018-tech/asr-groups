@@ -128,12 +128,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpenMobile, onCloseMobile })
       {isOpenMobile && (
         <div
           onClick={onCloseMobile}
+          aria-hidden="true"
           className="fixed inset-0 z-40 bg-black/60 backdrop-blur-xs md:hidden"
         />
       )}
 
       {/* Sidebar Container */}
       <aside
+        aria-label="Primary navigation"
         className={`fixed inset-y-0 left-0 z-40 h-full w-60 shrink-0 bg-[#1A0A13] text-slate-300 flex flex-col border-r border-[#2C1420] transition-transform duration-300 ease-in-out select-none md:relative md:inset-auto md:left-auto md:translate-x-0 ${
           isOpenMobile ? 'translate-x-0' : '-translate-x-full'
         }`}
@@ -163,6 +165,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpenMobile, onCloseMobile })
             type="button"
             onClick={onCloseMobile}
             className="md:hidden text-slate-400 hover:text-white p-1 rounded-lg hover:bg-white/10"
+            aria-label="Close navigation menu"
           >
             <X className="w-5 h-5" />
           </button>
@@ -171,7 +174,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpenMobile, onCloseMobile })
         {/* Navigation Section */}
         <div className="min-h-0 flex-1 overflow-hidden px-2.5 py-3">
           <div>
-            <nav className="space-y-0.5">
+            <nav aria-label="Main menu" className="space-y-0.5">
               {navItems.map((item) => {
                 const isActive =
                   (item.id === 'dashboard' && (pathname === '/' || pathname === '/dashboard' || pathname.startsWith('/dashboard'))) ||
@@ -182,6 +185,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpenMobile, onCloseMobile })
                     key={item.id}
                     type="button"
                     onClick={() => handleNavClick(item.id, item.href)}
+                    aria-current={isActive ? 'page' : undefined}
                     className={`card-float w-full flex items-center justify-between rounded-lg px-2.5 py-2 text-[11px] font-semibold transition-all duration-140 ease-out group cursor-pointer btn-press ${
                       isActive
                         ? 'bg-[#2E1220] text-[#EED8A1] border border-[#C5A059]/40 shadow-xs font-bold'
