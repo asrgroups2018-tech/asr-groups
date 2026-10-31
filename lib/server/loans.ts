@@ -40,7 +40,8 @@ export async function getLoans(query?: string, customerId?: string): Promise<Loa
 
   let sql = `
     SELECT 
-      l.id as loan_id, l.customer_id, l.code_no, l.total_amount, l.disbursed_amount, l.interest_amount, l.start_date,
+      l.id as loan_id, l.customer_id, l.code_no, l.total_amount, l.disbursed_amount, l.interest_amount,
+      l.opening_balance, l.opening_balance_type, l.start_date,
       l.installment_count, l.frequency, l.status as loan_status, l.created_at as loan_created_at,
       c.name as customer_name, c.place as customer_place
     FROM loans l
@@ -175,7 +176,10 @@ export async function getLoans(query?: string, customerId?: string): Promise<Loa
 
     const instSum = installments.reduce((sum, ins) => sum + (ins.amountDue || 0), 0);
     const totalAmount = installments.length > 0 ? instSum : Number(row.total_amount || 0);
-    const totalOutstanding = Math.max(0, totalAmount - totalCollected);
+    const openingBalance = Math.max(0, Number(row.opening_balance || 0));
+    const openingBalanceType = String(row.opening_balance_type || 'DEBIT').toUpperCase() === 'CREDIT' ? 'CREDIT' : 'DEBIT';
+    const openingSigned = openingBalanceType === 'CREDIT' ? -openingBalance : openingBalance;
+    const totalOutstanding = Math.max(0, openingSigned + totalAmount - totalCollected);
 
     return {
       id: lid,
@@ -186,6 +190,8 @@ export async function getLoans(query?: string, customerId?: string): Promise<Loa
       totalAmount,
       disbursedAmount: row.disbursed_amount != null ? Number(row.disbursed_amount) : null,
       interestAmount: row.interest_amount != null ? Number(row.interest_amount) : null,
+      openingBalance,
+      openingBalanceType: openingBalanceType as 'DEBIT' | 'CREDIT',
       startDate: String(row.start_date || new Date().toISOString().slice(0, 10)),
       installmentCount: Number(row.installment_count || installments.length),
       frequency: (row.frequency as any) || 'Monthly',
@@ -250,6 +256,8 @@ export async function createLoan(data: {
   totalAmount: number;
   disbursedAmount?: number | null;
   interestAmount?: number | null;
+  openingBalance?: number;
+  openingBalanceType?: 'DEBIT' | 'CREDIT';
   startDate: string;
   frequency: 'Weekly' | 'Monthly';
   splits: { companyId: string; splitPercent: number; splitAmount: number }[];
@@ -273,9 +281,9 @@ export async function createLoan(data: {
   const statements: any[] = [
     {
       sql: `INSERT INTO loans (
-        id, customer_id, code_no, total_amount, disbursed_amount, interest_amount, start_date,
+        id, customer_id, code_no, total_amount, disbursed_amount, interest_amount, opening_balance, opening_balance_type, start_date,
         installment_count, frequency, status, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       args: [
         loanId,
         data.customerId,
@@ -283,6 +291,8 @@ export async function createLoan(data: {
         data.totalAmount,
         data.disbursedAmount ?? null,
         data.interestAmount ?? null,
+        Math.max(0, Number(data.openingBalance || 0)),
+        data.openingBalanceType === 'CREDIT' ? 'CREDIT' : 'DEBIT',
         data.startDate,
         data.installments.length,
         data.frequency,
@@ -743,6 +753,33 @@ export async function updateFullLoan(
   });
 
   return await getLoanById(canonicalLoanId);
+}
+
+export async function updateLoanOpeningBalance(
+  loanId: string,
+  openingBalance: number,
+  openingBalanceType: 'DEBIT' | 'CREDIT',
+  actor?: AuditActor,
+): Promise<Loan | null> {
+  await ensureDbInitialized();
+  const current = await getLoanById(loanId);
+  if (!current) return null;
+  const amount = Math.max(0, Number(openingBalance) || 0);
+  const balanceType = openingBalanceType === 'CREDIT' ? 'CREDIT' : 'DEBIT';
+  await getTursoClient().execute({
+    sql: 'UPDATE loans SET opening_balance = ?, opening_balance_type = ? WHERE id = ?',
+    args: [amount, balanceType, current.id],
+  });
+  const updated = await getLoanById(current.id);
+  await logAudit({
+    ...auditActor(actor),
+    action: 'Updated Loan',
+    target: `Loan: ${current.id} opening balance`,
+    beforeVal: JSON.stringify({ openingBalance: current.openingBalance || 0, openingBalanceType: current.openingBalanceType || 'DEBIT' }),
+    afterVal: JSON.stringify({ openingBalance: amount, openingBalanceType: balanceType }),
+    isSensitive: false,
+  });
+  return updated;
 }
 
 export async function deleteLoan(id: string, actor?: AuditActor): Promise<boolean> {

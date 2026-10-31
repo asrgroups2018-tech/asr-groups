@@ -5,6 +5,7 @@ import {
   AlertOctagon,
   AlertTriangle,
   Banknote,
+  Building2,
   BarChart3,
   BookOpen,
   Calculator,
@@ -38,6 +39,7 @@ import { LoanLedger } from './LoanLedger';
 import { BounceReturnRegister } from './BounceReturnRegister';
 import { AreaWiseReport } from './AreaWiseReport';
 import { ForeclosureStatement } from './ForeclosureStatement';
+import { CompanySyndicationReport } from './CompanySyndicationReport';
 import { BalanceSheet } from './BalanceSheet';
 import { DateRangePicker } from '@/components/ui/DateRangePicker';
 import { CustomSelect } from '@/components/ui/CustomSelect';
@@ -141,7 +143,7 @@ function reportForTransactions(report: CustomerReport, transactions: LedgerRow[]
   };
 }
 
-type ReportTab = 'master' | 'balance-sheet' | 'trial-balance' | 'day-book' | 'ageing' | 'monthly' | 'statement' | 'pnl' | 'receipt-book' | 'loan-ledger' | 'bounce-register' | 'area-wise' | 'foreclosure';
+type ReportTab = 'master' | 'balance-sheet' | 'trial-balance' | 'day-book' | 'ageing' | 'monthly' | 'statement' | 'company-ledger' | 'pnl' | 'receipt-book' | 'loan-ledger' | 'bounce-register' | 'area-wise' | 'foreclosure';
 
 const TABS: { id: ReportTab; label: string; icon: React.ReactNode; description: string; dividerBefore?: boolean }[] = [
   { id: 'master', label: 'Master Report', icon: <FileBarChart className="h-3.5 w-3.5" />, description: 'Customer-wise ledger statements' },
@@ -151,6 +153,7 @@ const TABS: { id: ReportTab; label: string; icon: React.ReactNode; description: 
   { id: 'ageing', label: 'Ageing Report', icon: <AlertTriangle className="h-3.5 w-3.5" />, description: 'Outstanding receivables' },
   { id: 'monthly', label: 'Monthly Summary', icon: <BarChart3 className="h-3.5 w-3.5" />, description: 'Month-wise collection rates' },
   { id: 'statement', label: 'Account Statement', icon: <User className="h-3.5 w-3.5" />, description: 'Print-ready customer statement' },
+  { id: 'company-ledger', label: 'Company Ledger', icon: <Building2 className="h-3.5 w-3.5" />, description: 'Opening, funding, recovery, and closing balances by company' },
   { id: 'pnl', label: 'Portfolio P&L', icon: <TrendingUp className="h-3.5 w-3.5" />, description: 'Income vs capital deployed', dividerBefore: true },
   { id: 'receipt-book', label: 'Receipt Book', icon: <Banknote className="h-3.5 w-3.5" />, description: 'Mode-wise receipt register' },
   { id: 'loan-ledger', label: 'Loan Ledger', icon: <Layers className="h-3.5 w-3.5" />, description: 'Per-loan Dr/Cr ledger' },
@@ -276,6 +279,7 @@ export const ReportsView: React.FC = () => {
     {activeReportTab === 'ageing' && <AgeingReport />}
     {activeReportTab === 'monthly' && <MonthlyCollectionSummary />}
     {activeReportTab === 'statement' && <AccountStatement />}
+    {activeReportTab === 'company-ledger' && <CompanySyndicationReport />}
     {activeReportTab === 'pnl' && <PortfolioPnL />}
     {activeReportTab === 'receipt-book' && <CashReceiptBook />}
     {activeReportTab === 'loan-ledger' && <LoanLedger />}

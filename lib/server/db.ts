@@ -32,6 +32,7 @@ export const db = {
   getCompanies: companyOps.getCompanies,
   getCompanyById: companyOps.getCompanyById,
   createCompany: companyOps.createCompany,
+  updateCompanyOpeningBalance: companyOps.updateCompanyOpeningBalance,
   deleteCompany: companyOps.deleteCompany,
 
   // Loans & Installments
@@ -40,6 +41,7 @@ export const db = {
   createLoan: loanOps.createLoan,
   updateLoanInstallment: loanOps.updateLoanInstallment,
   updateFullLoan: loanOps.updateFullLoan,
+  updateLoanOpeningBalance: loanOps.updateLoanOpeningBalance,
   deleteLoan: loanOps.deleteLoan,
   getHistoricalReceipts: loanOps.getHistoricalReceipts,
   getDashboardStats: loanOps.getDashboardStats,

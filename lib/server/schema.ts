@@ -41,6 +41,8 @@ export const SCHEMA_STATEMENTS = [
     short_code TEXT NOT NULL UNIQUE,
     is_outside_party INTEGER NOT NULL DEFAULT 0,
     is_active INTEGER NOT NULL DEFAULT 1,
+    opening_balance REAL NOT NULL DEFAULT 0,
+    opening_balance_type TEXT NOT NULL DEFAULT 'DEBIT',
     created_at TEXT NOT NULL
   );`,
   `CREATE INDEX IF NOT EXISTS idx_companies_code ON companies(short_code);`,
@@ -54,6 +56,8 @@ export const SCHEMA_STATEMENTS = [
     total_amount REAL NOT NULL,
     disbursed_amount REAL,
     interest_amount REAL,
+    opening_balance REAL NOT NULL DEFAULT 0,
+    opening_balance_type TEXT NOT NULL DEFAULT 'DEBIT',
     start_date TEXT,
     installment_count INTEGER NOT NULL DEFAULT 1,
     frequency TEXT NOT NULL DEFAULT 'Monthly',
@@ -355,12 +359,32 @@ export function initializeSchema(client: Client): Promise<void> {
         // Column may already exist
       }
       try {
+        await client.execute('ALTER TABLE companies ADD COLUMN opening_balance REAL NOT NULL DEFAULT 0');
+      } catch {
+        // Column may already exist
+      }
+      try {
+        await client.execute("ALTER TABLE companies ADD COLUMN opening_balance_type TEXT NOT NULL DEFAULT 'DEBIT'");
+      } catch {
+        // Column may already exist
+      }
+      try {
         await client.execute('ALTER TABLE loans ADD COLUMN disbursed_amount REAL');
       } catch {
         // Column may already exist
       }
       try {
         await client.execute('ALTER TABLE loans ADD COLUMN interest_amount REAL');
+      } catch {
+        // Column may already exist
+      }
+      try {
+        await client.execute('ALTER TABLE loans ADD COLUMN opening_balance REAL NOT NULL DEFAULT 0');
+      } catch {
+        // Column may already exist
+      }
+      try {
+        await client.execute("ALTER TABLE loans ADD COLUMN opening_balance_type TEXT NOT NULL DEFAULT 'DEBIT'");
       } catch {
         // Column may already exist
       }

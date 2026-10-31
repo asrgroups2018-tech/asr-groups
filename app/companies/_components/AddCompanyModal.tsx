@@ -17,6 +17,8 @@ export const AddCompanyModal: React.FC<AddCompanyModalProps> = ({ isOpen, onClos
   const [name, setName] = useState('');
   const [shortCode, setShortCode] = useState('');
   const [isOutsideParty, setIsOutsideParty] = useState(false);
+  const [openingBalance, setOpeningBalance] = useState('');
+  const [openingBalanceType, setOpeningBalanceType] = useState<'DEBIT' | 'CREDIT'>('DEBIT');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (!isOpen) return null;
@@ -27,12 +29,19 @@ export const AddCompanyModal: React.FC<AddCompanyModalProps> = ({ isOpen, onClos
       showToast('Validation Error', 'Company Name and Short Code are required.', 'warning');
       return;
     }
+    const parsedOpeningBalance = openingBalance.trim() ? Number(openingBalance) : 0;
+    if (!Number.isFinite(parsedOpeningBalance) || parsedOpeningBalance < 0) {
+      showToast('Validation Error', 'Opening Balance must be a valid non-negative amount.', 'warning');
+      return;
+    }
 
     setIsSubmitting(true);
     const created = await createCompany({
       name: name.trim(),
       shortCode: shortCode.trim().toUpperCase(),
       isOutsideParty,
+      openingBalance: parsedOpeningBalance,
+      openingBalanceType,
     });
     setIsSubmitting(false);
 
@@ -41,6 +50,8 @@ export const AddCompanyModal: React.FC<AddCompanyModalProps> = ({ isOpen, onClos
       setName('');
       setShortCode('');
       setIsOutsideParty(false);
+      setOpeningBalance('');
+      setOpeningBalanceType('DEBIT');
     }
   };
 
@@ -111,7 +122,41 @@ export const AddCompanyModal: React.FC<AddCompanyModalProps> = ({ isOpen, onClos
               <span className="font-bold text-slate-800 text-xs">Outside-Party Company</span>
             </label>
             <p className="text-[11px] text-slate-500">
-              Check this if this entity is an external syndicate/funder (e.g. CS, MC, TA, TATVA) rather than ASR GROUP's own internal company.
+              Check this if this entity is an external syndicate/funder (e.g. CS, MC, TA, TATVA) rather than ASR GROUP&apos;s own internal company.
+            </p>
+          </div>
+
+          <div className="p-3 bg-[#FAF8F5] rounded-xl border border-[#E6E1D6] space-y-2">
+            <div className="flex items-center justify-between gap-3">
+              <label htmlFor="opening-balance" className="font-bold text-slate-800 text-xs">
+                Opening Balance <span className="font-normal text-slate-400">(Optional)</span>
+              </label>
+              <span className="text-[10px] text-slate-500">For starting ledger balance</span>
+            </div>
+            <div className="grid grid-cols-[1fr_auto] gap-2">
+              <input
+                id="opening-balance"
+                type="number"
+                min="0"
+                step="0.01"
+                inputMode="decimal"
+                placeholder="e.g. 1,00,000"
+                value={openingBalance}
+                onChange={(e) => setOpeningBalance(e.target.value)}
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-1 focus:ring-[#701A35]"
+              />
+              <select
+                value={openingBalanceType}
+                onChange={(e) => setOpeningBalanceType(e.target.value as 'DEBIT' | 'CREDIT')}
+                className="rounded-xl border border-slate-200 bg-white px-3 py-2 font-bold text-slate-700 focus:outline-none focus:ring-1 focus:ring-[#701A35]"
+                aria-label="Opening balance type"
+              >
+                <option value="DEBIT">Debit</option>
+                <option value="CREDIT">Credit</option>
+              </select>
+            </div>
+            <p className="text-[11px] text-slate-500">
+              Leave blank if this company has no opening balance.
             </p>
           </div>
 

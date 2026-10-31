@@ -349,6 +349,8 @@ export interface Company {
   shortCode: string; // Short ticker code (PASS, ALA, IG, GS, MARS, TG, FIN, MM, CS, MC, TA (SS), TATVA, etc.)
   isOutsideParty: boolean; // false = ASR GROUP Own, true = Outside-Party
   isActive?: boolean; // true = active for new loans, false = legacy/hidden
+  openingBalance?: number; // Optional opening ledger balance entered at company setup
+  openingBalanceType?: 'DEBIT' | 'CREDIT';
   totalFunded?: number; // Total ₹ capital provided across all loans
   totalCollected?: number; // Total ₹ collected back
   outstandingAmount?: number; // Total principal/interest still due to this company
@@ -426,6 +428,8 @@ export interface Loan {
   totalAmount: number; // Sum of all installment amounts (Total repayable account)
   disbursedAmount?: number | null; // Net principal amount paid / given to customer (e.g. ₹90,000)
   interestAmount?: number | null; // Upfront interest amount earned by ASR (e.g. ₹10,000)
+  openingBalance?: number; // Optional opening ledger balance entered when creating the loan
+  openingBalanceType?: 'DEBIT' | 'CREDIT';
   startDate: string;
   installmentCount: number; // e.g. 2, 4, 12
   frequency: RepaymentFrequency;

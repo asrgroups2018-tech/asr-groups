@@ -9,8 +9,8 @@ export async function GET(request: NextRequest) {
   try {
     const companies = await db.getCompanies();
     return NextResponse.json({ success: true, data: companies });
-  } catch (err: any) {
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+  } catch (err: unknown) {
+    return NextResponse.json({ success: false, error: err instanceof Error ? err.message : 'Unable to load companies.' }, { status: 500 });
   }
 }
 
@@ -28,10 +28,22 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
+    const openingBalance = body.openingBalance === '' || body.openingBalance === null || body.openingBalance === undefined
+      ? 0
+      : Number(body.openingBalance);
+    if (!Number.isFinite(openingBalance) || openingBalance < 0) {
+      return NextResponse.json(
+        { success: false, error: 'Opening Balance must be a valid non-negative amount.' },
+        { status: 400 }
+      );
+    }
+    const openingBalanceType = body.openingBalanceType === 'CREDIT' ? 'CREDIT' : 'DEBIT';
     const proposedPayload = {
       name,
       shortCode,
       isOutsideParty: !!body.isOutsideParty,
+      openingBalance,
+      openingBalanceType,
     };
     const queued = await queueMutationForApproval({
       actor: auth.user,
@@ -47,10 +59,12 @@ export async function POST(req: NextRequest) {
       name,
       shortCode,
       isOutsideParty: !!body.isOutsideParty,
+      openingBalance,
+      openingBalanceType,
     }, auth.user);
     return NextResponse.json({ success: true, data: created });
-  } catch (err: any) {
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+  } catch (err: unknown) {
+    return NextResponse.json({ success: false, error: err instanceof Error ? err.message : 'Unable to create company.' }, { status: 500 });
   }
 }
 
@@ -79,8 +93,29 @@ export async function DELETE(req: NextRequest) {
     if (queued) return queued;
     const deleted = await db.deleteCompany(id, auth.user);
     return NextResponse.json({ success: true, data: { id, deleted } });
-  } catch (err: any) {
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+  } catch (err: unknown) {
+    return NextResponse.json({ success: false, error: err instanceof Error ? err.message : 'Unable to delete company.' }, { status: 500 });
+  }
+}
+
+export async function PATCH(req: NextRequest) {
+  const auth = await authorizeRouteRequest(req);
+  if (!auth.ok) return auth.response;
+  try {
+    const body = await req.json();
+    const id = String(body.id || '').trim();
+    const openingBalance = body.openingBalance === '' || body.openingBalance === null || body.openingBalance === undefined
+      ? 0
+      : Number(body.openingBalance);
+    if (!id || !Number.isFinite(openingBalance) || openingBalance < 0) {
+      return NextResponse.json({ success: false, error: 'Company ID and a valid non-negative Opening Balance are required.' }, { status: 400 });
+    }
+    const existing = await db.getCompanyById(id);
+    if (!existing) return NextResponse.json({ success: false, error: 'Company not found.' }, { status: 404 });
+    const updated = await db.updateCompanyOpeningBalance(id, openingBalance, body.openingBalanceType === 'CREDIT' ? 'CREDIT' : 'DEBIT', auth.user);
+    return NextResponse.json({ success: true, data: updated });
+  } catch (err: unknown) {
+    return NextResponse.json({ success: false, error: err instanceof Error ? err.message : 'Unable to update company opening balance.' }, { status: 500 });
   }
 }
 

@@ -7,7 +7,6 @@ import {
   Building2,
   ArrowLeft,
   ArrowUpRight,
-  TrendingUp,
   Search,
   X,
 } from 'lucide-react';
@@ -218,6 +217,15 @@ export const CompanyDetailsView: React.FC = () => {
               <span className="text-slate-400 text-[11px] block font-mono">Ownership Type</span>
               <span className="text-slate-800 font-semibold block mt-0.5">
                 {company.isOutsideParty ? 'Outside-Party Entity' : 'ASR GROUP Internal Entity'}
+              </span>
+            </div>
+
+            <div>
+              <span className="text-slate-400 text-[11px] block font-mono">Opening Balance</span>
+              <span className={`font-semibold block mt-0.5 ${company.openingBalanceType === 'CREDIT' ? 'text-emerald-700' : 'text-[#701A35]'}`}>
+                {company.openingBalance
+                  ? `${company.openingBalanceType === 'CREDIT' ? 'Cr' : 'Dr'} ${company.openingBalance.toLocaleString('en-IN')}`
+                  : 'Not entered'}
               </span>
             </div>
           </div>

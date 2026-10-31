@@ -15,6 +15,10 @@ interface TermsStepProps {
   setDisbursedAmount: (amount: number) => void;
   interestAmount: number;
   setInterestAmount: (amount: number) => void;
+  openingBalance: number;
+  setOpeningBalance: (amount: number) => void;
+  openingBalanceType: 'DEBIT' | 'CREDIT';
+  setOpeningBalanceType: (type: 'DEBIT' | 'CREDIT') => void;
   frequency: RepaymentFrequency;
   setFrequency: (freq: RepaymentFrequency) => void;
   installmentCount: number;
@@ -30,6 +34,10 @@ export const TermsStep: React.FC<TermsStepProps> = ({
   setDisbursedAmount,
   interestAmount,
   setInterestAmount,
+  openingBalance,
+  setOpeningBalance,
+  openingBalanceType,
+  setOpeningBalanceType,
   frequency,
   setFrequency,
   installmentCount,
@@ -76,6 +84,39 @@ export const TermsStep: React.FC<TermsStepProps> = ({
             }
           }}
         />
+      </div>
+
+      {/* Optional Opening Balance */}
+      <div className="bg-[#240F1D] p-4.5 rounded-xl border border-[#3D1A2C] space-y-2">
+        <div className="flex items-center justify-between gap-3">
+          <label className="text-xs font-mono uppercase text-[#EED8A1] font-bold block">
+            Opening Balance <span className="normal-case text-slate-400">(Optional)</span>
+          </label>
+          <span className="text-[10px] text-slate-400">Starting ledger balance</span>
+        </div>
+        <div className="grid grid-cols-[1fr_auto] gap-2 items-start">
+          <AmountInput
+            value={openingBalance}
+            onChange={setOpeningBalance}
+            placeholder="e.g. 1,00,000"
+            theme="dark"
+            size="md"
+            showWords={true}
+            deferChange
+          />
+          <select
+            value={openingBalanceType}
+            onChange={(event) => setOpeningBalanceType(event.target.value as 'DEBIT' | 'CREDIT')}
+            className="h-10 rounded-xl border border-[#3D1A2C] bg-[#160810] px-3 text-xs font-bold text-slate-100 focus:outline-hidden focus:border-[#C5A059]"
+            aria-label="Loan opening balance type"
+          >
+            <option value="DEBIT">Debit</option>
+            <option value="CREDIT">Credit</option>
+          </select>
+        </div>
+        <span className="text-[11px] text-slate-400 block">
+          Leave blank if this loan has no opening balance.
+        </span>
       </div>
 
       {/* Disbursed Amount & Upfront Interest (ASR Earnings) */}

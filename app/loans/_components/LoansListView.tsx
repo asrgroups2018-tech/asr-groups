@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useApp } from '@/lib/store';
 import { Loan } from '@/lib/types';
@@ -35,6 +35,7 @@ import { getTodayIsoDate } from '@/components/ui/DatePicker';
 import { MoneyDisplay } from '@/components/ui/MoneyDisplay';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { getAuthorizedLoansForExport, requestLoanExportAccess } from '@/lib/exportAuthorization';
+import { InlineOpeningBalanceEditor } from '@/components/ui/InlineOpeningBalanceEditor';
 
 function parseToDate(dStr: string | null | undefined): Date | null {
   if (!dStr) return null;
@@ -83,8 +84,13 @@ const PAID_INSTALLMENT_STATUSES = new Set([
   'CLOSED', 'SETTLED', 'RET NEFT', 'RET PASS',
 ]);
 
-type SortField = 'customerName' | 'id' | 'startDate' | 'totalCollected' | 'interestAmount' | 'totalAmount' | 'installmentCount' | 'fundedBy' | 'nextDueDate' | 'status';
+type SortField = 'customerName' | 'id' | 'startDate' | 'totalCollected' | 'interestAmount' | 'totalAmount' | 'openingBalance' | 'installmentCount' | 'fundedBy' | 'nextDueDate' | 'status';
 type SortDirection = 'asc' | 'desc';
+
+function getLoanClosingDebit(loan: Loan): number {
+  const opening = Number(loan.openingBalance || 0) * (loan.openingBalanceType === 'CREDIT' ? -1 : 1);
+  return Math.max(0, opening + Number(loan.totalAmount || 0) - Number(loan.totalCollected || 0));
+}
 
 export function getDerivedLoanStatus(loan: Loan, todayIso = getTodayIsoDate()): 'Active' | 'Closed' | 'Overdue' | 'Pending' {
   const normSaved = String(loan.status || '').trim().toUpperCase();
@@ -96,9 +102,10 @@ export function getDerivedLoanStatus(loan: Loan, todayIso = getTodayIsoDate()): 
     insts.every((i) =>
       PAID_INSTALLMENT_STATUSES.has(String(i.status || '').trim().toUpperCase())
     );
-  const isFullyCollected = (loan.totalCollected || 0) >= (loan.totalAmount || 0) && (loan.totalAmount || 0) > 0;
+  const scheduledAmountSettled = (loan.totalCollected || 0) >= (loan.totalAmount || 0) && (loan.totalAmount || 0) > 0;
+  const isFullyCollected = scheduledAmountSettled && getLoanClosingDebit(loan) <= 0;
 
-  if (isAllPaid || isFullyCollected || ['CLOSED', 'SETTLED'].includes(normSaved)) {
+  if ((isAllPaid && getLoanClosingDebit(loan) <= 0) || isFullyCollected || ['CLOSED', 'SETTLED'].includes(normSaved)) {
     return 'Closed';
   }
 
@@ -126,6 +133,7 @@ export const LoansListView: React.FC = () => {
     setSelectedLoanId,
     deleteLoan,
     updateLoanInstallment,
+    updateLoanOpeningBalance,
     showToast,
     isLoading,
     hasModulePermission,
@@ -300,6 +308,9 @@ export const LoansListView: React.FC = () => {
         case 'totalAmount':
           comparison = a.totalAmount - b.totalAmount;
           break;
+        case 'openingBalance':
+          comparison = (a.openingBalance || 0) - (b.openingBalance || 0);
+          break;
         case 'installmentCount': {
           const countA = a.installments?.length || a.installmentCount || 0;
           const countB = b.installments?.length || b.installmentCount || 0;
@@ -346,8 +357,8 @@ export const LoansListView: React.FC = () => {
     [filteredAndSortedLoans]
   );
   const totalOutstandingAmount = useMemo(
-    () => Math.max(0, totalPortfolioAmount - totalCollectedAmount),
-    [totalPortfolioAmount, totalCollectedAmount]
+    () => filteredAndSortedLoans.reduce((sum, loan) => sum + getLoanClosingDebit(loan), 0),
+    [filteredAndSortedLoans]
   );
 
   const formattedDateRangeLabel = useMemo(() => {
@@ -895,7 +906,7 @@ export const LoansListView: React.FC = () => {
           {/* ─── Desktop Table View (lg+ Screens ≥ 1024px) ─── */}
           <div className="hidden xl:block bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
             {/* Desktop Table Header */}
-            <div className="grid grid-cols-[2.5fr_1.1fr_1.1fr_1.4fr_0.6fr_2fr_1fr_0.9fr_1fr] gap-3 px-5 py-3.5 bg-slate-100 border-b-2 border-slate-200 text-[11px] font-mono font-bold text-slate-700 uppercase tracking-wider select-none items-center">
+            <div className="grid grid-cols-[2.5fr_1.1fr_1.1fr_1.4fr_1.25fr_0.6fr_2fr_1fr_0.9fr_1fr] gap-3 px-5 py-3.5 bg-slate-100 border-b-2 border-slate-200 text-[11px] font-mono font-bold text-slate-700 uppercase tracking-wider select-none items-center">
               {/* Client & Loan ID */}
               <div
                 onClick={() => handleSort('customerName')}
@@ -934,6 +945,16 @@ export const LoansListView: React.FC = () => {
               >
                 <span>Loan Amount (₹)</span>
                 {renderSortIndicator('totalAmount')}
+              </div>
+
+              {/* Opening Balance */}
+              <div
+                onClick={() => handleSort('openingBalance')}
+                className="text-right flex items-center justify-end cursor-pointer hover:text-slate-900 transition-colors"
+                title="Sort by Opening Balance"
+              >
+                <span>Opening Balance</span>
+                {renderSortIndicator('openingBalance')}
               </div>
 
               {/* EMIs */}
@@ -998,7 +1019,7 @@ export const LoansListView: React.FC = () => {
 
                 const isLoanPaid =
                   PAID_INSTALLMENT_STATUSES.has(String(loan.status || '').trim().toUpperCase()) ||
-                  (loan.totalCollected || 0) >= loan.totalAmount;
+                  getLoanClosingDebit(loan) <= 0;
 
                 return (
                   <div
@@ -1012,7 +1033,7 @@ export const LoansListView: React.FC = () => {
                     {/* Summary Row */}
                     <div
                       onClick={() => toggleExpand(loan.id)}
-                      className="grid grid-cols-[2.5fr_1.1fr_1.1fr_1.4fr_0.6fr_2fr_1fr_0.9fr_1fr] gap-3 px-5 py-4 items-center cursor-pointer select-none"
+                      className="grid grid-cols-[2.5fr_1.1fr_1.1fr_1.4fr_1.25fr_0.6fr_2fr_1fr_0.9fr_1fr] gap-3 px-5 py-4 items-center cursor-pointer select-none"
                     >
                       {/* Client Name & Loan ID Badge */}
                       <div className="flex items-center gap-2 min-w-0">
@@ -1060,7 +1081,7 @@ export const LoansListView: React.FC = () => {
                               amount={loan.totalCollected || 0}
                               size="xs"
                               amountClassName={`font-bold text-xs block text-right ${
-                                (loan.totalCollected || 0) >= loan.totalAmount
+                                getLoanClosingDebit(loan) <= 0
                                     ? 'text-emerald-700 font-extrabold'
                                   : 'text-slate-900'
                               }`}
@@ -1096,15 +1117,25 @@ export const LoansListView: React.FC = () => {
                           size="sm"
                           amountClassName="font-bold text-slate-950 text-xs block text-right"
                         />
-                        {(loan.totalCollected || 0) >= loan.totalAmount ? (
+                        {getLoanClosingDebit(loan) <= 0 ? (
                           <span className="text-[10px] text-emerald-700 font-bold block mt-0.5">
                             Fully Settled
                           </span>
                         ) : (
                           <span className="text-[10px] text-slate-500 font-medium block mt-0.5">
-                            ₹{Math.max(0, loan.totalAmount - (loan.totalCollected || 0)).toLocaleString('en-IN')} due
+                            ₹{getLoanClosingDebit(loan).toLocaleString('en-IN')} due
                           </span>
                         )}
+                      </div>
+
+                      {/* Opening Balance */}
+                      <div className="text-right font-mono">
+                        <InlineOpeningBalanceEditor
+                          amount={loan.openingBalance}
+                          type={loan.openingBalanceType}
+                          onSave={async (amount, type) => { await updateLoanOpeningBalance(loan.id, amount, type); }}
+                          compact
+                        />
                       </div>
 
                       {/* EMI Count */}
@@ -1323,7 +1354,7 @@ export const LoansListView: React.FC = () => {
               const progress = total > 0 ? Math.min(100, Math.round((collected / total) * 100)) : 0;
               const isLoanPaid =
                 PAID_INSTALLMENT_STATUSES.has(String(loan.status || '').trim().toUpperCase()) ||
-                (loan.totalCollected || 0) >= loan.totalAmount;
+                getLoanClosingDebit(loan) <= 0;
 
               return (
                 <div
@@ -1381,7 +1412,7 @@ export const LoansListView: React.FC = () => {
                               amount={loan.totalCollected || 0}
                               size="sm"
                               amountClassName={`font-bold text-xs block ${
-                                (loan.totalCollected || 0) >= loan.totalAmount
+                                getLoanClosingDebit(loan) <= 0
                                   ? 'text-emerald-700 font-extrabold'
                                   : 'text-slate-900'
                               }`}
@@ -1433,26 +1464,43 @@ export const LoansListView: React.FC = () => {
                         </span>
                       </div>
 
+                      {/* Opening Balance */}
+                      <div className="bg-white p-2.5 rounded-lg border border-slate-200/80 shadow-2xs">
+                        <span className="text-[10px] uppercase font-bold text-slate-500 font-mono block">
+                          Opening Balance
+                        </span>
+                        <div className="mt-0.5">
+                          <InlineOpeningBalanceEditor
+                            amount={loan.openingBalance}
+                            type={loan.openingBalanceType}
+                            onSave={async (amount, type) => { await updateLoanOpeningBalance(loan.id, amount, type); }}
+                          />
+                        </div>
+                        <span className="text-[9px] text-slate-500 font-medium block mt-0.5">
+                          Optional starting balance
+                        </span>
+                      </div>
+
                       {/* Balance Due */}
                       <div className="bg-white p-2.5 rounded-lg border border-slate-200/80 shadow-2xs">
                         <span className="text-[10px] uppercase font-bold text-slate-500 font-mono block">
                           Balance Due
                         </span>
                         <div className="mt-0.5">
-                          {(loan.totalCollected || 0) >= loan.totalAmount ? (
+                          {getLoanClosingDebit(loan) <= 0 ? (
                             <span className="text-[11px] text-emerald-700 font-bold block">
                               Fully Settled
                             </span>
                           ) : (
                             <MoneyDisplay
-                              amount={Math.max(0, loan.totalAmount - (loan.totalCollected || 0))}
+                              amount={getLoanClosingDebit(loan)}
                               size="sm"
                               amountClassName="font-bold text-[#701A35] text-xs block"
                             />
                           )}
                         </div>
                         <span className="text-[9px] text-slate-500 font-medium block mt-0.5">
-                          {(loan.totalCollected || 0) >= loan.totalAmount ? '0 pending' : 'Pending collection'}
+                          {getLoanClosingDebit(loan) <= 0 ? '0 pending' : 'Pending collection'}
                         </span>
                       </div>
                     </div>

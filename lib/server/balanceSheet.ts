@@ -22,6 +22,8 @@ function normalizeEntry(value: unknown, index: number): BalanceSheetEntry {
     groupName: String(item.groupName || 'Other Accounts').trim().slice(0, 120) || 'Other Accounts',
     label: String(item.label || 'New Ledger').trim().slice(0, 160) || 'New Ledger',
     amount: Math.max(0, Number(item.amount) || 0),
+    openingBalance: Math.max(0, Number(item.openingBalance) || 0),
+    openingBalanceType: String(item.openingBalanceType || 'DEBIT').toUpperCase() === 'CREDIT' ? 'CREDIT' : 'DEBIT',
     sortOrder: Number.isFinite(Number(item.sortOrder)) ? Number(item.sortOrder) : index + 1,
   };
 }

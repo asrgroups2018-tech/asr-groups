@@ -180,6 +180,11 @@ export const LoanDetailsView: React.FC = () => {
           <span className="text-[10px] text-slate-600 font-medium mt-0.5 block">
             Gross repayable across {splits.length} partner companies
           </span>
+          <span className={`text-[10px] font-bold mt-1 block ${loan.openingBalanceType === 'CREDIT' ? 'text-emerald-700' : 'text-[#701A35]'}`}>
+            Opening Balance: {loan.openingBalance
+              ? `${loan.openingBalanceType === 'CREDIT' ? 'Cr' : 'Dr'} ₹${loan.openingBalance.toLocaleString('en-IN')}`
+              : '—'}
+          </span>
         </div>
 
         <div className="bg-gradient-to-br from-indigo-100/80 via-indigo-50/40 to-white p-3 rounded-xl border-2 border-indigo-200/90 shadow-sm hover:border-indigo-300 transition-all">

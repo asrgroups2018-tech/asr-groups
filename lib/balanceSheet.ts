@@ -8,6 +8,8 @@ export interface BalanceSheetEntry {
   groupName: string;
   label: string;
   amount: number;
+  openingBalance?: number;
+  openingBalanceType?: 'DEBIT' | 'CREDIT';
   sortOrder: number;
 }
 
@@ -41,7 +43,16 @@ const entry = (
   label: string,
   amount: number,
   sortOrder: number,
-): BalanceSheetEntry => ({ id, side, groupName, label, amount: Math.max(0, Number(amount) || 0), sortOrder });
+): BalanceSheetEntry => ({
+  id,
+  side,
+  groupName,
+  label,
+  amount: Math.max(0, Number(amount) || 0),
+  openingBalance: 0,
+  openingBalanceType: 'DEBIT',
+  sortOrder,
+});
 
 /**
  * The first balance sheet is seeded from the existing portfolio so the report

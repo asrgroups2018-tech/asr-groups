@@ -17,8 +17,8 @@ export async function GET(req: NextRequest) {
     }
     const loans = await db.getLoans(q, isCustomer ? user?.customerId : undefined);
     return NextResponse.json({ success: true, data: loans });
-  } catch (err: any) {
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+  } catch (err: unknown) {
+    return NextResponse.json({ success: false, error: err instanceof Error ? err.message : 'Unable to load loans.' }, { status: 500 });
   }
 }
 
@@ -39,17 +39,24 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const openingBalance = body.openingBalance === '' || body.openingBalance === undefined || body.openingBalance === null ? 0 : Number(body.openingBalance);
+    const openingBalanceType: 'DEBIT' | 'CREDIT' = body.openingBalanceType === 'CREDIT' ? 'CREDIT' : 'DEBIT';
     const proposedPayload = {
       customerId: body.customerId,
       codeNo: body.codeNo,
       totalAmount: Number(body.totalAmount),
       disbursedAmount: body.disbursedAmount !== undefined ? Number(body.disbursedAmount) : null,
       interestAmount: body.interestAmount !== undefined ? Number(body.interestAmount) : null,
+      openingBalance,
+      openingBalanceType,
       startDate: body.startDate || new Date().toISOString().slice(0, 10),
       frequency: body.frequency || 'Monthly',
       splits: body.splits || [],
       installments: body.installments || [],
     };
+    if (!Number.isFinite(proposedPayload.openingBalance) || proposedPayload.openingBalance < 0) {
+      return NextResponse.json({ success: false, error: 'Opening Balance must be a valid non-negative amount.' }, { status: 400 });
+    }
     const queued = await queueMutationForApproval({
       actor: auth.user,
       changeType: 'Loan Creation',
@@ -68,6 +75,8 @@ export async function POST(req: NextRequest) {
       totalAmount: Number(body.totalAmount),
       disbursedAmount: body.disbursedAmount !== undefined ? Number(body.disbursedAmount) : null,
       interestAmount: body.interestAmount !== undefined ? Number(body.interestAmount) : null,
+      openingBalance: proposedPayload.openingBalance,
+      openingBalanceType: proposedPayload.openingBalanceType,
       startDate: body.startDate || new Date().toISOString().slice(0, 10),
       frequency: body.frequency || 'Monthly',
       splits: body.splits || [],
@@ -75,8 +84,8 @@ export async function POST(req: NextRequest) {
     }, auth.user);
 
     return NextResponse.json({ success: true, data: created });
-  } catch (err: any) {
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+  } catch (err: unknown) {
+    return NextResponse.json({ success: false, error: err instanceof Error ? err.message : 'Unable to create loan.' }, { status: 500 });
   }
 }
 
@@ -110,7 +119,7 @@ export async function DELETE(req: NextRequest) {
     if (queued) return queued;
     const success = await db.deleteLoan(id, auth.user);
     return NextResponse.json({ success });
-  } catch (err: any) {
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+  } catch (err: unknown) {
+    return NextResponse.json({ success: false, error: err instanceof Error ? err.message : 'Unable to delete loan.' }, { status: 500 });
   }
 }

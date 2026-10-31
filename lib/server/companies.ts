@@ -106,6 +106,8 @@ export async function getCompanies(): Promise<Company[]> {
         shortCode: String(r.short_code),
         isOutsideParty: Boolean(r.is_outside_party),
         isActive: r.is_active !== undefined ? Boolean(r.is_active) : true,
+        openingBalance: Math.max(0, Number(r.opening_balance || 0)),
+        openingBalanceType: (String(r.opening_balance_type || 'DEBIT').toUpperCase() === 'CREDIT' ? 'CREDIT' : 'DEBIT') as 'DEBIT' | 'CREDIT',
         totalFunded,
         totalCollected,
         outstandingAmount: outstanding,
@@ -202,19 +204,29 @@ export function resolveCompany(key: string, companies: Company[]): Company | nul
   return null;
 }
 
-export async function createCompany(data: { name: string; shortCode: string; isOutsideParty?: boolean }, actor?: AuditActor): Promise<Company> {
+export async function createCompany(data: {
+  name: string;
+  shortCode: string;
+  isOutsideParty?: boolean;
+  openingBalance?: number;
+  openingBalanceType?: 'DEBIT' | 'CREDIT';
+}, actor?: AuditActor): Promise<Company> {
   await ensureDbInitialized();
   const client = getTursoClient();
 
   const code = data.shortCode.trim().toUpperCase();
   const id = `COMP-${code.replace(/[^A-Z0-9]/g, '')}`;
   const now = new Date().toISOString().slice(0, 10);
+  const openingBalance = Math.max(0, Number(data.openingBalance || 0));
+  const openingBalanceType = data.openingBalanceType === 'CREDIT' ? 'CREDIT' : 'DEBIT';
 
   const newCompany: Company = {
     id,
     name: data.name.trim(),
     shortCode: code,
     isOutsideParty: !!data.isOutsideParty,
+    openingBalance,
+    openingBalanceType,
     totalFunded: 0,
     totalCollected: 0,
     outstandingAmount: 0,
@@ -222,9 +234,9 @@ export async function createCompany(data: { name: string; shortCode: string; isO
   };
 
   await client.execute({
-    sql: `INSERT OR REPLACE INTO companies (id, name, short_code, is_outside_party, is_active, created_at)
-          VALUES (?, ?, ?, ?, 1, ?)`,
-    args: [newCompany.id, newCompany.name, newCompany.shortCode, newCompany.isOutsideParty ? 1 : 0, now],
+    sql: `INSERT OR REPLACE INTO companies (id, name, short_code, is_outside_party, is_active, opening_balance, opening_balance_type, created_at)
+          VALUES (?, ?, ?, ?, 1, ?, ?, ?)`,
+    args: [newCompany.id, newCompany.name, newCompany.shortCode, newCompany.isOutsideParty ? 1 : 0, openingBalance, openingBalanceType, now],
   });
 
   await logAudit({
@@ -260,4 +272,33 @@ export async function deleteCompany(id: string, actor?: AuditActor): Promise<boo
     isSensitive: false,
   });
   return true;
+}
+
+export async function updateCompanyOpeningBalance(
+  id: string,
+  openingBalance: number,
+  openingBalanceType: 'DEBIT' | 'CREDIT',
+  actor?: AuditActor,
+): Promise<Company | null> {
+  await ensureDbInitialized();
+  const current = await getCompanyById(id);
+  if (!current) return null;
+  const amount = Math.max(0, Number(openingBalance) || 0);
+  const balanceType = openingBalanceType === 'CREDIT' ? 'CREDIT' : 'DEBIT';
+  await getTursoClient().execute({
+    sql: 'UPDATE companies SET opening_balance = ?, opening_balance_type = ? WHERE id = ?',
+    args: [amount, balanceType, current.id],
+  });
+  const updated = await getCompanyById(current.id);
+  await logAudit({
+    actorId: actor?.id || 'SYSTEM',
+    actorName: actor?.name || 'System',
+    actorRoleId: actor?.primaryRoleId ?? 0,
+    action: 'Updated Company',
+    target: `Company: ${current.name} (${current.id}) opening balance`,
+    beforeVal: JSON.stringify({ openingBalance: current.openingBalance || 0, openingBalanceType: current.openingBalanceType || 'DEBIT' }),
+    afterVal: JSON.stringify({ openingBalance: amount, openingBalanceType: balanceType }),
+    isSensitive: false,
+  });
+  return updated;
 }

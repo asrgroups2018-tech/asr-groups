@@ -39,6 +39,8 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
   const [totalAmount, setTotalAmount] = useState<number>(0);
   const [disbursedAmount, setDisbursedAmount] = useState<number>(0);
   const [interestAmount, setInterestAmount] = useState<number>(0);
+  const [openingBalance, setOpeningBalance] = useState<number>(0);
+  const [openingBalanceType, setOpeningBalanceType] = useState<'DEBIT' | 'CREDIT'>('DEBIT');
 
   // Step 2: Repayment Schedule - 4 options: Monthly, Weekly, Bi-Weekly, Custom
   const [frequency, setFrequency] = useState<RepaymentFrequency>('Monthly');
@@ -70,6 +72,8 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
       setTotalAmount(0);
       setDisbursedAmount(0);
       setInterestAmount(0);
+      setOpeningBalance(0);
+      setOpeningBalanceType('DEBIT');
       setFrequency('Monthly');
       setInstallmentCount(5);
       setStartDate(toIsoDate(new Date()));
@@ -476,6 +480,8 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
       frequency,
       disbursedAmount: disbursedAmount > 0 ? disbursedAmount : null,
       interestAmount: interestAmount > 0 ? interestAmount : null,
+      openingBalance,
+      openingBalanceType,
       splits: formattedSplits,
       installments: formattedInstallments,
     });
@@ -602,6 +608,10 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
               setDisbursedAmount={setDisbursedAmount}
               interestAmount={interestAmount}
               setInterestAmount={setInterestAmount}
+              openingBalance={openingBalance}
+              setOpeningBalance={setOpeningBalance}
+              openingBalanceType={openingBalanceType}
+              setOpeningBalanceType={setOpeningBalanceType}
               frequency={frequency}
               setFrequency={setFrequency}
               installmentCount={installmentCount}
@@ -665,6 +675,8 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
               targetCustomer={targetCustomer}
               customerSearch={customerSearch}
               totalAmount={totalAmount}
+              openingBalance={openingBalance}
+              openingBalanceType={openingBalanceType}
               installmentCount={installmentCount}
               frequency={frequency}
               startDate={startDate}

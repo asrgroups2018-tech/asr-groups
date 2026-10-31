@@ -11,6 +11,8 @@ interface ReviewStepProps {
   targetCustomer: Customer | undefined;
   customerSearch: string;
   totalAmount: number;
+  openingBalance: number;
+  openingBalanceType: 'DEBIT' | 'CREDIT';
   installmentCount: number;
   frequency: RepaymentFrequency;
   startDate: string;
@@ -24,6 +26,8 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({
   targetCustomer,
   customerSearch,
   totalAmount,
+  openingBalance,
+  openingBalanceType,
   installmentCount,
   frequency,
   startDate,
@@ -69,6 +73,16 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({
           <div>
             <span className="text-slate-500 block text-[10px] uppercase tracking-wider font-bold">First Due Date</span>
             <span className="font-bold text-slate-100 text-sm">{startDate}</span>
+          </div>
+          <div>
+            <span className="text-slate-500 block text-[10px] uppercase tracking-wider font-bold">Opening Balance</span>
+            {openingBalance > 0 ? (
+              <span className={`font-bold text-sm ${openingBalanceType === 'CREDIT' ? 'text-emerald-300' : 'text-[#EED8A1]'}`}>
+                {openingBalanceType === 'CREDIT' ? 'Cr' : 'Dr'} ₹{openingBalance.toLocaleString('en-IN')}
+              </span>
+            ) : (
+              <span className="font-bold text-slate-400 text-sm">—</span>
+            )}
           </div>
         </div>
 

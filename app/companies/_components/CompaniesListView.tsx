@@ -16,6 +16,7 @@ import { DataTable, ColumnDef } from '@/components/ui/DataTable';
 import { AddCompanyModal } from './AddCompanyModal';
 import { MoneyDisplay } from '@/components/ui/MoneyDisplay';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
+import { InlineOpeningBalanceEditor } from '@/components/ui/InlineOpeningBalanceEditor';
 
 export const CompaniesListView: React.FC = () => {
   const router = useRouter();
@@ -25,6 +26,7 @@ export const CompaniesListView: React.FC = () => {
     selectedCompanyId,
     setSelectedCompanyId,
     deleteCompany,
+    updateCompanyOpeningBalance,
     isLoading,
   } = useApp();
 
@@ -110,6 +112,8 @@ export const CompaniesListView: React.FC = () => {
         company.name,
         company.isOutsideParty ? 'Outside Party' : 'ASR GROUP',
         company.isOutsideParty ? 'Outside Party Entity' : 'ASR GROUP Internal Entity',
+        company.openingBalance,
+        company.openingBalanceType,
         company.totalFunded,
         company.activeLoansCount,
       ].some((value) => String(value ?? '').toLowerCase().includes(query))
@@ -188,6 +192,22 @@ export const CompaniesListView: React.FC = () => {
         </span>
       ),
       exportValue: (c) => (c.isOutsideParty ? 'Outside Party' : 'ASR GROUP'),
+    },
+    {
+      key: 'openingBalance',
+      header: 'Opening Balance',
+      sortable: true,
+      align: 'right',
+      accessor: (c) => c.openingBalance || 0,
+      render: (c) => (
+        <InlineOpeningBalanceEditor
+          amount={c.openingBalance}
+          type={c.openingBalanceType}
+          onSave={async (amount, type) => { await updateCompanyOpeningBalance(c.id, amount, type); }}
+          compact
+        />
+      ),
+      exportValue: (c) => c.openingBalance ? `${c.openingBalance} ${c.openingBalanceType === 'CREDIT' ? 'Cr' : 'Dr'}` : '—',
     },
     {
       key: 'totalFunded',
@@ -286,6 +306,16 @@ export const CompaniesListView: React.FC = () => {
           amount={c.totalFunded || 0}
           size="sm"
           amountClassName="font-bold text-slate-900"
+        />
+      </div>
+
+      <div className="p-2.5 bg-[#FAF8F5] border border-[#E6E1D6] rounded-xl flex items-center justify-between text-xs">
+        <span className="text-slate-500 font-medium">Opening Balance:</span>
+        <InlineOpeningBalanceEditor
+          amount={c.openingBalance}
+          type={c.openingBalanceType}
+          onSave={async (amount, type) => { await updateCompanyOpeningBalance(c.id, amount, type); }}
+          compact
         />
       </div>
 
@@ -418,7 +448,7 @@ export const CompaniesListView: React.FC = () => {
             return (
               <button
                 key={tab.id}
-                onClick={() => setPartyFilter(tab.id as any)}
+                onClick={() => setPartyFilter(tab.id as 'ALL' | 'ASR' | 'OUTSIDE')}
                 className={`px-3 py-1.5 rounded-lg text-xs font-bold btn-press transition-all cursor-pointer ${
                   isActive
                     ? 'bg-[#701A35] text-white shadow-xs'

@@ -55,17 +55,36 @@ interface LoanLedgerRow {
   frequency: string;
   disbursedAmount: number | null;
   interestAmount: number | null;
+  openingDebit: number;
+  openingCredit: number;
   totalAmount: number;
   totalCollected: number;
   totalOutstanding: number;
+  closingDebit: number;
+  closingCredit: number;
   installmentCount: number;
   entries: LoanLedgerEntry[];
+}
+
+function splitBalance(signedBalance: number) {
+  return {
+    debit: signedBalance > 0 ? signedBalance : 0,
+    credit: signedBalance < 0 ? Math.abs(signedBalance) : 0,
+  };
+}
+
+function formatBalance(debit: number, credit: number) {
+  if (!debit && !credit) return '—';
+  return `${formatINR(credit || debit)} ${credit ? 'Cr' : 'Dr'}`;
 }
 
 function buildLoanLedger(loans: Loan[]): LoanLedgerRow[] {
   return loans.map((loan) => {
     const entries: LoanLedgerEntry[] = [];
-    let running = 0;
+    const openingAmount = Math.max(0, Number(loan.openingBalance || 0));
+    const openingSigned = loan.openingBalanceType === 'CREDIT' ? -openingAmount : openingAmount;
+    const opening = splitBalance(openingSigned);
+    let running = openingSigned;
 
     const sorted = [...(loan.installments || [])].sort((a, b) =>
       dateKey(a.dueDate).localeCompare(dateKey(b.dueDate))
@@ -104,6 +123,10 @@ function buildLoanLedger(loans: Loan[]): LoanLedgerRow[] {
       totalAmount: Number(loan.totalAmount || 0),
       totalCollected: Number(loan.totalCollected || 0),
       totalOutstanding: Number(loan.totalOutstanding || 0),
+      openingDebit: opening.debit,
+      openingCredit: opening.credit,
+      closingDebit: splitBalance(openingSigned + Number(loan.totalAmount || 0) - Number(loan.totalCollected || 0)).debit,
+      closingCredit: splitBalance(openingSigned + Number(loan.totalAmount || 0) - Number(loan.totalCollected || 0)).credit,
       installmentCount: entries.length,
       entries,
     };
@@ -183,7 +206,7 @@ export const LoanLedger: React.FC = () => {
     doc.text('ASR GROUP · Loan Ledger', 32, 26);
     doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(238, 216, 161);
     doc.text(`${row.customerName} · ${row.loanId}${row.codeNo ? ` (${row.codeNo})` : ''} · ${row.place}`, 32, 42);
-    doc.text(`${row.frequency} · ${entries.length} installments`, 32, 54);
+    doc.text(`${row.frequency} · ${entries.length} installments · Opening ${formatBalance(row.openingDebit, row.openingCredit)} · Closing ${formatBalance(row.closingDebit, row.closingCredit)}`, 32, 54);
 
     autoTable(doc, {
       startY: 78,
@@ -233,8 +256,10 @@ export const LoanLedger: React.FC = () => {
         'Installments': r.installmentCount,
         'Disbursed Amount': r.disbursedAmount ?? '',
         'Interest Amount': r.interestAmount ?? '',
+        'Opening Balance': formatBalance(r.openingDebit, r.openingCredit),
         'Total Amount': r.totalAmount,
         'Total Collected': r.totalCollected,
+        'Closing Balance': formatBalance(r.closingDebit, r.closingCredit),
         'Outstanding': r.totalOutstanding,
       }))
     ), 'Loan Summary');
@@ -390,12 +415,20 @@ export const LoanLedger: React.FC = () => {
                       {/* Amounts + per-loan PDF */}
                       <div className="hidden sm:flex items-center gap-6 flex-shrink-0">
                         <div className="text-right">
+                          <span className="block text-[9px] font-bold uppercase text-slate-400">Opening</span>
+                          <span className={`text-xs font-semibold ${row.openingCredit ? 'text-emerald-700' : 'text-[#701A35]'}`}>{formatBalance(row.openingDebit, row.openingCredit)}</span>
+                        </div>
+                        <div className="text-right">
                           <span className="block text-[9px] font-bold uppercase text-slate-400">Principal</span>
                           <span className="text-xs font-semibold text-slate-700">{formatINR(row.totalAmount)}</span>
                         </div>
                         <div className="text-right">
                           <span className="block text-[9px] font-bold uppercase text-slate-400">Collected</span>
                           <span className="text-xs font-semibold text-emerald-700">{formatINR(row.totalCollected)}</span>
+                        </div>
+                        <div className="text-right">
+                          <span className="block text-[9px] font-bold uppercase text-slate-400">Closing</span>
+                          <span className={`text-xs font-bold ${row.closingCredit ? 'text-emerald-700' : 'text-[#245B9B]'}`}>{formatBalance(row.closingDebit, row.closingCredit)}</span>
                         </div>
                         <div className="text-right">
                           <span className="block text-[9px] font-bold uppercase text-slate-400">Outstanding</span>
@@ -426,8 +459,10 @@ export const LoanLedger: React.FC = () => {
                         {row.interestAmount != null && row.interestAmount > 0 && (
                           <MiniInfo label="Interest Booked" value={formatINR(row.interestAmount)} />
                         )}
+                        <MiniInfo label="Opening Balance" value={formatBalance(row.openingDebit, row.openingCredit)} color={row.openingCredit ? 'text-emerald-700' : 'text-[#701A35]'} />
                         <MiniInfo label="Total Portfolio" value={formatINR(row.totalAmount)} />
                         <MiniInfo label="Collected" value={formatINR(row.totalCollected)} color="text-emerald-700" />
+                        <MiniInfo label="Closing Balance" value={formatBalance(row.closingDebit, row.closingCredit)} color={row.closingCredit ? 'text-emerald-700' : 'text-[#245B9B]'} />
                         <MiniInfo label="Outstanding" value={formatINR(row.totalOutstanding)} color="text-[#245B9B]" />
                       </div>
 

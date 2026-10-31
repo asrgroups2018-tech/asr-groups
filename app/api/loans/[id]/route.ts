@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/server/db';
 import { CUSTOMER_ROLE_ID } from '@/lib/types';
-import { updateFullLoan, deleteLoan } from '@/lib/server/loans';
+import { updateFullLoan, updateLoanOpeningBalance, deleteLoan } from '@/lib/server/loans';
 import { authorizeRouteRequest } from '@/lib/server/authorization';
 import { queueMutationForApproval } from '@/lib/server/approvalWorkflow';
 
@@ -104,5 +104,32 @@ export async function DELETE(
   } catch (err: any) {
     console.error('Error deleting loan:', err);
     return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+}
+
+export async function PATCH(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  const { id } = await context.params;
+  const auth = await authorizeRouteRequest(request);
+  if (!auth.ok) return auth.response;
+  try {
+    const user = auth.user;
+    if (user?.isCustomer || user?.primaryRoleId === CUSTOMER_ROLE_ID) {
+      return NextResponse.json({ success: false, error: 'Customer accounts cannot edit loan records.' }, { status: 403 });
+    }
+    const body = await request.json();
+    const openingBalance = body.openingBalance === '' || body.openingBalance === null || body.openingBalance === undefined
+      ? 0
+      : Number(body.openingBalance);
+    if (!Number.isFinite(openingBalance) || openingBalance < 0) {
+      return NextResponse.json({ success: false, error: 'Opening Balance must be a valid non-negative amount.' }, { status: 400 });
+    }
+    const updated = await updateLoanOpeningBalance(id, openingBalance, body.openingBalanceType === 'CREDIT' ? 'CREDIT' : 'DEBIT', auth.user);
+    if (!updated) return NextResponse.json({ success: false, error: 'Loan not found.' }, { status: 404 });
+    return NextResponse.json({ success: true, data: updated });
+  } catch (err: unknown) {
+    return NextResponse.json({ success: false, error: err instanceof Error ? err.message : 'Unable to update loan opening balance.' }, { status: 500 });
   }
 }

@@ -181,7 +181,14 @@ interface AppContextType {
   deleteCheque: (id: string) => Promise<boolean>;
 
   // Company Operations
-  createCompany: (data: { name: string; shortCode: string; isOutsideParty?: boolean }) => Promise<Company | null>;
+  createCompany: (data: {
+    name: string;
+    shortCode: string;
+    isOutsideParty?: boolean;
+    openingBalance?: number;
+    openingBalanceType?: 'DEBIT' | 'CREDIT';
+  }) => Promise<Company | null>;
+  updateCompanyOpeningBalance: (id: string, openingBalance: number, openingBalanceType: 'DEBIT' | 'CREDIT') => Promise<Company | null>;
   deleteCompany: (id: string) => Promise<boolean>;
 
   // Loan Engine v2 Operations
@@ -191,6 +198,8 @@ interface AppContextType {
     totalAmount: number;
     disbursedAmount?: number | null;
     interestAmount?: number | null;
+    openingBalance?: number;
+    openingBalanceType?: 'DEBIT' | 'CREDIT';
     startDate: string;
     frequency: RepaymentFrequency;
     splits: { companyId: string; splitPercent: number; splitAmount: number }[];
@@ -201,6 +210,7 @@ interface AppContextType {
       remarks?: string;
     }[];
   }) => Promise<Loan | null>;
+  updateLoanOpeningBalance: (id: string, openingBalance: number, openingBalanceType: 'DEBIT' | 'CREDIT') => Promise<Loan | null>;
   updateLoanInstallment: (
     installmentId: string,
     updates: {
@@ -642,6 +652,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     totalAmount: number;
     disbursedAmount?: number | null;
     interestAmount?: number | null;
+    openingBalance?: number;
+    openingBalanceType?: 'DEBIT' | 'CREDIT';
     startDate: string;
     frequency: RepaymentFrequency;
     splits: { companyId: string; splitPercent: number; splitAmount: number }[];
@@ -782,6 +794,36 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return json.data;
     } catch (err: any) {
       showToast('Error', err.message || 'Failed to update loan', 'error');
+      return null;
+    }
+  };
+
+  const updateLoanOpeningBalance = async (
+    id: string,
+    openingBalance: number,
+    openingBalanceType: 'DEBIT' | 'CREDIT',
+  ): Promise<Loan | null> => {
+    try {
+      const res = await fetch(`/api/loans/${encodeURIComponent(id)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ openingBalance, openingBalanceType }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        showToast('Update Failed', json.error || 'Unable to update loan opening balance.', 'error');
+        return null;
+      }
+      if (json.queued) {
+        showToast('Approval Required', json.message || 'The loan change is waiting for approval.', 'info');
+        await refreshAll(false);
+        return null;
+      }
+      if (json.data) setLoans((prev) => prev.map((loan) => loan.id === id ? json.data : loan));
+      showToast('Opening Balance Updated', 'Loan opening balance and closing balance were recalculated.', 'success');
+      return json.data || null;
+    } catch (error) {
+      showToast('Update Failed', error instanceof Error ? error.message : 'Unable to update loan opening balance.', 'error');
       return null;
     }
   };
@@ -1055,7 +1097,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // ==========================================
   // Company Operations
   // ==========================================
-  const createCompany = async (data: { name: string; shortCode: string; isOutsideParty?: boolean }) => {
+  const createCompany = async (data: {
+    name: string;
+    shortCode: string;
+    isOutsideParty?: boolean;
+    openingBalance?: number;
+    openingBalanceType?: 'DEBIT' | 'CREDIT';
+  }) => {
     try {
       const res = await fetch('/api/companies', {
         method: 'POST',
@@ -1109,6 +1157,36 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } catch {
       refreshAll(false);
       return false;
+    }
+  };
+
+  const updateCompanyOpeningBalance = async (
+    id: string,
+    openingBalance: number,
+    openingBalanceType: 'DEBIT' | 'CREDIT',
+  ): Promise<Company | null> => {
+    try {
+      const res = await fetch('/api/companies', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, openingBalance, openingBalanceType }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        showToast('Update Failed', json.error || 'Unable to update company opening balance.', 'error');
+        return null;
+      }
+      if (json.queued) {
+        showToast('Approval Required', json.message || 'The company change is waiting for approval.', 'info');
+        await refreshAll(false);
+        return null;
+      }
+      if (json.data) setCompanies((prev) => prev.map((company) => company.id === id ? json.data : company));
+      showToast('Opening Balance Updated', 'Company opening balance was saved.', 'success');
+      return json.data || null;
+    } catch (error) {
+      showToast('Update Failed', error instanceof Error ? error.message : 'Unable to update company opening balance.', 'error');
+      return null;
     }
   };
 
@@ -1537,9 +1615,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       deleteCheque,
 
       createCompany,
+      updateCompanyOpeningBalance,
       deleteCompany,
 
       createLoan,
+      updateLoanOpeningBalance,
       updateLoanInstallment,
       updateFullLoan,
       deleteLoan,

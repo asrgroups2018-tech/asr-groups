@@ -4,7 +4,6 @@ import React, { useMemo } from 'react';
 import { useApp } from '@/lib/store';
 import { DataTable, ColumnDef } from '@/components/ui/DataTable';
 import { MoneyDisplay } from '@/components/ui/MoneyDisplay';
-import { Building2, TrendingUp, ShieldCheck, Users, PieChart } from 'lucide-react';
 
 interface CompanySyndicationRow {
   id: string;
@@ -12,11 +11,39 @@ interface CompanySyndicationRow {
   name: string;
   isOutsideParty: boolean;
   activeLoansCount: number;
+  openingDebit: number;
+  openingCredit: number;
   totalFunded: number;
   totalCollected: number;
-  outstanding: number;
+  loanOutstanding: number;
+  closingDebit: number;
+  closingCredit: number;
   recoveryRate: number;
   sharePercent: number;
+}
+
+function splitBalance(signedBalance: number) {
+  return {
+    debit: signedBalance > 0 ? signedBalance : 0,
+    credit: signedBalance < 0 ? Math.abs(signedBalance) : 0,
+  };
+}
+
+function BalanceCell({ debit, credit }: { debit: number; credit: number }) {
+  if (!debit && !credit) return <span className="text-slate-400">—</span>;
+  const isCredit = credit > 0;
+  return (
+    <div className="text-right">
+      <MoneyDisplay
+        amount={isCredit ? credit : debit}
+        size="sm"
+        amountClassName={`font-bold block text-right ${isCredit ? 'text-emerald-700' : 'text-[#701A35]'}`}
+      />
+      <span className={`text-[10px] font-bold ${isCredit ? 'text-emerald-700' : 'text-[#701A35]'}`}>
+        {isCredit ? 'Cr' : 'Dr'}
+      </span>
+    </div>
+  );
 }
 
 export const CompanySyndicationReport: React.FC = () => {
@@ -26,9 +53,13 @@ export const CompanySyndicationReport: React.FC = () => {
     const totalSystemFunded = companies.reduce((sum, c) => sum + (c.totalFunded || 0), 0);
 
     return companies.map((c) => {
-      const totalFunded = c.totalFunded || 0;
-      const totalCollected = c.totalCollected || 0;
-      const outstanding = Math.max(0, totalFunded - totalCollected);
+      const openingAmount = Math.max(0, Number(c.openingBalance || 0));
+      const openingSigned = c.openingBalanceType === 'CREDIT' ? -openingAmount : openingAmount;
+      const opening = splitBalance(openingSigned);
+      const totalFunded = Number(c.totalFunded || 0);
+      const totalCollected = Number(c.totalCollected || 0);
+      const loanOutstanding = Math.max(0, totalFunded - totalCollected);
+      const closing = splitBalance(openingSigned + totalFunded - totalCollected);
       const recoveryRate = totalFunded > 0 ? Number(((totalCollected / totalFunded) * 100).toFixed(1)) : 0;
       const sharePercent = totalSystemFunded > 0 ? Number(((totalFunded / totalSystemFunded) * 100).toFixed(1)) : 0;
 
@@ -38,9 +69,13 @@ export const CompanySyndicationReport: React.FC = () => {
         name: c.name,
         isOutsideParty: c.isOutsideParty,
         activeLoansCount: c.activeLoansCount || 0,
+        openingDebit: opening.debit,
+        openingCredit: opening.credit,
         totalFunded,
         totalCollected,
-        outstanding,
+        loanOutstanding,
+        closingDebit: closing.debit,
+        closingCredit: closing.credit,
         recoveryRate,
         sharePercent,
       };
@@ -50,17 +85,21 @@ export const CompanySyndicationReport: React.FC = () => {
   const stats = useMemo(() => {
     const totalFunded = reportData.reduce((sum, r) => sum + r.totalFunded, 0);
     const totalCollected = reportData.reduce((sum, r) => sum + r.totalCollected, 0);
-    const totalOutstanding = reportData.reduce((sum, r) => sum + r.outstanding, 0);
-    const asrFunded = reportData.filter((r) => !r.isOutsideParty).reduce((sum, r) => sum + r.totalFunded, 0);
-    const outsideFunded = reportData.filter((r) => r.isOutsideParty).reduce((sum, r) => sum + r.totalFunded, 0);
+    const totalLoanOutstanding = reportData.reduce((sum, r) => sum + r.loanOutstanding, 0);
+    const openingDebit = reportData.reduce((sum, r) => sum + r.openingDebit, 0);
+    const openingCredit = reportData.reduce((sum, r) => sum + r.openingCredit, 0);
+    const closingDebit = reportData.reduce((sum, r) => sum + r.closingDebit, 0);
+    const closingCredit = reportData.reduce((sum, r) => sum + r.closingCredit, 0);
     const overallRecovery = totalFunded > 0 ? ((totalCollected / totalFunded) * 100).toFixed(1) : '0.0';
 
     return {
       totalFunded,
       totalCollected,
-      totalOutstanding,
-      asrFunded,
-      outsideFunded,
+      totalLoanOutstanding,
+      openingDebit,
+      openingCredit,
+      closingDebit,
+      closingCredit,
       overallRecovery,
       asrCount: reportData.filter((r) => !r.isOutsideParty).length,
       outsideCount: reportData.filter((r) => r.isOutsideParty).length,
@@ -70,7 +109,7 @@ export const CompanySyndicationReport: React.FC = () => {
   const columns: ColumnDef<CompanySyndicationRow>[] = [
     {
       key: 'shortCode',
-      header: 'Company Code',
+      header: 'Company',
       sortable: true,
       accessor: (r) => r.shortCode,
       render: (r) => (
@@ -90,34 +129,24 @@ export const CompanySyndicationReport: React.FC = () => {
       align: 'center',
       accessor: (r) => (r.isOutsideParty ? 'Outside Party' : 'ASR GROUP'),
       render: (r) => (
-        <span
-          className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${
-            r.isOutsideParty
-              ? 'bg-purple-50 text-purple-700 border-purple-200'
-              : 'bg-emerald-50 text-emerald-700 border-emerald-200'
-          }`}
-        >
+        <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${r.isOutsideParty ? 'bg-purple-50 text-purple-700 border-purple-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'}`}>
           {r.isOutsideParty ? 'Outside Party' : 'ASR GROUP'}
         </span>
       ),
       exportValue: (r) => (r.isOutsideParty ? 'Outside Party' : 'ASR GROUP'),
     },
     {
-      key: 'activeLoansCount',
-      header: 'Active Facilities',
+      key: 'openingBalance',
+      header: 'Opening Balance',
       sortable: true,
-      align: 'center',
-      accessor: (r) => r.activeLoansCount,
-      render: (r) => (
-        <span className="font-mono text-xs font-bold text-slate-700 bg-slate-50 px-2 py-0.5 rounded border border-slate-200">
-          {r.activeLoansCount} loans
-        </span>
-      ),
-      exportValue: (r) => r.activeLoansCount,
+      align: 'right',
+      accessor: (r) => r.openingDebit - r.openingCredit,
+      render: (r) => <BalanceCell debit={r.openingDebit} credit={r.openingCredit} />,
+      exportValue: (r) => r.openingDebit ? `${r.openingDebit} Dr` : r.openingCredit ? `${r.openingCredit} Cr` : '—',
     },
     {
       key: 'totalFunded',
-      header: 'Capital Funded',
+      header: 'Debit · Funded',
       sortable: true,
       align: 'right',
       accessor: (r) => r.totalFunded,
@@ -126,7 +155,7 @@ export const CompanySyndicationReport: React.FC = () => {
     },
     {
       key: 'totalCollected',
-      header: 'Capital Recovered',
+      header: 'Credit · Recovered',
       sortable: true,
       align: 'right',
       accessor: (r) => r.totalCollected,
@@ -134,131 +163,68 @@ export const CompanySyndicationReport: React.FC = () => {
       exportValue: (r) => r.totalCollected,
     },
     {
-      key: 'outstanding',
-      header: 'Outstanding Exposure',
+      key: 'closingBalance',
+      header: 'Closing Balance',
       sortable: true,
       align: 'right',
-      accessor: (r) => r.outstanding,
-      render: (r) => (
-        <MoneyDisplay
-          amount={r.outstanding}
-          size="sm"
-          amountClassName={r.outstanding > 0 ? 'font-bold text-rose-700' : 'font-bold text-slate-500'}
-        />
-      ),
-      exportValue: (r) => r.outstanding,
+      accessor: (r) => r.closingDebit - r.closingCredit,
+      render: (r) => <BalanceCell debit={r.closingDebit} credit={r.closingCredit} />,
+      exportValue: (r) => r.closingDebit ? `${r.closingDebit} Dr` : r.closingCredit ? `${r.closingCredit} Cr` : '—',
     },
     {
-      key: 'recoveryRate',
-      header: 'Recovery Rate',
+      key: 'loanOutstanding',
+      header: 'Loan Outstanding',
       sortable: true,
       align: 'right',
-      accessor: (r) => r.recoveryRate,
-      render: (r) => (
-        <div className="flex items-center justify-end gap-2">
-          <div className="w-16 bg-slate-100 h-2 rounded-full overflow-hidden border border-slate-200">
-            <div
-              className={`h-full ${r.recoveryRate >= 80 ? 'bg-emerald-600' : r.recoveryRate >= 50 ? 'bg-amber-500' : 'bg-rose-500'}`}
-              style={{ width: `${Math.min(100, r.recoveryRate)}%` }}
-            />
-          </div>
-          <span className="font-mono text-xs font-bold text-slate-800 tabular-nums">{r.recoveryRate}%</span>
-        </div>
-      ),
-      exportValue: (r) => `${r.recoveryRate}%`,
+      accessor: (r) => r.loanOutstanding,
+      render: (r) => <MoneyDisplay amount={r.loanOutstanding} size="sm" amountClassName="font-bold text-rose-700" />,
+      exportValue: (r) => r.loanOutstanding,
     },
     {
-      key: 'sharePercent',
-      header: 'Portfolio Share',
+      key: 'activeLoansCount',
+      header: 'Facilities',
       sortable: true,
-      align: 'right',
-      accessor: (r) => r.sharePercent,
-      render: (r) => (
-        <span className="font-mono text-xs text-slate-600 font-semibold">{r.sharePercent}%</span>
-      ),
-      exportValue: (r) => `${r.sharePercent}%`,
+      align: 'center',
+      accessor: (r) => r.activeLoansCount,
+      render: (r) => <span className="font-mono text-xs font-bold text-slate-700">{r.activeLoansCount}</span>,
+      exportValue: (r) => r.activeLoansCount,
     },
   ];
 
   return (
     <div className="space-y-6">
-      {/* 3 High-Impact KPI Badges matching Loans page */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div className="bg-gradient-to-br from-[#701A35]/12 via-[#FAF8F5] to-white p-3 rounded-xl border-2 border-[#701A35]/30 shadow-sm hover:border-[#701A35]/50 transition-all">
-          <span className="text-[10px] font-bold text-[#701A35] uppercase tracking-wider font-mono">
-            Total Capital Funded
-          </span>
-          <div className="mt-1">
-            <MoneyDisplay
-              amount={stats.totalFunded}
-              size="lg"
-              amountClassName="text-[#701A35] font-black text-xl block tracking-tight"
-            />
-          </div>
-          <span className="text-[10px] text-slate-600 font-medium mt-0.5 block">
-            Across <strong className="text-slate-800">{stats.asrCount + stats.outsideCount}</strong> entities ({stats.asrCount} ASR · {stats.outsideCount} Outside)
-          </span>
+      <section className="rounded-3xl border border-[#E7DFD2] bg-white p-5 shadow-[0_12px_32px_rgba(58,34,22,0.05)] sm:p-7">
+        <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#A07A39]">Company accounting</p>
+        <h2 className="mt-1 text-2xl font-bold tracking-tight text-[#24131B]">Company Opening & Closing Balances</h2>
+        <p className="mt-2 max-w-3xl text-sm text-slate-500">
+          Opening balance is optional. Debit funded capital and credit recovered capital are applied to calculate each company&apos;s closing balance.
+        </p>
+        <div className="mt-6 grid grid-cols-2 gap-2 border-t border-[#EEE8DE] pt-5 sm:grid-cols-4">
+          <SummaryCard label="Opening · Dr" amount={stats.openingDebit} tone="maroon" />
+          <SummaryCard label="Opening · Cr" amount={stats.openingCredit} tone="green" />
+          <SummaryCard label="Closing · Dr" amount={stats.closingDebit} tone="blue" />
+          <SummaryCard label="Closing · Cr" amount={stats.closingCredit} tone="green" />
         </div>
+      </section>
 
-        <div className="bg-gradient-to-br from-emerald-100/90 via-emerald-50 to-white p-3 rounded-xl border-2 border-emerald-300 shadow-sm hover:border-emerald-400 transition-all">
-          <span className="text-[10px] font-bold text-emerald-900 uppercase tracking-wider font-mono">
-            Total Capital Recovered
-          </span>
-          <div className="mt-1">
-            <MoneyDisplay
-              amount={stats.totalCollected}
-              size="lg"
-              amountClassName="text-emerald-700 font-black text-xl block tracking-tight"
-            />
-          </div>
-          <span className="text-[10px] text-emerald-800 font-bold mt-0.5 block">
-            {stats.overallRecovery}% recovery rate
-          </span>
-        </div>
-
-        <div className="bg-gradient-to-br from-rose-100/90 via-rose-50 to-white p-3 rounded-xl border-2 border-rose-300 shadow-sm hover:border-rose-400 transition-all">
-          <span className="text-[10px] font-bold text-rose-900 uppercase tracking-wider font-mono">
-            Total Outstanding Exposure
-          </span>
-          <div className="mt-1">
-            <MoneyDisplay
-              amount={stats.totalOutstanding}
-              size="lg"
-              amountClassName="text-[#701A35] font-black text-xl block tracking-tight"
-            />
-          </div>
-          <span className="text-[10px] text-rose-700 font-bold mt-0.5 block">
-            Active capital in circulation
-          </span>
-        </div>
-      </div>
-
-      {/* Main Report Table */}
       <DataTable
         data={reportData}
         columns={columns}
         keyExtractor={(r) => r.id}
-        title="16-Company Capital Syndication & Exposure Report"
-        exportFileName="asr_company_syndication_report"
+        title="Company Capital Ledger"
+        exportFileName="asr_company_capital_ledger"
         searchPlaceholder="Search by company code or legal name..."
         pageSizeDefault={20}
         footerTotals={
-          <div className="px-6 py-4 grid grid-cols-2 md:grid-cols-4 gap-6 text-xs font-mono">
+          <div className="px-6 py-4 grid grid-cols-2 md:grid-cols-5 gap-6 text-xs font-mono">
+            <SummaryCard label="Debit · Funded" amount={stats.totalFunded} tone="maroon" />
+            <SummaryCard label="Credit · Recovered" amount={stats.totalCollected} tone="green" />
+            <SummaryCard label="Closing · Dr" amount={stats.closingDebit} tone="blue" />
+            <SummaryCard label="Closing · Cr" amount={stats.closingCredit} tone="green" />
             <div>
-              <span className="text-slate-500 block uppercase text-[10px] font-bold tracking-wider">Total Capital Funded</span>
-              <MoneyDisplay amount={stats.totalFunded} size="sm" amountClassName="font-bold text-slate-900 text-sm" />
-            </div>
-            <div>
-              <span className="text-slate-500 block uppercase text-[10px] font-bold tracking-wider">Total Capital Recovered</span>
-              <MoneyDisplay amount={stats.totalCollected} size="sm" amountClassName="font-bold text-emerald-700 text-sm" />
-            </div>
-            <div>
-              <span className="text-slate-500 block uppercase text-[10px] font-bold tracking-wider">Net Outstanding Balance</span>
-              <MoneyDisplay amount={stats.totalOutstanding} size="sm" amountClassName="font-bold text-rose-700 text-sm" />
-            </div>
-            <div className="md:text-right">
-              <span className="text-slate-500 block uppercase text-[10px] font-bold tracking-wider">Overall Recovery Rate</span>
-              <span className="font-bold text-slate-900 text-sm">{stats.overallRecovery}%</span>
+              <span className="text-slate-500 block uppercase text-[10px] font-bold tracking-wider">Loan Outstanding</span>
+              <MoneyDisplay amount={stats.totalLoanOutstanding} size="sm" amountClassName="font-bold text-rose-700 text-sm" />
+              <span className="mt-1 block text-[10px] text-slate-500">{stats.asrCount} ASR · {stats.outsideCount} outside · {stats.overallRecovery}% recovered</span>
             </div>
           </div>
         }
@@ -266,3 +232,17 @@ export const CompanySyndicationReport: React.FC = () => {
     </div>
   );
 };
+
+function SummaryCard({ label, amount, tone }: { label: string; amount: number; tone: 'maroon' | 'green' | 'blue' }) {
+  const colors = {
+    maroon: 'text-[#701A35]',
+    green: 'text-emerald-700',
+    blue: 'text-[#245B9B]',
+  };
+  return (
+    <div>
+      <span className="text-slate-500 block uppercase text-[10px] font-bold tracking-wider">{label}</span>
+      <MoneyDisplay amount={amount} size="sm" amountClassName={`font-bold ${colors[tone]} text-sm`} />
+    </div>
+  );
+}
