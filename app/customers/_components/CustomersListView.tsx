@@ -120,6 +120,21 @@ export const CustomersListView: React.FC = () => {
       exportValue: (c) => c.totalBorrowed || 0,
     },
     {
+      key: 'closingBalance',
+      header: 'Closing Balance',
+      sortable: true,
+      align: 'right',
+      accessor: (c) => c.closingBalance || 0,
+      render: (c) => (
+        <MoneyDisplay
+          amount={c.closingBalance || 0}
+          size="sm"
+          amountClassName="text-[#245B9B] font-bold block text-right"
+        />
+      ),
+      exportValue: (c) => c.closingBalance || 0,
+    },
+    {
       key: 'activeLoansCount',
       header: 'Active Loans',
       sortable: true,

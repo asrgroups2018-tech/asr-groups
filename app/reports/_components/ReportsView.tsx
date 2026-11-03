@@ -71,6 +71,7 @@ interface CustomerReport {
   principal: number;
   collected: number;
   balance: number;
+  profileClosingBalance: number;
   loanCount: number;
   transactions: LedgerRow[];
   status: string;
@@ -114,7 +115,7 @@ function makeCustomerReports(rows: LedgerRow[], customers: Customer[], loans: Lo
   const grouped = new Map<string, CustomerReport>();
   rows.forEach((row) => {
     const customer = customerMap.get(row.customerId);
-    const current = grouped.get(row.customerId) || { id: row.customerId, name: row.customerName, place: customer?.place || '', principal: 0, collected: 0, balance: 0, loanCount: loanCounts.get(row.customerId) || 0, transactions: [], status: customer?.status || 'Active' };
+    const current = grouped.get(row.customerId) || { id: row.customerId, name: row.customerName, place: customer?.place || '', principal: 0, collected: 0, balance: 0, profileClosingBalance: Number(customer?.closingBalance || 0), loanCount: loanCounts.get(row.customerId) || 0, transactions: [], status: customer?.status || 'Active' };
     current.principal += row.amountDue;
     current.collected += row.amountPaid;
     current.balance += row.balance;
@@ -125,7 +126,7 @@ function makeCustomerReports(rows: LedgerRow[], customers: Customer[], loans: Lo
 }
 
 function makeLedgerEntries(report: CustomerReport): LedgerEntry[] {
-  let runningBalance = 0;
+  let runningBalance = report.profileClosingBalance;
   return report.transactions.map((row) => {
     runningBalance += row.amountDue - row.amountPaid;
     return { ...row, runningBalance: Math.max(0, runningBalance) };
@@ -199,7 +200,7 @@ export const ReportsView: React.FC = () => {
 
   const exportExcel = (reports: CustomerReport[], ledgerOnly = false) => {
     if (!reports.length) { showToast('Nothing to export', 'Select at least one customer or adjust the filters.', 'warning'); return; }
-    const summary = reports.map((report) => ({ 'Customer ID': report.id, 'Customer name': report.name, Place: report.place, 'Loan count': report.loanCount, Principal: report.principal, Collected: report.collected, Balance: report.balance, Status: report.status }));
+    const summary = reports.map((report) => ({ 'Customer ID': report.id, 'Customer name': report.name, Place: report.place, 'Loan count': report.loanCount, Principal: report.principal, Collected: report.collected, Balance: report.balance, 'Closing Balance': report.profileClosingBalance + report.balance, Status: report.status }));
     const ledger = reports.flatMap((report) => makeLedgerEntries(report).map((entry) => ({ 'Customer ID': report.id, 'Customer name': report.name, Date: entry.date, 'Due date': entry.dueDate, 'Received date': entry.receivedDate, 'Loan ID': entry.loanId, 'Loan code': entry.codeNo, 'S.No': entry.sequence, Status: entry.status, 'Amount due': entry.amountDue, Paid: entry.amountPaid, 'Running balance': entry.runningBalance, Reference: entry.reference, 'Deposit account': entry.depositName, Remarks: entry.remarks })));
     const workbook = XLSX.utils.book_new();
     if (!ledgerOnly) XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(summary), 'Customer summary');

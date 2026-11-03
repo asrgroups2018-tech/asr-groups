@@ -28,6 +28,10 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
+    const closingBalance = body.closingBalance === undefined || body.closingBalance === '' ? 0 : Number(body.closingBalance);
+    if (!Number.isFinite(closingBalance) || closingBalance < 0) {
+      return NextResponse.json({ success: false, error: 'Closing Balance must be a valid non-negative amount.' }, { status: 400 });
+    }
     const queued = await queueMutationForApproval({
       actor: auth.user,
       changeType: 'Customer Creation',
@@ -35,7 +39,7 @@ export async function POST(req: NextRequest) {
       entityType: 'customer',
       entityId: 'PENDING',
       beforePayload: null,
-      proposedPayload: { name, place: body.place || body.address, codeNo: body.codeNo || body.code, phone: body.phone },
+      proposedPayload: { name, place: body.place || body.address, codeNo: body.codeNo || body.code, phone: body.phone, closingBalance },
     });
     if (queued) return queued;
     const created = await db.createCustomer({
@@ -43,6 +47,7 @@ export async function POST(req: NextRequest) {
       place: body.place || body.address,
       codeNo: body.codeNo || body.code,
       phone: body.phone,
+      closingBalance,
     }, auth.user);
     return NextResponse.json({ success: true, data: created });
   } catch (err: any) {

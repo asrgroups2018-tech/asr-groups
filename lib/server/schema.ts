@@ -8,6 +8,7 @@ export const SCHEMA_STATEMENTS = [
     place TEXT,
     code_no TEXT,
     phone TEXT,
+    closing_balance REAL NOT NULL DEFAULT 0,
     is_active INTEGER NOT NULL DEFAULT 1,
     created_at TEXT NOT NULL
   );`,

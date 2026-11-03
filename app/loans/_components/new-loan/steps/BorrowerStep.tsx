@@ -20,6 +20,8 @@ interface BorrowerStepProps {
   setNewCustomerPlace: (place: string) => void;
   newCustomerCodeNo: string;
   setNewCustomerCodeNo: (code: string) => void;
+  newCustomerClosingBalance: string;
+  setNewCustomerClosingBalance: (balance: string) => void;
   totalAmount: number;
   setTotalAmount: (amount: number) => void;
 }
@@ -38,6 +40,8 @@ export const BorrowerStep: React.FC<BorrowerStepProps> = ({
   setNewCustomerPlace,
   newCustomerCodeNo,
   setNewCustomerCodeNo,
+  newCustomerClosingBalance,
+  setNewCustomerClosingBalance,
   totalAmount,
   setTotalAmount,
 }) => {
@@ -47,6 +51,7 @@ export const BorrowerStep: React.FC<BorrowerStepProps> = ({
   const [newNameDraft, setNewNameDraft] = useState(newCustomerName);
   const [newPlaceDraft, setNewPlaceDraft] = useState(newCustomerPlace);
   const [newCodeDraft, setNewCodeDraft] = useState(newCustomerCodeNo);
+  const [newClosingBalanceDraft, setNewClosingBalanceDraft] = useState(newCustomerClosingBalance);
 
   const filteredCustomers = customers.filter(
     (c) =>
@@ -158,7 +163,7 @@ export const BorrowerStep: React.FC<BorrowerStepProps> = ({
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 bg-[#160810] border border-[#3D1A2C] rounded-lg">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-[#160810] border border-[#3D1A2C] rounded-lg">
             <div>
               <label className="text-[11px] text-slate-400 block mb-1">Borrower Client Name *</label>
               <input
@@ -190,6 +195,20 @@ export const BorrowerStep: React.FC<BorrowerStepProps> = ({
                 onChange={(e) => setNewCodeDraft(e.target.value)}
                 onBlur={() => setNewCustomerCodeNo(newCodeDraft)}
                 className="w-full bg-[#240F1D] border border-[#3D1A2C] rounded-md px-3 py-1.5 text-xs text-slate-100 font-mono placeholder-slate-500 focus:outline-hidden focus:border-[#C5A059]"
+              />
+            </div>
+            <div>
+              <label className="text-[11px] text-slate-400 block mb-1">Closing Balance (Optional)</label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                inputMode="decimal"
+                placeholder="e.g. 25,000"
+                value={newClosingBalanceDraft}
+                onChange={(e) => setNewClosingBalanceDraft(e.target.value)}
+                onBlur={() => setNewCustomerClosingBalance(newClosingBalanceDraft)}
+                className="w-full bg-[#240F1D] border border-[#3D1A2C] rounded-md px-3 py-1.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-hidden focus:border-[#C5A059]"
               />
             </div>
           </div>

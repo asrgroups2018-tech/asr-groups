@@ -15,6 +15,10 @@ export async function ensureDbInitialized() {
     if (!hasCodeNo) {
       await client.execute('ALTER TABLE customers ADD COLUMN code_no TEXT');
     }
+    const hasClosingBalance = tableInfo.rows.some((row) => String(row.name) === 'closing_balance');
+    if (!hasClosingBalance) {
+      await client.execute('ALTER TABLE customers ADD COLUMN closing_balance REAL NOT NULL DEFAULT 0');
+    }
     await client.execute('CREATE INDEX IF NOT EXISTS idx_customers_code_no ON customers(code_no)');
     try {
       await client.execute('ALTER TABLE customers ADD COLUMN is_active INTEGER NOT NULL DEFAULT 1');
@@ -88,6 +92,7 @@ export async function getCustomers(query?: string): Promise<Customer[]> {
       place: String(row.place || ''),
       codeNo: row.code_no ? String(row.code_no) : cid,
       phone: row.phone ? String(row.phone) : undefined,
+      closingBalance: Number(row.closing_balance || 0),
       createdAt: String(row.created_at || new Date().toISOString().slice(0, 10)),
       totalBorrowed,
       totalRepaid,
@@ -111,7 +116,7 @@ export async function getCustomerById(id: string): Promise<Customer | null> {
   );
 }
 
-export async function createCustomer(data: { name: string; place?: string; codeNo?: string; phone?: string }, actor?: AuditActor): Promise<Customer> {
+export async function createCustomer(data: { name: string; place?: string; codeNo?: string; phone?: string; closingBalance?: number }, actor?: AuditActor): Promise<Customer> {
   await ensureDbInitialized();
   const client = getTursoClient();
 
@@ -128,6 +133,7 @@ export async function createCustomer(data: { name: string; place?: string; codeN
     place: data.place?.trim() || '',
     codeNo: data.codeNo?.trim() || newId,
     phone: data.phone?.trim() || undefined,
+    closingBalance: Number(data.closingBalance || 0),
     createdAt: now,
     totalBorrowed: 0,
     totalRepaid: 0,
@@ -137,8 +143,8 @@ export async function createCustomer(data: { name: string; place?: string; codeN
   };
 
   await client.execute({
-    sql: 'INSERT INTO customers (id, name, place, code_no, phone, is_active, created_at) VALUES (?, ?, ?, ?, ?, 1, ?)',
-    args: [newCustomer.id, newCustomer.name, newCustomer.place, newCustomer.codeNo || null, newCustomer.phone || null, newCustomer.createdAt],
+    sql: 'INSERT INTO customers (id, name, place, code_no, phone, closing_balance, is_active, created_at) VALUES (?, ?, ?, ?, ?, ?, 1, ?)',
+    args: [newCustomer.id, newCustomer.name, newCustomer.place, newCustomer.codeNo || null, newCustomer.phone || null, newCustomer.closingBalance || 0, newCustomer.createdAt],
   });
 
   await logAudit({
@@ -165,8 +171,8 @@ export async function updateCustomer(id: string, updates: Partial<Customer>, act
   const updated = { ...existing, ...updates };
 
   await client.execute({
-    sql: 'UPDATE customers SET name = ?, place = ?, code_no = ?, phone = ? WHERE id = ?',
-    args: [updated.name, updated.place, updated.codeNo || null, updated.phone || null, id],
+    sql: 'UPDATE customers SET name = ?, place = ?, code_no = ?, phone = ?, closing_balance = ? WHERE id = ?',
+    args: [updated.name, updated.place, updated.codeNo || null, updated.phone || null, Number(updated.closingBalance || 0), id],
   });
 
   await logAudit({

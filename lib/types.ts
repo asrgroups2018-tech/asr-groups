@@ -311,6 +311,7 @@ export interface Customer {
   place: string; // City / Branch (e.g. "CHENNAI", "CBE")
   codeNo?: string; // Optional code number (e.g. "101", "CUST-1001")
   phone?: string;
+  closingBalance?: number;
   createdAt: string;
   totalBorrowed?: number; // Cumulative ₹ borrowed across all loans
   totalRepaid?: number; // Total ₹ successfully repaid
@@ -423,6 +424,7 @@ export interface Loan {
   id: string; // e.g. "LN20260001"
   customerId: string;
   customerName: string;
+  customerClosingBalance?: number;
   place?: string;
   codeNo?: string; // Reference/display code (e.g. "TN0019") - NOT a unique key
   totalAmount: number; // Sum of all installment amounts (Total repayable account)

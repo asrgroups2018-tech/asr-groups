@@ -165,7 +165,7 @@ interface AppContextType {
   triggerBackupNow: () => Promise<void>;
 
   // Customer Operations
-  createCustomer: (data: { name: string; place?: string; codeNo?: string; phone?: string }) => Promise<Customer | null>;
+  createCustomer: (data: { name: string; place?: string; codeNo?: string; phone?: string; closingBalance?: number }) => Promise<Customer | null>;
   updateCustomer: (id: string, updates: Partial<Customer>) => Promise<Customer | null>;
   deleteCustomer: (id: string) => Promise<boolean>;
 
@@ -229,6 +229,7 @@ interface AppContextType {
     loanId: string,
     data: {
       customerName?: string;
+      customerClosingBalance?: number;
       codeNo?: string;
       place?: string;
       status?: string;
@@ -748,6 +749,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     loanId: string,
     data: {
       customerName?: string;
+      customerClosingBalance?: number;
       codeNo?: string;
       place?: string;
       status?: string;
@@ -904,7 +906,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // ==========================================
   // Customer Operations
   // ==========================================
-  const createCustomer = async (data: { name: string; place?: string; codeNo?: string; phone?: string }) => {
+  const createCustomer = async (data: { name: string; place?: string; codeNo?: string; phone?: string; closingBalance?: number }) => {
     try {
       const res = await fetch('/api/customers', {
         method: 'POST',

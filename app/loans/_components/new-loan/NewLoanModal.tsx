@@ -36,6 +36,7 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
   const [newCustomerName, setNewCustomerName] = useState<string>('');
   const [newCustomerPlace, setNewCustomerPlace] = useState<string>('');
   const [newCustomerCodeNo, setNewCustomerCodeNo] = useState<string>('');
+  const [newCustomerClosingBalance, setNewCustomerClosingBalance] = useState<string>('');
   const [totalAmount, setTotalAmount] = useState<number>(0);
   const [disbursedAmount, setDisbursedAmount] = useState<number>(0);
   const [interestAmount, setInterestAmount] = useState<number>(0);
@@ -69,6 +70,7 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
       setNewCustomerName('');
       setNewCustomerPlace('');
       setNewCustomerCodeNo('');
+      setNewCustomerClosingBalance('');
       setTotalAmount(0);
       setDisbursedAmount(0);
       setInterestAmount(0);
@@ -386,6 +388,7 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
           name: newCustomerName.trim(),
           place: newCustomerPlace.trim() || undefined,
           codeNo: newCustomerCodeNo.trim() || undefined,
+          closingBalance: newCustomerClosingBalance.trim() ? Number(newCustomerClosingBalance) : 0,
         });
         if (created) {
           setSelectedCustomerId(created.id);
@@ -595,6 +598,8 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
               setNewCustomerPlace={setNewCustomerPlace}
               newCustomerCodeNo={newCustomerCodeNo}
               setNewCustomerCodeNo={setNewCustomerCodeNo}
+              newCustomerClosingBalance={newCustomerClosingBalance}
+              setNewCustomerClosingBalance={setNewCustomerClosingBalance}
               totalAmount={totalAmount}
               setTotalAmount={setTotalAmount}
             />

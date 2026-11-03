@@ -25,6 +25,10 @@ async function ensureDbInitialized() {
   const client = getTursoClient();
   try {
     await initializeSchema(client);
+    const customerColumns = await client.execute('PRAGMA table_info(customers)');
+    if (!customerColumns.rows.some((row) => String(row.name) === 'closing_balance')) {
+      await client.execute('ALTER TABLE customers ADD COLUMN closing_balance REAL NOT NULL DEFAULT 0');
+    }
     schemaInitialized = true;
   } catch (err) {
     console.error('Turso Schema initialization warning:', err);
@@ -43,7 +47,7 @@ export async function getLoans(query?: string, customerId?: string): Promise<Loa
       l.id as loan_id, l.customer_id, l.code_no, l.total_amount, l.disbursed_amount, l.interest_amount,
       l.opening_balance, l.opening_balance_type, l.start_date,
       l.installment_count, l.frequency, l.status as loan_status, l.created_at as loan_created_at,
-      c.name as customer_name, c.place as customer_place
+      c.name as customer_name, c.place as customer_place, c.closing_balance as customer_closing_balance
     FROM loans l
     LEFT JOIN customers c ON c.id = l.customer_id
     WHERE 1=1
@@ -185,6 +189,7 @@ export async function getLoans(query?: string, customerId?: string): Promise<Loa
       id: lid,
       customerId: String(row.customer_id),
       customerName: String(row.customer_name || 'Unknown Client'),
+      customerClosingBalance: Number(row.customer_closing_balance || 0),
       place: String(row.customer_place || 'CHENNAI'),
       codeNo: row.code_no ? String(row.code_no) : undefined,
       totalAmount,
@@ -510,6 +515,7 @@ export async function updateFullLoan(
   loanId: string,
   data: {
     customerName?: string;
+    customerClosingBalance?: number;
     codeNo?: string;
     place?: string;
     status?: string;
@@ -620,13 +626,14 @@ export async function updateFullLoan(
   });
 
   // 2. Update Customer Name / Place if specified
-  if (data.customerName || data.place) {
+  if (data.customerName || data.place || data.customerClosingBalance !== undefined) {
     statements.push({
       sql: `UPDATE customers SET
               name = COALESCE(?, name),
-              place = COALESCE(?, place)
+              place = COALESCE(?, place),
+              closing_balance = COALESCE(?, closing_balance)
             WHERE id = (SELECT customer_id FROM loans WHERE id = ?)`,
-      args: [data.customerName || null, data.place || null, canonicalLoanId],
+      args: [data.customerName || null, data.place || null, data.customerClosingBalance ?? null, canonicalLoanId],
     });
   }
 

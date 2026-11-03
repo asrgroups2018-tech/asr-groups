@@ -304,6 +304,7 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
 
   // Top Loan Form Fields
   const [customerName, setCustomerName] = useState('');
+  const [customerClosingBalance, setCustomerClosingBalance] = useState<number>(0);
   const [codeNo, setCodeNo] = useState('');
   const [place, setPlace] = useState('');
   const [startDate, setStartDate] = useState('');
@@ -331,6 +332,7 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
     if (!loan) return;
 
     setCustomerName(loan.customerName || '');
+    setCustomerClosingBalance(Number(loan.customerClosingBalance || 0));
     setCodeNo(loan.codeNo || '');
     setPlace(loan.place || 'CHENNAI');
     setStartDate(formatToIso(loan.startDate) || new Date().toISOString().slice(0, 10));
@@ -848,6 +850,7 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
 
     const payload = {
       customerName: customerName.trim(),
+      customerClosingBalance,
       codeNo: codeNo.trim() || undefined,
       place: place.trim() || 'CHENNAI',
       status,
@@ -1023,7 +1026,7 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
         </div>
 
         {/* ─── Excel Metadata Properties Bar ─── */}
-        <div className={`${isPropsExpanded ? 'grid' : 'hidden sm:grid'} px-3.5 sm:px-5 py-3 bg-[#FDFCFA] border-b border-[#D0C8B8] grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2.5 sm:gap-3 text-xs shrink-0 max-h-[35vh] sm:max-h-none overflow-y-auto`}>
+        <div className={`${isPropsExpanded ? 'grid' : 'hidden sm:grid'} px-3.5 sm:px-5 py-3 bg-[#FDFCFA] border-b border-[#D0C8B8] grid-cols-2 sm:grid-cols-4 lg:grid-cols-10 gap-2.5 sm:gap-3 text-xs shrink-0 max-h-[35vh] sm:max-h-none overflow-y-auto`}>
           <div className="col-span-2 sm:col-span-2 lg:col-span-1">
             <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1 font-mono">
               Borrower Name *
@@ -1110,6 +1113,19 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
                 }
               }}
               className="w-full px-2.5 py-1.5 rounded border border-amber-300 bg-amber-50/70 font-mono font-bold text-amber-950 focus:outline-2 focus:outline-[#701A35] text-xs"
+            />
+          </div>
+
+          <div>
+            <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1 font-mono">
+              Closing Balance (₹)
+            </label>
+            <FastGridCellInput
+              value={customerClosingBalance}
+              numeric
+              placeholder="e.g. 25,000"
+              onCommit={(value) => setCustomerClosingBalance(Math.max(0, Number(value) || 0))}
+              className="w-full px-2.5 py-1.5 rounded border border-blue-300 bg-blue-50/70 font-mono font-bold text-blue-950 focus:outline-2 focus:outline-[#701A35] text-xs"
             />
           </div>
 

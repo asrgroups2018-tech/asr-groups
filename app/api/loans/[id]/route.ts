@@ -48,6 +48,9 @@ export async function PUT(
     if (!existing) {
       return NextResponse.json({ error: 'Loan not found' }, { status: 404 });
     }
+    if (body.customerClosingBalance !== undefined && (!Number.isFinite(Number(body.customerClosingBalance)) || Number(body.customerClosingBalance) < 0)) {
+      return NextResponse.json({ error: 'Closing Balance must be a valid non-negative amount.' }, { status: 400 });
+    }
     const queued = await queueMutationForApproval({
       actor: auth.user,
       changeType: 'Loan Update',
