@@ -11,6 +11,9 @@ interface ReviewStepProps {
   targetCustomer: Customer | undefined;
   customerSearch: string;
   totalAmount: number;
+  disbursedAmount: number;
+  interestAmount: number;
+  includeInterest: boolean;
   openingBalance: number;
   openingBalanceType: 'DEBIT' | 'CREDIT';
   installmentCount: number;
@@ -26,6 +29,9 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({
   targetCustomer,
   customerSearch,
   totalAmount,
+  disbursedAmount,
+  interestAmount,
+  includeInterest,
   openingBalance,
   openingBalanceType,
   installmentCount,
@@ -73,6 +79,15 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({
           <div>
             <span className="text-slate-500 block text-[10px] uppercase tracking-wider font-bold">First Due Date</span>
             <span className="font-bold text-slate-100 text-sm">{startDate}</span>
+          </div>
+          <div>
+            <span className="text-slate-500 block text-[10px] uppercase tracking-wider font-bold">Upfront Interest</span>
+            <span className={`font-bold text-sm ${includeInterest && interestAmount > 0 ? 'text-amber-300' : 'text-slate-400'}`}>
+              {includeInterest ? `₹${interestAmount.toLocaleString('en-IN')}` : 'Not applied'}
+            </span>
+            <span className="text-[10px] text-slate-400 font-sans block">
+              {includeInterest ? `Net paid ₹${disbursedAmount.toLocaleString('en-IN')}` : 'Full amount disbursed'}
+            </span>
           </div>
           <div>
             <span className="text-slate-500 block text-[10px] uppercase tracking-wider font-bold">Opening Balance</span>

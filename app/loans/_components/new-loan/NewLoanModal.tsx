@@ -40,6 +40,7 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
   const [totalAmount, setTotalAmount] = useState<number>(0);
   const [disbursedAmount, setDisbursedAmount] = useState<number>(0);
   const [interestAmount, setInterestAmount] = useState<number>(0);
+  const [includeInterest, setIncludeInterest] = useState<boolean>(true);
   const [openingBalance, setOpeningBalance] = useState<number>(0);
   const [openingBalanceType, setOpeningBalanceType] = useState<'DEBIT' | 'CREDIT'>('DEBIT');
 
@@ -74,6 +75,7 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
       setTotalAmount(0);
       setDisbursedAmount(0);
       setInterestAmount(0);
+      setIncludeInterest(true);
       setOpeningBalance(0);
       setOpeningBalanceType('DEBIT');
       setFrequency('Monthly');
@@ -481,8 +483,8 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
       totalAmount,
       startDate,
       frequency,
-      disbursedAmount: disbursedAmount > 0 ? disbursedAmount : null,
-      interestAmount: interestAmount > 0 ? interestAmount : null,
+      disbursedAmount: !includeInterest ? totalAmount : disbursedAmount > 0 ? disbursedAmount : null,
+      interestAmount: includeInterest && interestAmount > 0 ? interestAmount : null,
       openingBalance,
       openingBalanceType,
       splits: formattedSplits,
@@ -613,6 +615,8 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
               setDisbursedAmount={setDisbursedAmount}
               interestAmount={interestAmount}
               setInterestAmount={setInterestAmount}
+              includeInterest={includeInterest}
+              setIncludeInterest={setIncludeInterest}
               openingBalance={openingBalance}
               setOpeningBalance={setOpeningBalance}
               openingBalanceType={openingBalanceType}
@@ -680,6 +684,9 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
               targetCustomer={targetCustomer}
               customerSearch={customerSearch}
               totalAmount={totalAmount}
+              disbursedAmount={disbursedAmount}
+              interestAmount={interestAmount}
+              includeInterest={includeInterest}
               openingBalance={openingBalance}
               openingBalanceType={openingBalanceType}
               installmentCount={installmentCount}

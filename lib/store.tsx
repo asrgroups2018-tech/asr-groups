@@ -931,8 +931,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         refreshAll(false);
         return json.data;
       }
+      showToast('Customer Creation Failed', json.error || 'Unable to create the borrower.', 'error');
       return null;
-    } catch {
+    } catch (error) {
+      showToast(
+        'Customer Creation Failed',
+        error instanceof Error ? error.message : 'Unable to create the borrower.',
+        'error',
+      );
       return null;
     }
   };

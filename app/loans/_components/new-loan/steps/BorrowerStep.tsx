@@ -53,13 +53,15 @@ export const BorrowerStep: React.FC<BorrowerStepProps> = ({
   const [newCodeDraft, setNewCodeDraft] = useState(newCustomerCodeNo);
   const [newClosingBalanceDraft, setNewClosingBalanceDraft] = useState(newCustomerClosingBalance);
 
-  const filteredCustomers = customers.filter(
-    (c) =>
-      !searchDraft.trim() ||
-      c.name.toLowerCase().includes(searchDraft.toLowerCase()) ||
-      (c.place && c.place.toLowerCase().includes(searchDraft.toLowerCase())) ||
-      (c.codeNo && c.codeNo.toLowerCase().includes(searchDraft.toLowerCase()))
-  );
+  const filteredCustomers = customers
+    .filter(
+      (c) =>
+        !searchDraft.trim() ||
+        c.name.toLowerCase().includes(searchDraft.toLowerCase()) ||
+        (c.place && c.place.toLowerCase().includes(searchDraft.toLowerCase())) ||
+        (c.codeNo && c.codeNo.toLowerCase().includes(searchDraft.toLowerCase()))
+    )
+    .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
 
   return (
     <div className="space-y-4">
@@ -170,8 +172,10 @@ export const BorrowerStep: React.FC<BorrowerStepProps> = ({
                 type="text"
                 placeholder="e.g. ABI ASSOCIATES"
                 value={newNameDraft}
-                onChange={(e) => setNewNameDraft(e.target.value)}
-                onBlur={() => setNewCustomerName(newNameDraft)}
+                onChange={(e) => {
+                  setNewNameDraft(e.target.value);
+                  setNewCustomerName(e.target.value);
+                }}
                 className="w-full bg-[#240F1D] border border-[#3D1A2C] rounded-md px-3 py-1.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-hidden focus:border-[#C5A059]"
               />
             </div>
@@ -181,8 +185,10 @@ export const BorrowerStep: React.FC<BorrowerStepProps> = ({
                 type="text"
                 placeholder="e.g. CHENNAI, CBE, TIRUPUR"
                 value={newPlaceDraft}
-                onChange={(e) => setNewPlaceDraft(e.target.value)}
-                onBlur={() => setNewCustomerPlace(newPlaceDraft)}
+                onChange={(e) => {
+                  setNewPlaceDraft(e.target.value);
+                  setNewCustomerPlace(e.target.value);
+                }}
                 className="w-full bg-[#240F1D] border border-[#3D1A2C] rounded-md px-3 py-1.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-hidden focus:border-[#C5A059]"
               />
             </div>
@@ -192,23 +198,27 @@ export const BorrowerStep: React.FC<BorrowerStepProps> = ({
                 type="text"
                 placeholder="e.g. 101, A-12"
                 value={newCodeDraft}
-                onChange={(e) => setNewCodeDraft(e.target.value)}
-                onBlur={() => setNewCustomerCodeNo(newCodeDraft)}
+                onChange={(e) => {
+                  setNewCodeDraft(e.target.value);
+                  setNewCustomerCodeNo(e.target.value);
+                }}
                 className="w-full bg-[#240F1D] border border-[#3D1A2C] rounded-md px-3 py-1.5 text-xs text-slate-100 font-mono placeholder-slate-500 focus:outline-hidden focus:border-[#C5A059]"
               />
             </div>
             <div>
-              <label className="text-[11px] text-slate-400 block mb-1">Closing Balance (Optional)</label>
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                inputMode="decimal"
+              <label className="text-[11px] text-slate-400 block mb-1">Opening Balance (Optional)</label>
+              <AmountInput
+                value={newClosingBalanceDraft === '' ? 0 : Number(newClosingBalanceDraft)}
+                onChange={(value) => {
+                  const nextValue = value === 0 ? '' : String(value);
+                  setNewClosingBalanceDraft(nextValue);
+                  setNewCustomerClosingBalance(nextValue);
+                }}
                 placeholder="e.g. 25,000"
-                value={newClosingBalanceDraft}
-                onChange={(e) => setNewClosingBalanceDraft(e.target.value)}
-                onBlur={() => setNewCustomerClosingBalance(newClosingBalanceDraft)}
-                className="w-full bg-[#240F1D] border border-[#3D1A2C] rounded-md px-3 py-1.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-hidden focus:border-[#C5A059]"
+                theme="dark"
+                size="sm"
+                showWords
+                inputClassName="rounded-md"
               />
             </div>
           </div>
