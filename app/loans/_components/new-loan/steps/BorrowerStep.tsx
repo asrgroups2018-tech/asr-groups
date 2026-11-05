@@ -225,6 +225,7 @@ export const BorrowerStep: React.FC<BorrowerStepProps> = ({
         <div className="bg-[#240F1D] p-4 rounded-xl border border-[#3D1A2C] space-y-3">
           <label className="text-sm font-semibold text-[#EED8A1] flex items-center gap-2">
             <IndianRupee className="w-4 h-4 text-[#C5A059]" /> Existing Account Opening Balance (₹)
+            <span className="text-xs font-normal text-slate-400">(Optional)</span>
           </label>
           <AmountInput
             value={openingBalance}

@@ -405,12 +405,11 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
         return;
       }
 
-      // Existing borrowers are migrations from the offline ledger. Their
-      // opening balance is the only loan amount entered here; interest and
-      // new-loan terms are intentionally skipped.
+      // Existing borrowers with a balance are migrations from the offline
+      // ledger, so they can skip the new-loan terms step.
       if (!isCreatingNewCustomer && selectedCustomerId) {
         if (openingBalance <= 0) {
-          showToast('Validation Error', 'Opening Balance is required for an existing borrower.', 'warning');
+          setCurrentStep(2);
           return;
         }
         setTotalAmount(openingBalance);
