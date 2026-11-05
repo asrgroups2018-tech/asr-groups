@@ -36,13 +36,13 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
   const [newCustomerName, setNewCustomerName] = useState<string>('');
   const [newCustomerPlace, setNewCustomerPlace] = useState<string>('');
   const [newCustomerCodeNo, setNewCustomerCodeNo] = useState<string>('');
-  const [newCustomerClosingBalance, setNewCustomerClosingBalance] = useState<string>('');
   const [totalAmount, setTotalAmount] = useState<number>(0);
   const [disbursedAmount, setDisbursedAmount] = useState<number>(0);
   const [interestAmount, setInterestAmount] = useState<number>(0);
   const [includeInterest, setIncludeInterest] = useState<boolean>(true);
   const [openingBalance, setOpeningBalance] = useState<number>(0);
   const [openingBalanceType, setOpeningBalanceType] = useState<'DEBIT' | 'CREDIT'>('DEBIT');
+  const [isOpeningBalanceOnly, setIsOpeningBalanceOnly] = useState(false);
 
   // Step 2: Repayment Schedule - 4 options: Monthly, Weekly, Bi-Weekly, Custom
   const [frequency, setFrequency] = useState<RepaymentFrequency>('Monthly');
@@ -61,7 +61,9 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
   const [scheduleRows, setScheduleRows] = useState<ScheduleStepRow[]>([]);
   const [chequeRows, setChequeRows] = useState<LoanChequeRow[]>([]);
 
-  // Reset on open
+  // Reset only when the modal opens. A customer creation refreshes the shared
+  // companies/customers collections; that must never reset a partially filled
+  // wizard back to Step 1.
   useEffect(() => {
     if (isOpen) {
       setCurrentStep(1);
@@ -71,48 +73,47 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
       setNewCustomerName('');
       setNewCustomerPlace('');
       setNewCustomerCodeNo('');
-      setNewCustomerClosingBalance('');
       setTotalAmount(0);
       setDisbursedAmount(0);
       setInterestAmount(0);
       setIncludeInterest(true);
       setOpeningBalance(0);
       setOpeningBalanceType('DEBIT');
+      setIsOpeningBalanceOnly(false);
       setFrequency('Monthly');
       setInstallmentCount(5);
       setStartDate(toIsoDate(new Date()));
       setScheduleRows([]);
       setChequeRows([]);
-
-      // Pick default active ASR companies (exclude INE and INS)
-      const activeAsr = companies.filter(
-        (c) =>
-          !c.isOutsideParty &&
-          c.isActive !== false &&
-          !['INE', 'INS'].includes(c.shortCode.toUpperCase()) &&
-          !c.name.toUpperCase().includes('INFINITY ENTERPRISES') &&
-          !c.name.toUpperCase().includes('INNOVATIVE SOLUTIONS')
-      );
-
-      if (selectedCompanyIds.length === 0 && activeAsr.length > 0) {
-        const asrComps = activeAsr.slice(0, 3);
-        const ids = asrComps.map((c) => c.id);
-        setSelectedCompanyIds(ids);
-
-        const initialPcts: Record<string, number> = {};
-        if (ids.length === 1) initialPcts[ids[0]] = 100;
-        else if (ids.length === 2) {
-          initialPcts[ids[0]] = 50;
-          initialPcts[ids[1]] = 50;
-        } else if (ids.length === 3) {
-          initialPcts[ids[0]] = 50;
-          initialPcts[ids[1]] = 30;
-          initialPcts[ids[2]] = 20;
-        }
-        setCompanyPcts(initialPcts);
-      }
+      setSelectedCompanyIds([]);
+      setSplitMode('PERCENT');
+      setCompanyPcts({});
+      setCompanyManualAmounts({});
     }
-  }, [isOpen, companies]);
+  }, [isOpen]);
+
+  // Companies can arrive after the modal has opened. Seed the default split
+  // once, without coupling the wizard lifecycle to collection refreshes.
+  useEffect(() => {
+    if (!isOpen || selectedCompanyIds.length > 0 || companies.length === 0) return;
+
+    const activeAsr = companies.filter((c) => !c.isOutsideParty && c.isActive !== false);
+    const ids = activeAsr.slice(0, 3).map((c) => c.id);
+    if (ids.length === 0) return;
+
+    const initialPcts: Record<string, number> = {};
+    if (ids.length === 1) initialPcts[ids[0]] = 100;
+    else if (ids.length === 2) {
+      initialPcts[ids[0]] = 50;
+      initialPcts[ids[1]] = 50;
+    } else {
+      initialPcts[ids[0]] = 50;
+      initialPcts[ids[1]] = 30;
+      initialPcts[ids[2]] = 20;
+    }
+    setSelectedCompanyIds(ids);
+    setCompanyPcts(initialPcts);
+  }, [companies, isOpen, selectedCompanyIds.length]);
 
   // Selected company objects
   const selectedCompanies = useMemo(() => {
@@ -240,9 +241,9 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
     !hasChequeDetails ||
     (areChequeRowsComplete && Math.abs(allocatedChequeAmount - totalAmount) < 1);
 
-  const getTermsSchedule = () => {
+  const getTermsSchedule = (amount = totalAmount) => {
     const count = Math.max(1, installmentCount);
-    const equalAmount = Math.round(totalAmount / count);
+    const equalAmount = Math.round(amount / count);
     const initialDate = parseDateString(startDate) || new Date();
     return Array.from({ length: count }, (_, index) => {
       const dueDate = new Date(initialDate);
@@ -256,7 +257,7 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
       return {
         seqNo: index + 1,
         dueDate: toIsoDate(dueDate),
-        amountDue: index === count - 1 ? totalAmount - equalAmount * (count - 1) : equalAmount,
+        amountDue: index === count - 1 ? amount - equalAmount * (count - 1) : equalAmount,
       };
     });
   };
@@ -289,8 +290,8 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
     });
   };
 
-  const prepareChequeRowsFromTerms = () => {
-    prepareChequeRows(getTermsSchedule());
+  const prepareChequeRowsFromTerms = (amount = totalAmount) => {
+    prepareChequeRows(getTermsSchedule(amount));
   };
 
   const clearChequeEntries = () => {
@@ -390,10 +391,10 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
           name: newCustomerName.trim(),
           place: newCustomerPlace.trim() || undefined,
           codeNo: newCustomerCodeNo.trim() || undefined,
-          closingBalance: newCustomerClosingBalance.trim() ? Number(newCustomerClosingBalance) : 0,
         });
         if (created) {
           setSelectedCustomerId(created.id);
+          setCustomerSearch(created.name);
           setIsCreatingNewCustomer(false);
         } else {
           return;
@@ -401,6 +402,24 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
       }
       if (!selectedCustomerId && !newCustomerName) {
         showToast('Validation Error', 'Please select or create a borrower customer.', 'warning');
+        return;
+      }
+
+      // Existing borrowers are migrations from the offline ledger. Their
+      // opening balance is the only loan amount entered here; interest and
+      // new-loan terms are intentionally skipped.
+      if (!isCreatingNewCustomer && selectedCustomerId) {
+        if (openingBalance <= 0) {
+          showToast('Validation Error', 'Opening Balance is required for an existing borrower.', 'warning');
+          return;
+        }
+        setTotalAmount(openingBalance);
+        setDisbursedAmount(0);
+        setInterestAmount(0);
+        setIncludeInterest(false);
+        setIsOpeningBalanceOnly(true);
+        prepareChequeRowsFromTerms(openingBalance);
+        setCurrentStep(3);
         return;
       }
       setCurrentStep(2);
@@ -483,10 +502,11 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
       totalAmount,
       startDate,
       frequency,
-      disbursedAmount: !includeInterest ? totalAmount : disbursedAmount > 0 ? disbursedAmount : null,
+      disbursedAmount: !includeInterest ? disbursedAmount : disbursedAmount > 0 ? disbursedAmount : null,
       interestAmount: includeInterest && interestAmount > 0 ? interestAmount : null,
       openingBalance,
       openingBalanceType,
+      isOpeningBalanceOnly,
       splits: formattedSplits,
       installments: formattedInstallments,
     });
@@ -600,10 +620,10 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
               setNewCustomerPlace={setNewCustomerPlace}
               newCustomerCodeNo={newCustomerCodeNo}
               setNewCustomerCodeNo={setNewCustomerCodeNo}
-              newCustomerClosingBalance={newCustomerClosingBalance}
-              setNewCustomerClosingBalance={setNewCustomerClosingBalance}
-              totalAmount={totalAmount}
-              setTotalAmount={setTotalAmount}
+              openingBalance={openingBalance}
+              setOpeningBalance={setOpeningBalance}
+              openingBalanceType={openingBalanceType}
+              setOpeningBalanceType={setOpeningBalanceType}
             />
           )}
 

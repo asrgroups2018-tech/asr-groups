@@ -1,6 +1,5 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import * as XLSX from 'xlsx';
 import { Loan } from '@/lib/types';
 
 export interface FlattenedLoanExportRow {
@@ -15,29 +14,18 @@ export interface FlattenedLoanExportRow {
   recdDate: string;
   depName: string;
   chqNo: string;
-  // 10 ASR Companies
-  pass: number;
-  kars: number;
-  ig: number;
-  ine: number;
-  ins: number;
-  mars: number;
-  mm: number;
-  tg: number;
-  gs: number;
-  ala: number;
-  // 6 Outside Companies
-  fin: number;
-  cs: number;
-  mc: number;
-  tatva: number;
-  bhavna: number;
-  taSS: number;
+  companyValues: Record<string, number>;
   remarks: string;
 }
 
 export function flattenLoansForExport(loans: Loan[]): FlattenedLoanExportRow[] {
   const rows: FlattenedLoanExportRow[] = [];
+
+  const normalizeSplits = (splits: Record<string, number>) => Object.entries(splits).reduce<Record<string, number>>((result, [code, amount]) => {
+    const numericAmount = Number(amount) || 0;
+    if (numericAmount > 0) result[code.trim().toUpperCase()] = numericAmount;
+    return result;
+  }, {});
 
   loans.forEach((loan) => {
     const installments = loan.installments || [];
@@ -62,22 +50,7 @@ export function flattenLoansForExport(loans: Loan[]): FlattenedLoanExportRow[] {
         recdDate: '',
         depName: '',
         chqNo: '',
-        pass: Number(splitMap['PASS'] || splitMap['PASS ENTERPRISES'] || 0),
-        kars: Number(splitMap['KARS'] || splitMap['KARS ENTERPRISES'] || 0),
-        ig: Number(splitMap['IG'] || splitMap['INFIN GROUP'] || splitMap['INFIN'] || 0),
-        ine: Number(splitMap['INE'] || splitMap['INFINITY ENTERPRISES'] || 0),
-        ins: Number(splitMap['INS'] || splitMap['INNOVATIVE SOLUTIONS'] || 0),
-        mars: Number(splitMap['MARS'] || splitMap['MARS SOLUTION'] || 0),
-        mm: Number(splitMap['MM'] || splitMap['MM ASSOCIATES'] || 0),
-        tg: Number(splitMap['TG'] || splitMap['TRIVENI GROUP'] || 0),
-        gs: Number(splitMap['GS'] || splitMap['GLOBAL SOLITAIRE'] || 0),
-        ala: Number(splitMap['ALA'] || splitMap['ALAGESH'] || 0),
-        fin: Number(splitMap['FIN'] || splitMap['FINCUBE VENTURES'] || 0),
-        cs: Number(splitMap['CS'] || splitMap['CS ASSOCIATES'] || 0),
-        mc: Number(splitMap['MC'] || splitMap['M CHINNIAH'] || 0),
-        tatva: Number(splitMap['TATVA'] || splitMap['TATVA ENTERPRISES'] || 0),
-        bhavna: Number(splitMap['BHAVNA'] || splitMap['BHAVANA'] || 0),
-        taSS: Number(splitMap['TA (SS)'] || splitMap['TA'] || 0),
+        companyValues: normalizeSplits(splitMap),
         remarks: (loan as any).remarks || '',
       });
       return;
@@ -98,24 +71,7 @@ export function flattenLoansForExport(loans: Loan[]): FlattenedLoanExportRow[] {
         recdDate: inst.recdDate || '',
         depName: inst.depName || '',
         chqNo: inst.chqNo || '',
-        // 10 ASR Companies
-        pass: Number(splits['PASS'] || splits['PASS ENTERPRISES'] || 0),
-        kars: Number(splits['KARS'] || splits['KARS ENTERPRISES'] || 0),
-        ig: Number(splits['IG'] || splits['INFIN GROUP'] || splits['INFIN'] || 0),
-        ine: Number(splits['INE'] || splits['INFINITY ENTERPRISES'] || 0),
-        ins: Number(splits['INS'] || splits['INNOVATIVE SOLUTIONS'] || splits['INNOVATE SOLUTIONS'] || 0),
-        mars: Number(splits['MARS'] || splits['MARS SOLUTION'] || 0),
-        mm: Number(splits['MM'] || splits['MM ASSOCIATES'] || 0),
-        tg: Number(splits['TG'] || splits['TRIVENI GROUP'] || splits['TREVINI GROUP'] || 0),
-        gs: Number(splits['GS'] || splits['GLOBAL SOLITAIRE'] || splits['GLOBAL SOLITARE'] || 0),
-        ala: Number(splits['ALA'] || splits['ALAGESH'] || 0),
-        // 6 Outside Companies
-        fin: Number(splits['FIN'] || splits['FINCUBE VENTURES'] || 0),
-        cs: Number(splits['CS'] || splits['CS ASSOCIATES'] || 0),
-        mc: Number(splits['MC'] || splits['M CHINNIAH'] || 0),
-        tatva: Number(splits['TATVA'] || splits['TATVA ENTERPRISES'] || 0),
-        bhavna: Number(splits['BHAVNA'] || splits['BHAVANA'] || splits['BHAVANA CORP'] || 0),
-        taSS: Number(splits['TA (SS)'] || splits['TA'] || splits['THIRUCHENDURAON ASSOCIATE'] || 0),
+        companyValues: normalizeSplits(splits),
         remarks: inst.remarks || '',
       });
     });
@@ -146,7 +102,16 @@ export async function exportLoansToExcel(loans: Loan[], dateRangeLabel?: string)
     pageSetup: { orientation: 'landscape', fitToPage: true },
   });
 
-  // Define All 28 Columns with Metadata & Alignment
+  const companyColumns = Array.from(new Set(rows.flatMap((row) => Object.keys(row.companyValues)))).map((code) => ({
+    header: code,
+    key: `company:${code}`,
+    companyCode: code,
+    width: Math.max(14, Math.min(28, code.length + 4)),
+    align: 'right',
+    type: 'company',
+  }));
+
+  // Base columns plus only the companies present in the selected loans.
   const columnsDef = [
     { header: 'LOAN ID', key: 'loanId', width: 15, align: 'center', type: 'base' },
     { header: 'S.NO', key: 'seqNo', width: 8, align: 'center', type: 'base' },
@@ -159,24 +124,7 @@ export async function exportLoansToExcel(loans: Loan[], dateRangeLabel?: string)
     { header: 'RECD DATE', key: 'recdDate', width: 14, align: 'center', type: 'base' },
     { header: 'DEP NAME', key: 'depName', width: 15, align: 'center', type: 'base' },
     { header: 'CHQ NO', key: 'chqNo', width: 14, align: 'center', type: 'base' },
-    // 8 ASR GROUP Own Companies (Active + Historical)
-    { header: 'PASS ENTERPRISES', key: 'pass', width: 18, align: 'right', type: 'asr' },
-    { header: 'KARS ENTERPRISES', key: 'kars', width: 18, align: 'right', type: 'asr' },
-    { header: 'INFIN GROUP', key: 'ig', width: 16, align: 'right', type: 'asr' },
-    { header: 'INFINITY ENTERPRISES', key: 'ine', width: 18, align: 'right', type: 'asr' },
-    { header: 'INNOVATIVE SOLUTIONS', key: 'ins', width: 20, align: 'right', type: 'asr' },
-    { header: 'MARS SOLUTION', key: 'mars', width: 16, align: 'right', type: 'asr' },
-    { header: 'TRIVENI GROUP', key: 'tg', width: 16, align: 'right', type: 'asr' },
-    { header: 'GLOBAL SOLITAIRE', key: 'gs', width: 18, align: 'right', type: 'asr' },
-    { header: 'ALAGESH', key: 'ala', width: 15, align: 'right', type: 'asr' },
-    // 7 Outside Party Companies
-    { header: 'MM ASSOCIATES', key: 'mm', width: 16, align: 'right', type: 'outside' },
-    { header: 'FINCUBE VENTURES', key: 'fin', width: 18, align: 'right', type: 'outside' },
-    { header: 'CS ASSOCIATES', key: 'cs', width: 16, align: 'right', type: 'outside' },
-    { header: 'M CHINNIAH', key: 'mc', width: 15, align: 'right', type: 'outside' },
-    { header: 'TATVA ENTERPRISES', key: 'tatva', width: 18, align: 'right', type: 'outside' },
-    { header: 'BHAVANA CORP', key: 'bhavna', width: 16, align: 'right', type: 'outside' },
-    { header: 'THIRUCHENDURAON ASSOCIATE', key: 'taSS', width: 24, align: 'right', type: 'outside' },
+    ...companyColumns,
     // Remarks
     { header: 'REMARKS', key: 'remarks', width: 28, align: 'left', type: 'base' },
   ];
@@ -194,22 +142,7 @@ export async function exportLoansToExcel(loans: Loan[], dateRangeLabel?: string)
     r.recdDate || '',
     r.depName || '',
     r.chqNo || '',
-    r.pass || 0,
-    r.kars || 0,
-    r.ig || 0,
-    r.ine || 0,
-    r.ins || 0,
-    r.mars || 0,
-    r.mm || 0,
-    r.tg || 0,
-    r.gs || 0,
-    r.ala || 0,
-    r.fin || 0,
-    r.cs || 0,
-    r.mc || 0,
-    r.tatva || 0,
-    r.bhavna || 0,
-    r.taSS || 0,
+    ...companyColumns.map((column) => r.companyValues[column.companyCode] || 0),
     r.remarks || '',
   ]);
 
@@ -227,7 +160,7 @@ export async function exportLoansToExcel(loans: Loan[], dateRangeLabel?: string)
       name: c.header,
       filterButton: true,
       totalsRowLabel: c.key === 'loanId' ? 'TOTAL' : undefined,
-      totalsRowFunction: (c.type === 'amount' || c.type === 'asr' || c.type === 'outside') ? 'sum' : undefined,
+      totalsRowFunction: (c.type === 'amount' || c.type === 'asr' || c.type === 'outside' || c.type === 'company') ? 'sum' : undefined,
     })),
     rows: tableDataRows,
   });
@@ -247,7 +180,7 @@ export async function exportLoansToExcel(loans: Loan[], dateRangeLabel?: string)
     let fillArgb = 'FF701A35'; // Deep Maroon (Application Brand)
     let fontColor = 'FFFFFFFF'; // White
 
-    if (col.type === 'asr') {
+    if (col.type === 'asr' || col.type === 'company') {
       fillArgb = 'FF831843'; // ASR Internal Wine
       fontColor = 'FFEED8A1'; // Gold text
     } else if (col.type === 'outside') {
@@ -318,7 +251,7 @@ export async function exportLoansToExcel(loans: Loan[], dateRangeLabel?: string)
       };
 
       // Numeric columns formatting
-      if (col.type === 'amount' || col.type === 'asr' || col.type === 'outside') {
+      if (col.type === 'amount' || col.type === 'asr' || col.type === 'outside' || col.type === 'company') {
         cell.numFmt = '#,##,##0';
         if (typeof cell.value === 'number') {
           cell.font = {
@@ -380,7 +313,7 @@ export async function exportLoansToExcel(loans: Loan[], dateRangeLabel?: string)
       right: { style: 'thin', color: { argb: 'FFD4C8B8' } },
     };
 
-    if (col.type === 'amount' || col.type === 'asr' || col.type === 'outside') {
+    if (col.type === 'amount' || col.type === 'asr' || col.type === 'outside' || col.type === 'company') {
       cell.numFmt = '#,##,##0';
     }
   });
@@ -404,6 +337,7 @@ export async function exportLoansToExcel(loans: Loan[], dateRangeLabel?: string)
 export function exportLoansToPDF(loans: Loan[], dateRangeLabel?: string) {
   const rows = flattenLoansForExport(loans);
   const totalAmount = rows.reduce((s, r) => s + r.amountDue, 0);
+  const outstandingAmount = loans.reduce((sum, loan) => sum + Number(loan.totalOutstanding || 0), 0);
   const collectedAmount = loans.reduce((sum, l) => {
     return sum + (l.installments || []).reduce((instSum, inst) => {
       if (inst.status === 'PASS' || inst.status === 'CLS' || inst.status === 'Paid') {
@@ -465,7 +399,7 @@ export function exportLoansToPDF(loans: Loan[], dateRangeLabel?: string) {
   doc.setTextColor(4, 120, 87);
   doc.text(`INR ${collectedAmount.toLocaleString('en-IN')}`, 285, 96);
   doc.setTextColor(180, 83, 9);
-  doc.text(`INR ${Math.max(0, totalAmount - collectedAmount).toLocaleString('en-IN')}`, 530, 96);
+  doc.text(`INR ${outstandingAmount.toLocaleString('en-IN')}`, 530, 96);
 
   // Table Columns
   const tableHeaders = [
@@ -483,27 +417,7 @@ export function exportLoansToPDF(loans: Loan[], dateRangeLabel?: string) {
   ];
 
   const tableBody = rows.map((r) => {
-    // List ALL companies involved with their split amounts
-    const allCompanySplits: [string, number][] = [
-      ['PASS', r.pass],
-      ['KARS', r.kars],
-      ['IG', r.ig],
-      ['INE', r.ine],
-      ['INS', r.ins],
-      ['MARS', r.mars],
-      ['MM', r.mm],
-      ['TG', r.tg],
-      ['GS', r.gs],
-      ['ALA', r.ala],
-      ['FIN', r.fin],
-      ['CS', r.cs],
-      ['MC', r.mc],
-      ['TATVA', r.tatva],
-      ['BHAVNA', r.bhavna],
-      ['TA', r.taSS],
-    ];
-
-    const activeSplits = allCompanySplits.filter(([_, amt]) => amt > 0);
+    const activeSplits = Object.entries(r.companyValues).filter(([, amount]) => amount > 0);
     const splitText = activeSplits.length > 0
       ? activeSplits.map(([name, amt]) => `${name} (${amt.toLocaleString('en-IN')})`).join(' · ')
       : (r.depName ? `${r.depName} (${r.amountDue.toLocaleString('en-IN')})` : '-');
@@ -539,7 +453,7 @@ export function exportLoansToPDF(loans: Loan[], dateRangeLabel?: string) {
         '',
         '',
         '',
-        'All 16 Portfolios Consolidated',
+        `${new Set(rows.flatMap((row) => Object.keys(row.companyValues))).size} Linked Companies`,
       ],
     ],
     theme: 'striped',

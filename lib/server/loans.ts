@@ -46,6 +46,7 @@ export async function getLoans(query?: string, customerId?: string): Promise<Loa
     SELECT 
       l.id as loan_id, l.customer_id, l.code_no, l.total_amount, l.disbursed_amount, l.interest_amount,
       l.opening_balance, l.opening_balance_type, l.start_date,
+      l.is_opening_balance_only,
       l.installment_count, l.frequency, l.status as loan_status, l.created_at as loan_created_at,
       c.name as customer_name, c.place as customer_place, c.closing_balance as customer_closing_balance
     FROM loans l
@@ -183,7 +184,10 @@ export async function getLoans(query?: string, customerId?: string): Promise<Loa
     const openingBalance = Math.max(0, Number(row.opening_balance || 0));
     const openingBalanceType = String(row.opening_balance_type || 'DEBIT').toUpperCase() === 'CREDIT' ? 'CREDIT' : 'DEBIT';
     const openingSigned = openingBalanceType === 'CREDIT' ? -openingBalance : openingBalance;
-    const totalOutstanding = Math.max(0, openingSigned + totalAmount - totalCollected);
+    const totalOutstanding = Math.max(
+      0,
+      openingSigned + (Number(row.is_opening_balance_only || 0) ? 0 : totalAmount) - totalCollected,
+    );
 
     return {
       id: lid,
@@ -197,6 +201,7 @@ export async function getLoans(query?: string, customerId?: string): Promise<Loa
       interestAmount: row.interest_amount != null ? Number(row.interest_amount) : null,
       openingBalance,
       openingBalanceType: openingBalanceType as 'DEBIT' | 'CREDIT',
+      isOpeningBalanceOnly: Boolean(Number(row.is_opening_balance_only || 0)),
       startDate: String(row.start_date || new Date().toISOString().slice(0, 10)),
       installmentCount: Number(row.installment_count || installments.length),
       frequency: (row.frequency as any) || 'Monthly',
@@ -263,6 +268,7 @@ export async function createLoan(data: {
   interestAmount?: number | null;
   openingBalance?: number;
   openingBalanceType?: 'DEBIT' | 'CREDIT';
+  isOpeningBalanceOnly?: boolean;
   startDate: string;
   frequency: 'Weekly' | 'Monthly';
   splits: { companyId: string; splitPercent: number; splitAmount: number }[];
@@ -286,9 +292,9 @@ export async function createLoan(data: {
   const statements: any[] = [
     {
       sql: `INSERT INTO loans (
-        id, customer_id, code_no, total_amount, disbursed_amount, interest_amount, opening_balance, opening_balance_type, start_date,
+        id, customer_id, code_no, total_amount, disbursed_amount, interest_amount, opening_balance, opening_balance_type, is_opening_balance_only, start_date,
         installment_count, frequency, status, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       args: [
         loanId,
         data.customerId,
@@ -298,6 +304,7 @@ export async function createLoan(data: {
         data.interestAmount ?? null,
         Math.max(0, Number(data.openingBalance || 0)),
         data.openingBalanceType === 'CREDIT' ? 'CREDIT' : 'DEBIT',
+        data.isOpeningBalanceOnly ? 1 : 0,
         data.startDate,
         data.installments.length,
         data.frequency,
@@ -523,6 +530,8 @@ export async function updateFullLoan(
     startDate?: string;
     disbursedAmount?: number | null;
     interestAmount?: number | null;
+    openingBalance?: number;
+    openingBalanceType?: 'DEBIT' | 'CREDIT';
     installments: {
       id?: string;
       seqNo: number;
@@ -599,6 +608,12 @@ export async function updateFullLoan(
     ['CLEARED', 'NEFT', 'RTGS', 'CASH', 'PASS', 'PAID', 'CLOSED', 'SETTLED'].includes(String(r.status || '').toUpperCase())
   );
   const finalStatus = data.status || (allPaid ? 'Closed' : 'Active');
+  const openingBalance = data.openingBalance !== undefined
+    ? Math.max(0, Number(data.openingBalance) || 0)
+    : Number(currentLoan.openingBalance || 0);
+  const openingBalanceType = data.openingBalanceType === 'CREDIT'
+    ? 'CREDIT'
+    : (currentLoan.openingBalanceType || 'DEBIT');
 
   // 1. Update loan metadata
   statements.push({
@@ -607,6 +622,8 @@ export async function updateFullLoan(
             total_amount = ?,
             disbursed_amount = ?,
             interest_amount = ?,
+            opening_balance = ?,
+            opening_balance_type = ?,
             start_date = ?,
             installment_count = ?,
             frequency = ?,
@@ -617,6 +634,8 @@ export async function updateFullLoan(
       newTotalAmount,
       data.disbursedAmount !== undefined ? data.disbursedAmount : currentLoan.disbursedAmount ?? null,
       data.interestAmount !== undefined ? data.interestAmount : currentLoan.interestAmount ?? null,
+      openingBalance,
+      openingBalanceType,
       data.startDate || currentLoan.startDate,
       data.installments.length,
       data.frequency || currentLoan.frequency,
@@ -1390,7 +1409,7 @@ export async function getDashboardStats(customerId?: string) {
   // 1. Portfolio-level Metrics (All-time, never affected by time filter)
   const totalDisbursed = loans.reduce((sum, l) => sum + Number(l.totalAmount || 0), 0);
   const totalRecovered = loans.reduce((sum, l) => sum + Number(l.totalCollected || 0), 0);
-  const totalOutstanding = Math.max(0, totalDisbursed - totalRecovered);
+  const totalOutstanding = loans.reduce((sum, loan) => sum + Number(loan.totalOutstanding || 0), 0);
 
   // 2. Installments & Status counts (confirmed status taxonomy)
   let totalInstallments = 0;

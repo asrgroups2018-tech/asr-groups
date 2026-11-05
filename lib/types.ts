@@ -432,6 +432,7 @@ export interface Loan {
   interestAmount?: number | null; // Upfront interest amount earned by ASR (e.g. ₹10,000)
   openingBalance?: number; // Optional opening ledger balance entered when creating the loan
   openingBalanceType?: 'DEBIT' | 'CREDIT';
+  isOpeningBalanceOnly?: boolean; // Existing offline account migrated without new-loan interest
   startDate: string;
   installmentCount: number; // e.g. 2, 4, 12
   frequency: RepaymentFrequency;

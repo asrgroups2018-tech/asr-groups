@@ -140,18 +140,17 @@ export const TermsStep: React.FC<TermsStepProps> = ({
             onChange={(val) => {
               const cappedAmount = Math.min(val, totalAmount);
               setDisbursedAmount(cappedAmount);
-              if (totalAmount > 0) setInterestAmount(totalAmount - cappedAmount);
+              if (includeInterest && totalAmount > 0) setInterestAmount(totalAmount - cappedAmount);
             }}
             placeholder="e.g. 8,50,000"
             theme="dark"
             size="md"
             showWords={true}
             max={totalAmount}
-            disabled={!includeInterest}
             deferChange
           />
           <span className="text-[11px] text-slate-400 block">
-            {includeInterest ? 'Principal given to the borrower' : 'Interest is off, so the full loan amount is disbursed'}
+            {includeInterest ? 'Principal given to the borrower' : 'Interest is off; net disbursed remains editable'}
           </span>
         </div>
 
@@ -207,7 +206,7 @@ export const TermsStep: React.FC<TermsStepProps> = ({
             </>
           ) : (
             <div className="flex min-h-20 items-center rounded-lg border border-dashed border-slate-600/70 bg-slate-900/30 px-3 text-xs text-slate-400">
-              Upfront interest is disabled for this loan.
+              Upfront interest is off for this loan. Net Disbursed remains available above.
             </div>
           )}
         </div>

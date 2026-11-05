@@ -89,7 +89,8 @@ type SortDirection = 'asc' | 'desc';
 
 function getLoanClosingDebit(loan: Loan): number {
   const opening = Number(loan.openingBalance || 0) * (loan.openingBalanceType === 'CREDIT' ? -1 : 1);
-  return Math.max(0, opening + Number(loan.totalAmount || 0) - Number(loan.totalCollected || 0));
+  const scheduledBalance = loan.isOpeningBalanceOnly ? 0 : Number(loan.totalAmount || 0);
+  return Math.max(0, opening + scheduledBalance - Number(loan.totalCollected || 0));
 }
 
 export function getDerivedLoanStatus(loan: Loan, todayIso = getTodayIsoDate()): 'Active' | 'Closed' | 'Overdue' | 'Pending' {

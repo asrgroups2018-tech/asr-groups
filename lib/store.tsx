@@ -200,6 +200,7 @@ interface AppContextType {
     interestAmount?: number | null;
     openingBalance?: number;
     openingBalanceType?: 'DEBIT' | 'CREDIT';
+    isOpeningBalanceOnly?: boolean;
     startDate: string;
     frequency: RepaymentFrequency;
     splits: { companyId: string; splitPercent: number; splitAmount: number }[];
@@ -655,6 +656,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     interestAmount?: number | null;
     openingBalance?: number;
     openingBalanceType?: 'DEBIT' | 'CREDIT';
+    isOpeningBalanceOnly?: boolean;
     startDate: string;
     frequency: RepaymentFrequency;
     splits: { companyId: string; splitPercent: number; splitAmount: number }[];
@@ -755,6 +757,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       status?: string;
       frequency?: string;
       startDate?: string;
+      openingBalance?: number;
+      openingBalanceType?: 'DEBIT' | 'CREDIT';
       installments: {
         id?: string;
         seqNo: number;

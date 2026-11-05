@@ -51,6 +51,9 @@ export async function PUT(
     if (body.customerClosingBalance !== undefined && (!Number.isFinite(Number(body.customerClosingBalance)) || Number(body.customerClosingBalance) < 0)) {
       return NextResponse.json({ error: 'Closing Balance must be a valid non-negative amount.' }, { status: 400 });
     }
+    if (body.openingBalance !== undefined && (!Number.isFinite(Number(body.openingBalance)) || Number(body.openingBalance) < 0)) {
+      return NextResponse.json({ error: 'Opening Balance must be a valid non-negative amount.' }, { status: 400 });
+    }
     const queued = await queueMutationForApproval({
       actor: auth.user,
       changeType: 'Loan Update',

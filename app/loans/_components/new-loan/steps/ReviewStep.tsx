@@ -86,7 +86,7 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({
               {includeInterest ? `₹${interestAmount.toLocaleString('en-IN')}` : 'Not applied'}
             </span>
             <span className="text-[10px] text-slate-400 font-sans block">
-              {includeInterest ? `Net paid ₹${disbursedAmount.toLocaleString('en-IN')}` : 'Full amount disbursed'}
+              Net paid ₹{disbursedAmount.toLocaleString('en-IN')}
             </span>
           </div>
           <div>

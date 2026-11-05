@@ -48,7 +48,7 @@ export async function getCustomers(query?: string): Promise<Customer[]> {
   // sequential hosted-database round trips on the customers page.
   const [custResult, loansResult, instResult] = await client.batch([
     { sql, args },
-    { sql: 'SELECT id, customer_id, total_amount, status FROM loans', args: [] },
+    { sql: 'SELECT id, customer_id, total_amount, status, opening_balance, opening_balance_type, is_opening_balance_only FROM loans', args: [] },
     { sql: 'SELECT loan_id, amount_due, status FROM installments', args: [] },
   ], 'read');
 
@@ -82,7 +82,18 @@ export async function getCustomers(query?: string): Promise<Customer[]> {
       });
     });
 
-    const outstanding = Math.max(0, totalBorrowed - totalRepaid);
+    const outstanding = userLoans.reduce((sum, loan) => {
+      const loanInstallments = loanInstMap.get(String(loan.id)) || [];
+      const loanCollected = loanInstallments.reduce((collected, installment) => {
+        const status = String(installment.status || '').trim().toUpperCase();
+        return ['CLEARED', 'NEFT', 'RTGS', 'CASH', 'PASS', 'PAID', 'CLS', 'CS', 'SETTLED', 'CLOSED'].includes(status)
+          ? collected + Number(installment.amount_due || 0)
+          : collected;
+      }, 0);
+      const opening = Number(loan.opening_balance || 0) * (String(loan.opening_balance_type || 'DEBIT').toUpperCase() === 'CREDIT' ? -1 : 1);
+      const scheduled = Number(loan.is_opening_balance_only || 0) ? 0 : Number(loan.total_amount || 0);
+      return sum + Math.max(0, opening + scheduled - loanCollected);
+    }, 0);
     const hasOverdue = userLoans.some((l) => l.status === 'Overdue');
     const isClosed = userLoans.length > 0 && userLoans.every((l) => l.status === 'Closed');
 

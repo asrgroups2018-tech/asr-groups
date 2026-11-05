@@ -5,7 +5,7 @@ import { ModalFrame } from '@/components/ui/ModalFrame';
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useApp } from '@/lib/store';
 import { useTheme } from '@/components/providers/ThemeProvider';
-import { Loan, Installment, Company, AppStatus, LoanStatus, RepaymentFrequency } from '@/lib/types';
+import { Loan, AppStatus, LoanStatus, RepaymentFrequency } from '@/lib/types';
 import { MoneyDisplay } from '@/components/ui/MoneyDisplay';
 import { DatePicker } from '@/components/ui/DatePicker';
 import { CustomSelect } from '@/components/ui/CustomSelect';
@@ -44,24 +44,7 @@ interface EditableInstallmentRow {
   depName: string;
   bank?: string;
   remarks: string;
-  // ASR Companies (10)
-  pass: number;
-  kars: number;
-  ig: number;
-  ine: number;
-  ins: number;
-  mars: number;
-  mm: number;
-  tg: number;
-  gs: number;
-  ala: number;
-  // Outside Companies (6)
-  fin: number;
-  cs: number;
-  mc: number;
-  tatva: number;
-  bhavna: number;
-  taSS: number;
+  companyValues: Record<string, number>;
 }
 
 function formatToIso(dStr: string | null | undefined): string {
@@ -95,33 +78,10 @@ function formatToIso(dStr: string | null | undefined): string {
 }
 
 export interface CompanyColumnDef {
-  key: keyof EditableInstallmentRow;
+  key: string;
   label: string;
   isOutside: boolean;
 }
-
-export const ALL_COMPANY_COLUMNS: CompanyColumnDef[] = [
-  // 10 ASR GROUP Companies
-  { key: 'pass', label: 'PASS ENTERPRISES', isOutside: false },
-  { key: 'kars', label: 'KARS ENTERPRISES', isOutside: false },
-  { key: 'ig', label: 'INFIN GROUP', isOutside: false },
-  { key: 'ine', label: 'INFINITY ENTERPRISES', isOutside: false },
-  { key: 'ins', label: 'INNOVATIVE SOLUTIONS', isOutside: false },
-  { key: 'mars', label: 'MARS SOLUTION', isOutside: false },
-  { key: 'mm', label: 'MM ASSOCIATES', isOutside: false },
-  { key: 'tg', label: 'TRIVENI GROUP', isOutside: false },
-  { key: 'gs', label: 'GLOBAL SOLITAIRE', isOutside: false },
-  { key: 'ala', label: 'ALAGESH', isOutside: false },
-  // 6 Outside Parties
-  { key: 'fin', label: 'FINCUBE', isOutside: true },
-  { key: 'cs', label: 'CS ASSOCIATES', isOutside: true },
-  { key: 'mc', label: 'M CHINNIAH', isOutside: true },
-  { key: 'tatva', label: 'TATVA ENTERPRISES', isOutside: true },
-  { key: 'bhavna', label: 'BHAVANA CORP', isOutside: true },
-  { key: 'taSS', label: 'THIRUCHENDUR (SS)', isOutside: true },
-];
-
-const COMPANY_KEYS: (keyof EditableInstallmentRow)[] = ALL_COMPANY_COLUMNS.map((c) => c.key);
 
 interface FastGridCellInputProps {
   value: string | number | null | undefined;
@@ -224,25 +184,8 @@ const FastGridCellInput = React.memo<FastGridCellInputProps>(({
   );
 });
 
-function getFieldKeyForCompanyCode(code: string): keyof EditableInstallmentRow | null {
-  const c = code.trim().toUpperCase();
-  if (c === 'PASS' || c.includes('PASS')) return 'pass';
-  if (c === 'KARS' || c.includes('KARS')) return 'kars';
-  if (c === 'IG' || c === 'INFIN' || c.includes('INFIN')) return 'ig';
-  if (c === 'INE' || c.includes('INFINITY')) return 'ine';
-  if (c === 'INS' || c.includes('INNOVAT')) return 'ins';
-  if (c === 'MARS' || c.includes('MARS')) return 'mars';
-  if (c === 'MM' || c.includes('MM')) return 'mm';
-  if (c === 'TG' || c.includes('TRIVENI') || c.includes('TREVINI')) return 'tg';
-  if (c === 'GS' || c.includes('SOLITAIRE') || c.includes('SOLITARE')) return 'gs';
-  if (c === 'ALA' || c.includes('ALAGESH')) return 'ala';
-  if (c === 'FIN' || c.includes('FINCUBE')) return 'fin';
-  if (c === 'CS' || c.includes('CS ASSOC')) return 'cs';
-  if (c === 'MC' || c.includes('CHINNIAH')) return 'mc';
-  if (c === 'TATVA' || c.includes('TATVA')) return 'tatva';
-  if (c === 'BHAVNA' || c === 'BHAVANA' || c.includes('BHAVAN')) return 'bhavna';
-  if (c.includes('TA') || c.includes('THIRUCHENDUR')) return 'taSS';
-  return null;
+function normalizeCompanyCode(value: string): string {
+  return value.trim().toUpperCase();
 }
 
 export const ALLOWED_STATUS_LIST: AppStatus[] = ['Pending', 'Cleared', 'NEFT', 'RTGS', 'Cash'];
@@ -299,7 +242,7 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
   onClose,
   loan,
 }) => {
-  const { updateFullLoan, showToast } = useApp();
+  const { updateFullLoan, showToast, companies } = useApp();
   const { theme } = useTheme();
 
   // Top Loan Form Fields
@@ -312,6 +255,8 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
   const [status, setStatus] = useState<TopLoanStatus>('Active');
   const [disbursedAmount, setDisbursedAmount] = useState<number | ''>('');
   const [interestAmount, setInterestAmount] = useState<number | ''>('');
+  const [openingBalance, setOpeningBalance] = useState<number>(0);
+  const [openingBalanceType, setOpeningBalanceType] = useState<'DEBIT' | 'CREDIT'>('DEBIT');
 
   // Spreadsheet Rows
   const [rows, setRows] = useState<EditableInstallmentRow[]>([]);
@@ -340,9 +285,19 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
     setStatus(normalizeLoanStatus(loan.status));
     setDisbursedAmount(loan.disbursedAmount != null ? loan.disbursedAmount : '');
     setInterestAmount(loan.interestAmount != null ? loan.interestAmount : '');
+    setOpeningBalance(Number(loan.openingBalance || 0));
+    setOpeningBalanceType(loan.openingBalanceType === 'CREDIT' ? 'CREDIT' : 'DEBIT');
 
     const mappedRows: EditableInstallmentRow[] = (loan.installments || []).map((inst, idx) => {
       const splits = inst.companySplits || {};
+      const companyValues = Object.entries(splits).reduce<Record<string, number>>((values, [code, amount]) => {
+        const splitCompany = (loan.splits || []).find(
+          (candidate) => candidate.companyId === code || candidate.companyCode.toUpperCase() === normalizeCompanyCode(code),
+        );
+        const canonicalCode = normalizeCompanyCode(splitCompany?.companyCode || code);
+        values[canonicalCode] = Number(amount) || 0;
+        return values;
+      }, {});
       return {
         id: inst.id,
         seqNo: inst.seqNo || idx + 1,
@@ -355,24 +310,7 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
         depName: inst.depName || '',
         bank: inst.bank || '',
         remarks: inst.remarks || '',
-        // ASR Companies (10)
-        pass: Number(splits['PASS'] || splits['PASS ENTERPRISES'] || 0),
-        kars: Number(splits['KARS'] || splits['KARS ENTERPRISES'] || 0),
-        ig: Number(splits['IG'] || splits['INFIN GROUP'] || splits['INFIN'] || 0),
-        ine: Number(splits['INE'] || splits['INFINITY ENTERPRISES'] || 0),
-        ins: Number(splits['INS'] || splits['INNOVATIVE SOLUTIONS'] || splits['INNOVATE SOLUTIONS'] || 0),
-        mars: Number(splits['MARS'] || splits['MARS SOLUTION'] || 0),
-        mm: Number(splits['MM'] || splits['MM ASSOCIATES'] || 0),
-        tg: Number(splits['TG'] || splits['TRIVENI GROUP'] || splits['TREVINI GROUP'] || 0),
-        gs: Number(splits['GS'] || splits['GLOBAL SOLITAIRE'] || splits['GLOBAL SOLITARE'] || 0),
-        ala: Number(splits['ALA'] || splits['ALAGESH'] || 0),
-        // Outside Companies (6)
-        fin: Number(splits['FIN'] || splits['FINCUBE VENTURES'] || 0),
-        cs: Number(splits['CS'] || splits['CS ASSOCIATES'] || 0),
-        mc: Number(splits['MC'] || splits['M CHINNIAH'] || 0),
-        tatva: Number(splits['TATVA'] || splits['TATVA ENTERPRISES'] || 0),
-        bhavna: Number(splits['BHAVNA'] || splits['BHAVANA'] || splits['BHAVANA CORP'] || 0),
-        taSS: Number(splits['TA (SS)'] || splits['TA'] || splits['THIRUCHENDURAON ASSOCIATE'] || 0),
+        companyValues,
       };
     });
 
@@ -397,8 +335,10 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
   }, [rows, paidRowsCount]);
 
   const totalPendingAmount = useMemo(() => {
-    return Math.max(0, capitalAmount - totalPaidAmount);
-  }, [capitalAmount, totalPaidAmount]);
+    const signedOpening = openingBalanceType === 'CREDIT' ? -openingBalance : openingBalance;
+    const scheduledBalance = loan?.isOpeningBalanceOnly ? 0 : totalLoanAmount;
+    return Math.max(0, signedOpening + scheduledBalance - totalPaidAmount);
+  }, [loan?.isOpeningBalanceOnly, openingBalance, openingBalanceType, totalLoanAmount, totalPaidAmount]);
 
   // Auto-adjust top loan status when all installments are fully paid or unpaid
   useEffect(() => {
@@ -410,66 +350,54 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
     }
   }, [totalPendingAmount, paidRowsCount, rows.length]);
 
-  // Column totals
-  const companySums = useMemo(() => {
-    return {
-      pass: rows.reduce((s, r) => s + (Number(r.pass) || 0), 0),
-      kars: rows.reduce((s, r) => s + (Number(r.kars) || 0), 0),
-      ig: rows.reduce((s, r) => s + (Number(r.ig) || 0), 0),
-      ine: rows.reduce((s, r) => s + (Number(r.ine) || 0), 0),
-      ins: rows.reduce((s, r) => s + (Number(r.ins) || 0), 0),
-      mars: rows.reduce((s, r) => s + (Number(r.mars) || 0), 0),
-      mm: rows.reduce((s, r) => s + (Number(r.mm) || 0), 0),
-      tg: rows.reduce((s, r) => s + (Number(r.tg) || 0), 0),
-      gs: rows.reduce((s, r) => s + (Number(r.gs) || 0), 0),
-      ala: rows.reduce((s, r) => s + (Number(r.ala) || 0), 0),
-      fin: rows.reduce((s, r) => s + (Number(r.fin) || 0), 0),
-      cs: rows.reduce((s, r) => s + (Number(r.cs) || 0), 0),
-      mc: rows.reduce((s, r) => s + (Number(r.mc) || 0), 0),
-      tatva: rows.reduce((s, r) => s + (Number(r.tatva) || 0), 0),
-      bhavna: rows.reduce((s, r) => s + (Number(r.bhavna) || 0), 0),
-      taSS: rows.reduce((s, r) => s + (Number(r.taSS) || 0), 0),
-    };
-  }, [rows]);
-
-  // Active/selected funding companies for this specific loan
-  const activeCompanyKeys = useMemo(() => {
-    const set = new Set<keyof EditableInstallmentRow>();
-
-    // 1. From loan.splits
-    if (loan?.splits && Array.isArray(loan.splits)) {
-      loan.splits.forEach((sp) => {
-        const k = getFieldKeyForCompanyCode(sp.companyCode || sp.companyName || '');
-        if (k && ((sp.splitPercent || 0) > 0 || (sp.splitAmount || 0) > 0)) {
-          set.add(k);
-        }
+  // Only companies persisted against this loan are eligible spreadsheet
+  // columns. The global company directory is never rendered as blank columns.
+  const linkedCompanyColumns = useMemo(() => {
+    const linked = new Map<string, CompanyColumnDef>();
+    const addCompany = (codeOrId: string, name?: string, isOutsideParty?: boolean) => {
+      const directoryCompany = companies.find(
+        (candidate) => candidate.id === codeOrId || candidate.shortCode.toUpperCase() === normalizeCompanyCode(codeOrId),
+      );
+      const code = normalizeCompanyCode(directoryCompany?.shortCode || codeOrId);
+      if (!code || linked.has(code)) return;
+      linked.set(code, {
+        key: code,
+        label: directoryCompany?.name || name || code,
+        isOutside: directoryCompany?.isOutsideParty ?? Boolean(isOutsideParty),
       });
-    }
+    };
 
-    // 2. From existing rows in the loan
-    COMPANY_KEYS.forEach((k) => {
-      if (companySums[k as keyof typeof companySums] > 0) {
-        set.add(k);
+    (loan?.splits || []).forEach((split) => {
+      if ((split.splitPercent || 0) > 0 || (split.splitAmount || 0) > 0) {
+        addCompany(split.companyCode || split.companyId, split.companyName, split.isOutsideParty);
       }
     });
+    rows.forEach((row) => {
+      Object.entries(row.companyValues).forEach(([code, amount]) => {
+        if (Number(amount) > 0) addCompany(code);
+      });
+    });
 
-    return set;
-  }, [loan, companySums]);
+    return Array.from(linked.values());
+  }, [companies, loan, rows]);
+
+  const activeCompanyKeys = useMemo(
+    () => new Set(linkedCompanyColumns.map((column) => column.key)),
+    [linkedCompanyColumns],
+  );
+
+  const companySums = useMemo(() => {
+    return linkedCompanyColumns.reduce<Record<string, number>>((sums, column) => {
+      sums[column.key] = rows.reduce((sum, row) => sum + (Number(row.companyValues[column.key]) || 0), 0);
+      return sums;
+    }, {});
+  }, [linkedCompanyColumns, rows]);
 
   const visibleCompanyColumns = useMemo(() => {
-    return ALL_COMPANY_COLUMNS.filter((col) => {
-      if (categoryFilter === 'SELECTED_ONLY') {
-        return activeCompanyKeys.has(col.key);
-      }
-      if (categoryFilter === 'ASR_ONLY') {
-        return !col.isOutside;
-      }
-      if (categoryFilter === 'OUTSIDE_ONLY') {
-        return col.isOutside;
-      }
-      return true; // 'ALL'
-    });
-  }, [categoryFilter, activeCompanyKeys]);
+    if (categoryFilter === 'ASR_ONLY') return linkedCompanyColumns.filter((column) => !column.isOutside);
+    if (categoryFilter === 'OUTSIDE_ONLY') return linkedCompanyColumns.filter((column) => column.isOutside);
+    return linkedCompanyColumns;
+  }, [categoryFilter, linkedCompanyColumns]);
 
   const gridRows = useMemo(() => {
     return rows.map((_, rowIndex) => {
@@ -528,23 +456,7 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
   // Check row validation mismatches
   const rowMismatches = useMemo(() => {
     return rows.map((r) => {
-      const splitSum =
-        (Number(r.pass) || 0) +
-        (Number(r.kars) || 0) +
-        (Number(r.ig) || 0) +
-        (Number(r.ine) || 0) +
-        (Number(r.ins) || 0) +
-        (Number(r.mars) || 0) +
-        (Number(r.mm) || 0) +
-        (Number(r.tg) || 0) +
-        (Number(r.gs) || 0) +
-        (Number(r.ala) || 0) +
-        (Number(r.fin) || 0) +
-        (Number(r.cs) || 0) +
-        (Number(r.mc) || 0) +
-        (Number(r.tatva) || 0) +
-        (Number(r.bhavna) || 0) +
-        (Number(r.taSS) || 0);
+      const splitSum = Object.values(r.companyValues).reduce((sum, amount) => sum + (Number(amount) || 0), 0);
 
       const amt = Number(r.amountDue) || 0;
       const isMismatch = splitSum > 0 && Math.abs(amt - splitSum) > 0.01;
@@ -591,9 +503,9 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
 
   const isSaveDisabled = Boolean(validationError) || isSaving;
 
-  // Fixed funding company split ratios for this loan
+  // Funding company split ratios for this loan
   const loanSplitRatios = useMemo(() => {
-    const ratios: Partial<Record<keyof EditableInstallmentRow, number>> = {};
+    const ratios: Record<string, number> = {};
 
     // 1. From loan.splits
     const validSplits = (loan?.splits || []).filter(
@@ -603,10 +515,8 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
     if (validSplits.length > 0) {
       const totalPct = validSplits.reduce((sum, sp) => sum + (sp.splitPercent || 0), 0);
       validSplits.forEach((sp) => {
-        const k = getFieldKeyForCompanyCode(sp.companyCode || sp.companyName || '');
-        if (k) {
-          ratios[k] = totalPct > 0 ? (sp.splitPercent || 0) / totalPct : (sp.splitAmount || 1) / (loan?.totalAmount || 1);
-        }
+        const k = normalizeCompanyCode(sp.companyCode || sp.companyId || sp.companyName || '');
+        if (k) ratios[k] = totalPct > 0 ? (sp.splitPercent || 0) / totalPct : (sp.splitAmount || 1) / (loan?.totalAmount || 1);
       });
       return ratios;
     }
@@ -618,7 +528,7 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
       loan.installments.forEach((inst) => {
         const sp = inst.companySplits || {};
         Object.entries(sp).forEach(([code, amt]) => {
-          const k = getFieldKeyForCompanyCode(code);
+          const k = normalizeCompanyCode(code);
           if (k && Number(amt) > 0) {
             sums[k] = (sums[k] || 0) + Number(amt);
             totalAll += Number(amt);
@@ -628,7 +538,7 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
 
       if (totalAll > 0) {
         Object.entries(sums).forEach(([k, s]) => {
-          ratios[k as keyof EditableInstallmentRow] = s / totalAll;
+          ratios[k] = s / totalAll;
         });
         return ratios;
       }
@@ -646,61 +556,70 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
   }, [loan, activeCompanyKeys]);
 
   // Distribute splits helper based on established loan ratio
-  const distributeSplits = (amt: number, splitsObj: any) => {
-    COMPANY_KEYS.forEach((k) => {
-      splitsObj[k] = 0;
+  const distributeSplits = (amt: number, row: EditableInstallmentRow) => {
+    const nextCompanyValues: Record<string, number> = {};
+    activeCompanyKeys.forEach((key) => {
+      nextCompanyValues[key] = 0;
     });
 
-    if (amt <= 0) return splitsObj;
+    if (amt <= 0) {
+      row.companyValues = nextCompanyValues;
+      return row;
+    }
 
     const entries = Object.entries(loanSplitRatios).filter(
-      ([k, ratio]) => (ratio || 0) > 0 && activeCompanyKeys.has(k as keyof EditableInstallmentRow)
-    ) as [keyof EditableInstallmentRow, number][];
+      ([k, ratio]) => (ratio || 0) > 0 && activeCompanyKeys.has(k)
+    );
 
-    if (entries.length === 0) return splitsObj;
+    if (entries.length === 0) {
+      row.companyValues = nextCompanyValues;
+      return row;
+    }
 
     const totalRatio = entries.reduce((sum, [_, r]) => sum + r, 0);
     let allocated = 0;
 
     entries.forEach(([key, ratio], idx) => {
       if (idx === entries.length - 1) {
-        splitsObj[key] = Math.max(0, amt - allocated);
+        nextCompanyValues[key] = Math.max(0, amt - allocated);
       } else {
         const normalizedRatio = totalRatio > 0 ? ratio / totalRatio : 1 / entries.length;
         const share = Math.round(amt * normalizedRatio);
-        splitsObj[key] = share;
+        nextCompanyValues[key] = share;
         allocated += share;
       }
     });
 
-    return splitsObj;
+    row.companyValues = nextCompanyValues;
+    return row;
   };
 
   // Update cell handler
-  const handleCellChange = (index: number, field: keyof EditableInstallmentRow, val: any) => {
+  const handleCellChange = (index: number, field: keyof EditableInstallmentRow | string, val: string | number) => {
     setRows((prev) => {
       const next = [...prev];
       const currentRow = next[index];
       if (!currentRow) return prev;
-
-      // Prevent editing unselected company columns
-      if (COMPANY_KEYS.includes(field) && !activeCompanyKeys.has(field)) {
-        return prev;
-      }
 
       if (field === 'amountDue') {
         const newAmt = Number(val) || 0;
         const updatedRow: EditableInstallmentRow = { ...currentRow, amountDue: newAmt };
 
         if (newAmt <= 0) {
-          COMPANY_KEYS.forEach((k) => {
-            (updatedRow as any)[k] = 0;
-          });
+          updatedRow.companyValues = Object.fromEntries(Array.from(activeCompanyKeys).map((key) => [key, 0]));
         } else {
           distributeSplits(newAmt, updatedRow);
         }
 
         next[index] = updatedRow;
+        return next;
+      }
+
+      if (activeCompanyKeys.has(field)) {
+        next[index] = {
+          ...currentRow,
+          companyValues: { ...currentRow.companyValues, [field]: Number(val) || 0 },
+        };
         return next;
       }
 
@@ -728,22 +647,7 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
       place: place || 'CHENNAI',
       depName: '',
       remarks: 'Auto-balanced remainder',
-      pass: 0,
-      kars: 0,
-      ig: 0,
-      ine: 0,
-      ins: 0,
-      mars: 0,
-      mm: 0,
-      tg: 0,
-      gs: 0,
-      ala: 0,
-      fin: 0,
-      cs: 0,
-      mc: 0,
-      tatva: 0,
-      bhavna: 0,
-      taSS: 0,
+      companyValues: {},
     };
 
     distributeSplits(diff, autoRow);
@@ -778,22 +682,7 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
       place: place || 'CHENNAI',
       depName: '',
       remarks: '',
-      pass: 0,
-      kars: 0,
-      ig: 0,
-      ine: 0,
-      ins: 0,
-      mars: 0,
-      mm: 0,
-      tg: 0,
-      gs: 0,
-      ala: 0,
-      fin: 0,
-      cs: 0,
-      mc: 0,
-      tatva: 0,
-      bhavna: 0,
-      taSS: 0,
+      companyValues: {},
     };
 
     distributeSplits(defaultAmt, newRow);
@@ -819,10 +708,7 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
     const amt = Number(row.amountDue) || 0;
     if (amt <= 0) return;
 
-    const updatedRow = { ...row };
-    COMPANY_KEYS.forEach((k) => {
-      (updatedRow as any)[k] = 0;
-    });
+    const updatedRow = { ...row, companyValues: {} };
 
     distributeSplits(amt, updatedRow);
 
@@ -858,26 +744,13 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
       startDate: startDate || new Date().toISOString().slice(0, 10),
       disbursedAmount: disbursedAmount !== '' && disbursedAmount !== null ? Number(disbursedAmount) : null,
       interestAmount: interestAmount !== '' && interestAmount !== null ? Number(interestAmount) : null,
+      openingBalance,
+      openingBalanceType,
       installments: rows.map((r) => {
-        const companySplits: Record<string, number> = {};
-        // ASR Companies (10)
-        if (r.pass > 0) companySplits['PASS'] = Number(r.pass);
-        if (r.kars > 0) companySplits['KARS'] = Number(r.kars);
-        if (r.ig > 0) companySplits['IG'] = Number(r.ig);
-        if (r.ine > 0) companySplits['INE'] = Number(r.ine);
-        if (r.ins > 0) companySplits['INS'] = Number(r.ins);
-        if (r.mars > 0) companySplits['MARS'] = Number(r.mars);
-        if (r.mm > 0) companySplits['MM'] = Number(r.mm);
-        if (r.tg > 0) companySplits['TG'] = Number(r.tg);
-        if (r.gs > 0) companySplits['GS'] = Number(r.gs);
-        if (r.ala > 0) companySplits['ALA'] = Number(r.ala);
-        // Outside Companies (6)
-        if (r.fin > 0) companySplits['FIN'] = Number(r.fin);
-        if (r.cs > 0) companySplits['CS'] = Number(r.cs);
-        if (r.mc > 0) companySplits['MC'] = Number(r.mc);
-        if (r.tatva > 0) companySplits['TATVA'] = Number(r.tatva);
-        if (r.bhavna > 0) companySplits['BHAVNA'] = Number(r.bhavna);
-        if (r.taSS > 0) companySplits['TA (SS)'] = Number(r.taSS);
+        const companySplits = Object.entries(r.companyValues).reduce<Record<string, number>>((splits, [code, amount]) => {
+          if (Number(amount) > 0) splits[code] = Number(amount);
+          return splits;
+        }, {});
 
         return {
           id: r.id && !r.id.startsWith('INST-NEW') ? r.id : undefined,
@@ -948,7 +821,7 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
                     ? 'bg-emerald-100 text-emerald-950 border-emerald-300'
                     : 'bg-rose-100 text-rose-950 border-rose-300'
                 }`}>
-                  <span className={totalPendingAmount === 0 ? 'text-emerald-800' : 'text-rose-800'}>Pending:</span>
+                  <span className={totalPendingAmount === 0 ? 'text-emerald-800' : 'text-rose-800'}>Closing:</span>
                   <MoneyDisplay
                     amount={totalPendingAmount}
                     size="xs"
@@ -1118,7 +991,44 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
 
           <div>
             <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1 font-mono">
-              Closing Balance (₹)
+              Opening Balance (₹)
+            </label>
+            <div className="flex gap-1">
+              <FastGridCellInput
+                value={openingBalance}
+                numeric
+                placeholder="e.g. 25,000"
+                onCommit={(value) => setOpeningBalance(Math.max(0, Number(value) || 0))}
+                className="min-w-0 flex-1 px-2.5 py-1.5 rounded border border-[#C5A059] bg-amber-50/60 font-mono font-bold text-slate-900 focus:outline-2 focus:outline-[#701A35] text-xs"
+              />
+              <select
+                value={openingBalanceType}
+                onChange={(event) => setOpeningBalanceType(event.target.value as 'DEBIT' | 'CREDIT')}
+                className="w-16 rounded border border-slate-300 bg-white px-1 text-[10px] font-bold text-slate-800 focus:outline-2 focus:outline-[#701A35]"
+                aria-label="Loan opening balance type"
+              >
+                <option value="DEBIT">Dr</option>
+                <option value="CREDIT">Cr</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1 font-mono">
+              Loan Closing Balance (₹)
+            </label>
+            <div className={`w-full px-2.5 py-1.5 rounded border font-mono font-bold text-xs ${
+              totalPendingAmount === 0
+                ? 'border-emerald-300 bg-emerald-50 text-emerald-900'
+                : 'border-rose-300 bg-rose-50 text-rose-900'
+            }`}>
+              ₹{totalPendingAmount.toLocaleString('en-IN')}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1 font-mono">
+              Customer Closing Balance (₹)
             </label>
             <FastGridCellInput
               value={customerClosingBalance}
@@ -1163,10 +1073,10 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
             <span className="text-[10px] sm:text-[11px] font-bold text-slate-600 font-mono uppercase shrink-0">View Columns:</span>
             <div className="flex flex-wrap items-center bg-white rounded border border-[#D0C8B8] p-0.5">
               {[
-                { id: 'ALL', label: `All Companies (${ALL_COMPANY_COLUMNS.length})` },
+                { id: 'ALL', label: `Loan Companies (${linkedCompanyColumns.length})` },
                 { id: 'SELECTED_ONLY', label: `Selected Only (${activeCompanyKeys.size})` },
-                { id: 'ASR_ONLY', label: `ASR Companies (${ALL_COMPANY_COLUMNS.filter((column) => !column.isOutside).length})` },
-                { id: 'OUTSIDE_ONLY', label: `Outside Companies (${ALL_COMPANY_COLUMNS.filter((column) => column.isOutside).length})` },
+                { id: 'ASR_ONLY', label: `ASR Companies (${linkedCompanyColumns.filter((column) => !column.isOutside).length})` },
+                { id: 'OUTSIDE_ONLY', label: `Outside Companies (${linkedCompanyColumns.filter((column) => column.isOutside).length})` },
               ].map((tab) => (
                 <button
                   key={tab.id}
@@ -1380,7 +1290,7 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
                     {/* Dynamic Funding Company Cells */}
                     {visibleCompanyColumns.map((col) => {
                       const isSelected = activeCompanyKeys.has(col.key);
-                      const val = Number(row[col.key]) || 0;
+                      const val = Number(row.companyValues[col.key]) || 0;
 
                       if (!isSelected) {
                         return (
@@ -1499,7 +1409,7 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
                 {/* Dynamic Funding Company Column Totals */}
                 {visibleCompanyColumns.map((col) => {
                   const isSelected = activeCompanyKeys.has(col.key);
-                  const sum = companySums[col.key as keyof typeof companySums] || 0;
+                  const sum = companySums[col.key] || 0;
                   return (
                     <td
                       key={col.key}

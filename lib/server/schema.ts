@@ -59,6 +59,7 @@ export const SCHEMA_STATEMENTS = [
     interest_amount REAL,
     opening_balance REAL NOT NULL DEFAULT 0,
     opening_balance_type TEXT NOT NULL DEFAULT 'DEBIT',
+    is_opening_balance_only INTEGER NOT NULL DEFAULT 0,
     start_date TEXT,
     installment_count INTEGER NOT NULL DEFAULT 1,
     frequency TEXT NOT NULL DEFAULT 'Monthly',
@@ -386,6 +387,11 @@ export function initializeSchema(client: Client): Promise<void> {
       }
       try {
         await client.execute("ALTER TABLE loans ADD COLUMN opening_balance_type TEXT NOT NULL DEFAULT 'DEBIT'");
+      } catch {
+        // Column may already exist
+      }
+      try {
+        await client.execute('ALTER TABLE loans ADD COLUMN is_opening_balance_only INTEGER NOT NULL DEFAULT 0');
       } catch {
         // Column may already exist
       }

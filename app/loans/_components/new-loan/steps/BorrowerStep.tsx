@@ -20,10 +20,10 @@ interface BorrowerStepProps {
   setNewCustomerPlace: (place: string) => void;
   newCustomerCodeNo: string;
   setNewCustomerCodeNo: (code: string) => void;
-  newCustomerClosingBalance: string;
-  setNewCustomerClosingBalance: (balance: string) => void;
-  totalAmount: number;
-  setTotalAmount: (amount: number) => void;
+  openingBalance: number;
+  setOpeningBalance: (amount: number) => void;
+  openingBalanceType: 'DEBIT' | 'CREDIT';
+  setOpeningBalanceType: (type: 'DEBIT' | 'CREDIT') => void;
 }
 
 export const BorrowerStep: React.FC<BorrowerStepProps> = ({
@@ -40,10 +40,10 @@ export const BorrowerStep: React.FC<BorrowerStepProps> = ({
   setNewCustomerPlace,
   newCustomerCodeNo,
   setNewCustomerCodeNo,
-  newCustomerClosingBalance,
-  setNewCustomerClosingBalance,
-  totalAmount,
-  setTotalAmount,
+  openingBalance,
+  setOpeningBalance,
+  openingBalanceType,
+  setOpeningBalanceType,
 }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
   const borrowerInputRef = useRef<HTMLInputElement>(null);
@@ -51,7 +51,6 @@ export const BorrowerStep: React.FC<BorrowerStepProps> = ({
   const [newNameDraft, setNewNameDraft] = useState(newCustomerName);
   const [newPlaceDraft, setNewPlaceDraft] = useState(newCustomerPlace);
   const [newCodeDraft, setNewCodeDraft] = useState(newCustomerCodeNo);
-  const [newClosingBalanceDraft, setNewClosingBalanceDraft] = useState(newCustomerClosingBalance);
 
   const filteredCustomers = customers
     .filter(
@@ -208,12 +207,8 @@ export const BorrowerStep: React.FC<BorrowerStepProps> = ({
             <div>
               <label className="text-[11px] text-slate-400 block mb-1">Opening Balance (Optional)</label>
               <AmountInput
-                value={newClosingBalanceDraft === '' ? 0 : Number(newClosingBalanceDraft)}
-                onChange={(value) => {
-                  const nextValue = value === 0 ? '' : String(value);
-                  setNewClosingBalanceDraft(nextValue);
-                  setNewCustomerClosingBalance(nextValue);
-                }}
+                value={openingBalance}
+                onChange={setOpeningBalance}
                 placeholder="e.g. 25,000"
                 theme="dark"
                 size="sm"
@@ -225,23 +220,33 @@ export const BorrowerStep: React.FC<BorrowerStepProps> = ({
         )}
       </div>
 
-      {/* Total Loan Capital Amount for the Loan — Only shown when choosing existing borrower */}
+      {/* Existing offline accounts are migrated with only their opening ledger balance. */}
       {!isCreatingNewCustomer && (
-          <div className="bg-[#240F1D] p-4 rounded-xl border border-[#3D1A2C] space-y-3">
+        <div className="bg-[#240F1D] p-4 rounded-xl border border-[#3D1A2C] space-y-3">
           <label className="text-sm font-semibold text-[#EED8A1] flex items-center gap-2">
-            <IndianRupee className="w-4 h-4 text-[#C5A059]" /> Total Loan Capital Amount (₹)
+            <IndianRupee className="w-4 h-4 text-[#C5A059]" /> Existing Account Opening Balance (₹)
           </label>
           <AmountInput
-            value={totalAmount}
-            onChange={(val) => setTotalAmount(val)}
+            value={openingBalance}
+            onChange={setOpeningBalance}
             placeholder="e.g. 1,00,000"
             theme="dark"
             size="lg"
             showWords={true}
             deferChange
-            presets={[500000, 1000000, 2000000, 5000000]}
-            onPresetClick={(val) => setTotalAmount(val)}
           />
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-[11px] text-slate-400">Interest and new-loan terms are not required for an existing account.</span>
+            <select
+              value={openingBalanceType}
+              onChange={(event) => setOpeningBalanceType(event.target.value as 'DEBIT' | 'CREDIT')}
+              className="h-9 rounded-lg border border-[#3D1A2C] bg-[#160810] px-2 text-xs font-bold text-slate-100 focus:outline-hidden focus:border-[#C5A059]"
+              aria-label="Existing account opening balance type"
+            >
+              <option value="DEBIT">Debit</option>
+              <option value="CREDIT">Credit</option>
+            </select>
+          </div>
         </div>
       )}
     </div>
