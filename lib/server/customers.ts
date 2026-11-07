@@ -131,32 +131,68 @@ export async function createCustomer(data: { name: string; place?: string; codeN
   await ensureDbInitialized();
   const client = getTursoClient();
 
-  const countRes = await client.execute('SELECT COUNT(*) as count FROM customers');
-  const total = Number(countRes.rows[0].count);
-  const newId = data.codeNo?.trim()
+  const sequenceRes = await client.execute(`
+    SELECT MAX(CAST(SUBSTR(id, 6) AS INTEGER)) AS max_sequence
+    FROM customers
+    WHERE UPPER(SUBSTR(id, 1, 5)) = 'CUST-'
+      AND SUBSTR(id, 6) <> ''
+      AND SUBSTR(id, 6) NOT GLOB '*[^0-9]*'
+  `);
+  const highestSequence = Math.max(1000, Number(sequenceRes.rows[0]?.max_sequence || 0));
+  let nextSequence = highestSequence + 1;
+  const requestedCodeId = data.codeNo?.trim()
     ? (data.codeNo.trim().startsWith('CUST-') ? data.codeNo.trim() : `CUST-${data.codeNo.trim()}`)
-    : `CUST-${1000 + total + 1}`;
+    : undefined;
   const now = new Date().toISOString().slice(0, 10);
 
-  const newCustomer: Customer = {
-    id: newId,
-    name: data.name.trim(),
-    place: data.place?.trim() || '',
-    codeNo: data.codeNo?.trim() || newId,
-    phone: data.phone?.trim() || undefined,
-    closingBalance: Number(data.closingBalance || 0),
-    createdAt: now,
-    totalBorrowed: 0,
-    totalRepaid: 0,
-    outstandingAmount: 0,
-    activeLoansCount: 0,
-    status: 'Active',
-  };
+  let newCustomer: Customer | null = null;
+  let candidateId = requestedCodeId || `CUST-${nextSequence}`;
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    const candidate: Customer = {
+      id: candidateId,
+      name: data.name.trim(),
+      place: data.place?.trim() || '',
+      codeNo: data.codeNo?.trim() || candidateId,
+      phone: data.phone?.trim() || undefined,
+      closingBalance: Number(data.closingBalance || 0),
+      createdAt: now,
+      totalBorrowed: 0,
+      totalRepaid: 0,
+      outstandingAmount: 0,
+      activeLoansCount: 0,
+      status: 'Active',
+    };
 
-  await client.execute({
-    sql: 'INSERT INTO customers (id, name, place, code_no, phone, closing_balance, is_active, created_at) VALUES (?, ?, ?, ?, ?, ?, 1, ?)',
-    args: [newCustomer.id, newCustomer.name, newCustomer.place, newCustomer.codeNo || null, newCustomer.phone || null, newCustomer.closingBalance || 0, newCustomer.createdAt],
-  });
+    try {
+      await client.execute({
+        sql: 'INSERT INTO customers (id, name, place, code_no, phone, closing_balance, is_active, created_at) VALUES (?, ?, ?, ?, ?, ?, 1, ?)',
+        args: [candidate.id, candidate.name, candidate.place, candidate.codeNo || null, candidate.phone || null, candidate.closingBalance || 0, candidate.createdAt],
+      });
+      newCustomer = candidate;
+      break;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      const isIdCollision = /(?:UNIQUE|PRIMARY KEY) constraint failed.*customers\.id|customers\.id.*(?:UNIQUE|PRIMARY KEY)/i.test(message);
+      if (!isIdCollision) throw error;
+
+      // A supplied code can already belong to another borrower. Preserve it
+      // as Code No, but fall back to a fresh generated customer ID.
+      if (candidateId === requestedCodeId) {
+        const requestedSequence = candidateId.match(/^CUST-(\d+)$/i);
+        if (requestedSequence) {
+          nextSequence = Math.max(nextSequence, Number(requestedSequence[1]) + 1);
+        }
+        candidateId = `CUST-${nextSequence}`;
+      } else {
+        nextSequence += 1;
+        candidateId = `CUST-${nextSequence}`;
+      }
+    }
+  }
+
+  if (!newCustomer) {
+    throw new Error('Unable to allocate a unique customer ID. Please retry.');
+  }
 
   await logAudit({
     actorId: actor?.id || 'SYSTEM',

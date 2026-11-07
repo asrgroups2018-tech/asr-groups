@@ -166,6 +166,7 @@ interface AppContextType {
 
   // Customer Operations
   createCustomer: (data: { name: string; place?: string; codeNo?: string; phone?: string; closingBalance?: number }) => Promise<Customer | null>;
+  createLoanBorrower: (data: { name: string; place?: string; codeNo?: string }) => Promise<Customer | null>;
   updateCustomer: (id: string, updates: Partial<Customer>) => Promise<Customer | null>;
   deleteCustomer: (id: string) => Promise<boolean>;
 
@@ -947,6 +948,40 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const createLoanBorrower = async (data: { name: string; place?: string; codeNo?: string }) => {
+    try {
+      const res = await fetch('/api/loans/borrowers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      const json = await res.json();
+      if (json.success && json.queued) {
+        showToast(
+          json.accessRequestSubmitted ? 'Access Request Submitted' : 'Approval Request Submitted',
+          json.message || 'Loan creation access is required to add this borrower.',
+          'info',
+        );
+        return null;
+      }
+      if (!json.success || !json.data) {
+        showToast('Borrower Creation Failed', json.error || 'Unable to create the borrower.', 'error');
+        return null;
+      }
+
+      showToast('Borrower Created', `Borrower ${data.name} added.`, 'success');
+      setCustomers((prev) => [json.data, ...prev.filter((customer) => customer.id !== json.data.id)]);
+      return json.data;
+    } catch (error) {
+      showToast(
+        'Borrower Creation Failed',
+        error instanceof Error ? error.message : 'Unable to create the borrower.',
+        'error',
+      );
+      return null;
+    }
+  };
+
   const updateCustomer = async (id: string, updates: Partial<Customer>) => {
     try {
       const res = await fetch('/api/customers', {
@@ -1619,6 +1654,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       triggerBackupNow,
 
       createCustomer,
+      createLoanBorrower,
       updateCustomer,
       deleteCustomer,
 

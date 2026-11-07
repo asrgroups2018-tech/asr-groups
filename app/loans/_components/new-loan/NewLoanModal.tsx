@@ -25,9 +25,10 @@ interface NewLoanModalProps {
 }
 
 export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) => {
-  const { customers, companies, createCustomer, createLoan, createCheque, showToast } = useApp();
+  const { customers, companies, createLoanBorrower, createLoan, createCheque, showToast } = useApp();
 
   const [currentStep, setCurrentStep] = useState<number>(1);
+  const [isCreatingBorrower, setIsCreatingBorrower] = useState(false);
 
   // Step 1: Customer & Borrower
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
@@ -68,6 +69,7 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
   useEffect(() => {
     if (isOpen) {
       setCurrentStep(1);
+      setIsCreatingBorrower(false);
       setSelectedCustomerId('');
       setCustomerSearch('');
       setIsCreatingNewCustomer(false);
@@ -389,11 +391,13 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
           showToast('Validation Error', 'Customer name is required.', 'warning');
           return;
         }
-        const created = await createCustomer({
+        setIsCreatingBorrower(true);
+        const created = await createLoanBorrower({
           name: newCustomerName.trim(),
           place: newCustomerPlace.trim() || undefined,
           codeNo: newCustomerCodeNo.trim() || undefined,
         });
+        setIsCreatingBorrower(false);
         if (created) {
           setSelectedCustomerId(created.id);
           setCustomerSearch(created.name);
@@ -764,12 +768,13 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
               <button
                 type="button"
                 onClick={handleNext}
-                disabled={
+                disabled={isCreatingBorrower ||
                   (currentStep === 3 && !isChequeStepValid) ||
                   (currentStep === 4 && !isStep3Valid) ||
                   (currentStep === 5 && !isStep4Valid)
                 }
                 className={`px-4 sm:px-5 py-2.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all btn-press whitespace-nowrap ${
+                  isCreatingBorrower ||
                   (currentStep === 3 && !isChequeStepValid) ||
                   (currentStep === 4 && !isStep3Valid) ||
                   (currentStep === 5 && !isStep4Valid)
@@ -777,7 +782,7 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
                     : 'bg-[#C5A059] text-slate-950 hover:bg-[#D4AF37] font-bold shadow-lg cursor-pointer'
                 }`}
               >
-                Next Step <ChevronRight className="w-4 h-4" />
+                {isCreatingBorrower ? 'Creating Borrower...' : 'Next Step'} {!isCreatingBorrower && <ChevronRight className="w-4 h-4" />}
               </button>
             ) : (
               <button
