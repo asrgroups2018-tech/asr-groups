@@ -14,6 +14,7 @@ export interface LoanChequeRow {
   followsScheduleDate: boolean;
   followsScheduleAmount: boolean;
   isUsed: boolean;
+  isCustom?: boolean;
 }
 
 interface ChequesStepProps {
@@ -64,7 +65,7 @@ export const ChequesStep: React.FC<ChequesStepProps> = ({
         <div>
           <h3 className="text-sm font-bold text-[#EED8A1]">Cheque Details</h3>
           <p className="mt-1 text-xs text-slate-400">
-            Deposit dates follow the EMI schedule. Edit cheque amounts to allocate the loan total across cheques.
+            Enter cheque details only for EMIs paid by cheque. Leave other cheque numbers blank; link any added cheque row to its EMI.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -102,7 +103,38 @@ export const ChequesStep: React.FC<ChequesStepProps> = ({
               )}
             </div>
 
-            <label className="block text-[11px] font-bold uppercase tracking-wide text-slate-300 sm:col-span-4">
+            {row.isCustom && (
+              <label className="block text-[11px] font-bold uppercase tracking-wide text-slate-300 sm:col-span-3">
+                Link to EMI
+                <select
+                  value={row.scheduleSeqNo ?? ''}
+                  onChange={(event) =>
+                    onChange(
+                      rows.map((item) =>
+                        item.id === row.id
+                          ? {
+                              ...item,
+                              scheduleSeqNo: event.target.value ? Number(event.target.value) : null,
+                            }
+                          : item
+                      )
+                    )
+                  }
+                  className="mt-1.5 h-10 w-full rounded-lg border border-[#3D1A2C] bg-[#240F1D] px-3 text-sm font-normal normal-case text-slate-100 outline-none focus:border-[#C5A059]"
+                >
+                  <option value="">Select an EMI</option>
+                  {rows
+                    .filter((item) => !item.isCustom)
+                    .map((item) => (
+                      <option key={item.scheduleSeqNo} value={item.scheduleSeqNo ?? ''}>
+                        EMI {item.scheduleSeqNo}
+                      </option>
+                    ))}
+                </select>
+              </label>
+            )}
+
+            <label className={`block text-[11px] font-bold uppercase tracking-wide text-slate-300 ${row.isCustom ? 'sm:col-span-3' : 'sm:col-span-4'}`}>
               Cheque No.
               <input
                 type="text"
@@ -125,7 +157,7 @@ export const ChequesStep: React.FC<ChequesStepProps> = ({
               />
             </label>
 
-            <div className="sm:col-span-3">
+            <div className={row.isCustom ? 'sm:col-span-2' : 'sm:col-span-3'}>
               <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-wide text-slate-300">
                 Deposit Date
               </label>
@@ -154,7 +186,7 @@ export const ChequesStep: React.FC<ChequesStepProps> = ({
               />
             </div>
 
-            <div className="sm:col-span-3">
+            <div className={row.isCustom ? 'sm:col-span-2' : 'sm:col-span-3'}>
               <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-wide text-slate-300">
                 Cheque Amount (₹)
               </label>
@@ -183,7 +215,7 @@ export const ChequesStep: React.FC<ChequesStepProps> = ({
             </div>
 
             <div className="flex justify-end sm:col-span-1">
-              {row.scheduleSeqNo === null && (
+              {row.isCustom && (
                 <button
                   type="button"
                   onClick={() => onRemoveRow(row.id)}
@@ -215,7 +247,12 @@ export const ChequesStep: React.FC<ChequesStepProps> = ({
           </span>
           {!isValid && (
             <span className="w-full text-[11px]">
-              Enter a cheque number, date, and positive amount for every row, and allocate exactly the loan total.
+              Add a deposit date, positive amount, and unique EMI link for each cheque number entered. Blank cheque-number rows are skipped, and entered amounts cannot exceed the loan total.
+            </span>
+          )}
+          {isValid && (
+            <span className="w-full text-[11px]">
+              Only rows with a cheque number will be saved; other cheque rows are optional.
             </span>
           )}
         </div>

@@ -275,6 +275,7 @@ export async function createLoan(data: {
   installments: {
     dueDate: string;
     amountDue: number;
+    chqNo?: string;
     companySplits: Record<string, number>;
     remarks?: string;
   }[];
@@ -340,7 +341,7 @@ export async function createLoan(data: {
         inst.amountDue,
         'PENDING',
         null,
-        null,
+        inst.chqNo?.trim() || null,
         'CHENNAI',
         null,
         inst.remarks || null,

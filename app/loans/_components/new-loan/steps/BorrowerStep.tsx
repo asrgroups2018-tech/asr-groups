@@ -52,15 +52,17 @@ export const BorrowerStep: React.FC<BorrowerStepProps> = ({
   const [newPlaceDraft, setNewPlaceDraft] = useState(newCustomerPlace);
   const [newCodeDraft, setNewCodeDraft] = useState(newCustomerCodeNo);
 
-  const filteredCustomers = customers
-    .filter(
-      (c) =>
-        !searchDraft.trim() ||
-        c.name.toLowerCase().includes(searchDraft.toLowerCase()) ||
-        (c.place && c.place.toLowerCase().includes(searchDraft.toLowerCase())) ||
-        (c.codeNo && c.codeNo.toLowerCase().includes(searchDraft.toLowerCase()))
-    )
-    .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
+  const searchTerm = searchDraft.trim().toLowerCase();
+  const filteredCustomers = searchTerm
+    ? customers
+        .filter(
+          (c) =>
+            c.name.toLowerCase().includes(searchTerm) ||
+            (c.place && c.place.toLowerCase().includes(searchTerm)) ||
+            (c.codeNo && c.codeNo.toLowerCase().includes(searchTerm))
+        )
+        .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }))
+    : [];
 
   return (
     <div className="space-y-4">
@@ -133,7 +135,7 @@ export const BorrowerStep: React.FC<BorrowerStepProps> = ({
             </div>
 
             {/* Quick dropdown matching */}
-            {isDropdownOpen && !selectedCustomerId && (
+            {isDropdownOpen && !selectedCustomerId && searchTerm && (
               <FloatingPopover anchorRef={borrowerInputRef} open={isDropdownOpen && !selectedCustomerId} onClose={() => setIsDropdownOpen(false)} className="rounded-lg border border-[#3D1A2C] bg-[#160810] divide-y divide-[#2C1420] shadow-2xl">
                 {filteredCustomers.length > 0 ? (
                   filteredCustomers.slice(0, 10).map((c) => (

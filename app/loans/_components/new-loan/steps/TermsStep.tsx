@@ -30,6 +30,10 @@ interface TermsStepProps {
   setInstallmentCount: (count: number) => void;
   startDate: string;
   setStartDate: (date: string) => void;
+  chequeNumber?: string;
+  setChequeNumber?: (chequeNumber: string) => void;
+  depositDate?: string;
+  setDepositDate?: (date: string) => void;
 }
 
 export const TermsStep: React.FC<TermsStepProps> = ({
@@ -54,6 +58,10 @@ export const TermsStep: React.FC<TermsStepProps> = ({
   setInstallmentCount,
   startDate,
   setStartDate,
+  chequeNumber,
+  setChequeNumber,
+  depositDate,
+  setDepositDate,
 }) => {
   const frequencyOptions: { label: string; value: RepaymentFrequency; subtitle?: string }[] = [
     { label: 'Monthly', value: 'Monthly' },
@@ -130,6 +138,38 @@ export const TermsStep: React.FC<TermsStepProps> = ({
             Total loan account amount is off. Only the opening balance will be tracked.
           </div>
         )}
+
+        {/* Cheque No. & Deposit Date (Optional) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3 border-t border-[#3D1A2C]/60">
+          <label className="block text-xs font-mono uppercase text-slate-300 font-bold">
+            Cheque No. <span className="normal-case font-normal text-slate-500">(Optional)</span>
+            <input
+              type="text"
+              value={chequeNumber || ''}
+              onChange={(event) => setChequeNumber?.(event.target.value)}
+              placeholder="e.g. 000194"
+              className="mt-1.5 w-full h-10 rounded-xl border border-[#3D1A2C] bg-[#160810] px-3 text-sm font-mono font-normal normal-case text-slate-100 outline-none focus:border-[#C5A059]"
+            />
+          </label>
+          <div>
+            <label className="mb-1.5 block text-xs font-mono font-bold uppercase text-slate-300">
+              Deposit Date <span className="normal-case font-normal text-slate-500">(Optional)</span>
+            </label>
+            <DatePicker
+              value={depositDate || null}
+              onChange={(d) => setDepositDate?.(d)}
+              theme="dark"
+              size="md"
+              placeholder="Select deposit date"
+              className="w-full"
+              buttonClassName="w-full h-10"
+              showPresets={false}
+            />
+          </div>
+        </div>
+        <p className="text-[11px] text-slate-400">
+          Cheque is added to the Cheques page only when both details are entered.
+        </p>
       </div>
       {/* Optional Opening Balance */}
       <div className="bg-[#240F1D] p-4.5 rounded-xl border border-[#3D1A2C] space-y-2">

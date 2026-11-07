@@ -260,7 +260,7 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
   onClose,
   loan,
 }) => {
-  const { updateFullLoan, showToast, companies } = useApp();
+  const { updateFullLoan, showToast, companies, cheques } = useApp();
   const { theme } = useTheme();
 
   // Top Loan Form Fields
@@ -334,6 +334,9 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
         values[canonicalCode] = Number(amount) || 0;
         return values;
       }, {});
+      const fallbackChq = (idx === 0)
+        ? (cheques?.find((c) => (loan.customerId && c.customerId === loan.customerId) || (c.customerName && loan.customerName && c.customerName.toLowerCase() === loan.customerName.toLowerCase()))?.chequeNumber || '')
+        : '';
       return {
         id: inst.id,
         seqNo: inst.seqNo || idx + 1,
@@ -341,7 +344,7 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
         amountDue: inst.amountDue || 0,
         status: normalizeStatus(inst.status),
         recdDate: formatToIso(inst.recdDate) || '',
-        chqNo: inst.chqNo || '',
+        chqNo: inst.chqNo || (inst as any).chq_no || fallbackChq || '',
         place: inst.place || loan.place || 'CHENNAI',
         depName: inst.depName || '',
         bank: inst.bank || '',

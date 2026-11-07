@@ -52,6 +52,8 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
   const [startDate, setStartDate] = useState<string>(() => {
     return toIsoDate(new Date());
   });
+  const [chequeNumber, setChequeNumber] = useState<string>('');
+  const [depositDate, setDepositDate] = useState<string>('');
 
   // Step 3: Companies & Overall Split
   const [selectedCompanyIds, setSelectedCompanyIds] = useState<string[]>([]);
@@ -87,6 +89,8 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
       setFrequency('Monthly');
       setInstallmentCount(5);
       setStartDate(toIsoDate(new Date()));
+      setChequeNumber('');
+      setDepositDate('');
       setScheduleRows([]);
       setChequeRows([]);
       setSelectedCompanyIds([]);
@@ -178,11 +182,16 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
         }
       });
 
+      const linkedCheque = chequeRows.find((c) => c.scheduleSeqNo === i + 1);
+      const rowChq = linkedCheque?.chequeNumber?.trim() ||
+        (i === 0 ? (chequeNumber.trim() || chequeRows[0]?.chequeNumber?.trim() || undefined) : undefined);
+
       rows.push({
         seqNo: i + 1,
         dueDate,
         amountDue: equalEmi,
         companySplits: splits,
+        chqNo: rowChq,
       });
     }
 
@@ -236,14 +245,20 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
 
   const areAllRowsBalanced = rowBalances.every((b) => b.isBalanced);
   const isStep4Valid = isScheduledTotalBalanced && areAllRowsBalanced;
-  const hasChequeDetails = chequeRows.some((row) => row.isUsed || row.chequeNumber.trim());
-  const allocatedChequeAmount = chequeRows.reduce((sum, row) => sum + (Number(row.amount) || 0), 0);
-  const areChequeRowsComplete = chequeRows.every(
-    (row) => row.chequeNumber.trim() && row.depositDate && row.amount > 0
-  );
+  const chequesToSave = chequeRows.filter((row) => row.chequeNumber.trim());
+  const hasChequeDetails = chequesToSave.length > 0;
+  const allocatedChequeAmount = chequesToSave.reduce((sum, row) => sum + (Number(row.amount) || 0), 0);
+  const areChequeRowsComplete = chequesToSave.every((row) => row.depositDate && row.amount > 0);
+  const areChequeRowsLinked = chequesToSave.every((row) => row.scheduleSeqNo !== null);
+  const chequeScheduleSeqNos = chequesToSave.map((row) => row.scheduleSeqNo);
+  const hasDuplicateChequeScheduleLinks =
+    new Set(chequeScheduleSeqNos).size !== chequeScheduleSeqNos.length;
   const isChequeStepValid =
     !hasChequeDetails ||
-    (areChequeRowsComplete && Math.abs(allocatedChequeAmount - totalAmount) < 1);
+    (areChequeRowsComplete &&
+      areChequeRowsLinked &&
+      !hasDuplicateChequeScheduleLinks &&
+      allocatedChequeAmount <= totalAmount + 1);
 
   const getTermsSchedule = (amount = totalAmount) => {
     const count = Math.max(1, installmentCount);
@@ -270,26 +285,35 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
     scheduledRows: Pick<ScheduleStepRow, 'seqNo' | 'dueDate' | 'amountDue'>[]
   ) => {
     setChequeRows((currentRows) => {
-      const nextRows = scheduledRows.map((scheduleRow) => {
-        const existing = currentRows.find((row) => row.scheduleSeqNo === scheduleRow.seqNo);
+      const nextRows = scheduledRows.map((scheduleRow, index) => {
+        const existing = currentRows.find(
+          (row) => !row.isCustom && row.scheduleSeqNo === scheduleRow.seqNo
+        );
+        const matchingSchedule = scheduledRows.find((r) => r.seqNo === scheduleRow.seqNo);
+        const scheduleChq = (matchingSchedule as any)?.chqNo?.trim();
+        const rowChequeNumber =
+          scheduleChq ||
+          (existing?.chequeNumber && existing.chequeNumber.trim()) ||
+          (index === 0 ? chequeNumber.trim() : '');
+        const rowDepositDate =
+          existing && !existing.followsScheduleDate && existing.depositDate
+            ? existing.depositDate
+            : (index === 0 && depositDate ? depositDate : scheduleRow.dueDate);
         return {
           id: existing?.id ?? `emi-${scheduleRow.seqNo}`,
           scheduleSeqNo: scheduleRow.seqNo,
-          chequeNumber: existing?.chequeNumber ?? '',
-          depositDate:
-            existing && !existing.followsScheduleDate
-              ? existing.depositDate
-              : scheduleRow.dueDate,
+          chequeNumber: rowChequeNumber,
+          depositDate: rowDepositDate,
           amount:
             existing && !existing.followsScheduleAmount
               ? existing.amount
               : scheduleRow.amountDue,
-          followsScheduleDate: existing?.followsScheduleDate ?? true,
+          followsScheduleDate: existing?.followsScheduleDate ?? !(index === 0 && depositDate),
           followsScheduleAmount: existing?.followsScheduleAmount ?? true,
-          isUsed: existing?.isUsed ?? false,
+          isUsed: existing?.isUsed ?? Boolean(rowChequeNumber.trim()),
         };
       });
-      const extraRows = currentRows.filter((row) => row.scheduleSeqNo === null);
+      const extraRows = currentRows.filter((row) => row.isCustom);
       return [...nextRows, ...extraRows];
     });
   };
@@ -298,7 +322,64 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
     prepareChequeRows(getTermsSchedule(amount));
   };
 
+  const handleTermsChequeNumberChange = (val: string) => {
+    setChequeNumber(val);
+    setChequeRows((prev) => {
+      if (prev.length === 0) return prev;
+      return prev.map((row, idx) => {
+        if (idx === 0 || row.scheduleSeqNo === 1) {
+          return {
+            ...row,
+            chequeNumber: val,
+            isUsed: Boolean(val.trim()),
+          };
+        }
+        return row;
+      });
+    });
+    setScheduleRows((prev) => {
+      if (prev.length === 0) return prev;
+      return prev.map((row, idx) => {
+        if (idx === 0 || row.seqNo === 1) {
+          return {
+            ...row,
+            chqNo: val,
+          };
+        }
+        return row;
+      });
+    });
+  };
+
+  const handleTermsDepositDateChange = (val: string) => {
+    setDepositDate(val);
+    setChequeRows((prev) => {
+      if (prev.length === 0) return prev;
+      return prev.map((row, idx) => {
+        if (idx === 0 || row.scheduleSeqNo === 1) {
+          return {
+            ...row,
+            depositDate: val,
+            followsScheduleDate: false,
+          };
+        }
+        return row;
+      });
+    });
+  };
+
+  const handleChequeRowsChange = (nextRows: LoanChequeRow[]) => {
+    setChequeRows(nextRows);
+    const firstRow = nextRows.find((r) => r.scheduleSeqNo === 1) || nextRows[0];
+    if (firstRow) {
+      setChequeNumber(firstRow.chequeNumber || '');
+      setDepositDate(firstRow.depositDate || '');
+    }
+  };
+
   const clearChequeEntries = () => {
+    setChequeNumber('');
+    setDepositDate('');
     setChequeRows(
       getTermsSchedule().map((row) => ({
         id: `emi-${row.seqNo}`,
@@ -325,6 +406,7 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
         followsScheduleDate: false,
         followsScheduleAmount: false,
         isUsed: true,
+        isCustom: true,
       },
     ]);
   };
@@ -455,7 +537,7 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
       if (!isChequeStepValid) {
         showToast(
           'Cheque Details Incomplete',
-          'Complete every cheque row and make the cheque amounts equal the loan total, or clear the cheque entries to continue without cheques.',
+          'For each cheque number entered, add a deposit date and positive amount, and link it to a unique EMI. Blank cheque-number rows are skipped, and entered amounts cannot exceed the loan total.',
           'warning'
         );
         return;
@@ -507,12 +589,21 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
       };
     });
 
-    const formattedInstallments = scheduleRows.map((r) => ({
-      dueDate: r.dueDate,
-      amountDue: r.amountDue,
-      companySplits: r.companySplits,
-      remarks: r.remarks,
-    }));
+    const formattedInstallments = scheduleRows.map((r, idx) => {
+      const chq =
+        r.chqNo?.trim() ||
+        chequesToSave.find((cheque) => cheque.scheduleSeqNo === r.seqNo)?.chequeNumber?.trim() ||
+        chequeRows.find((cheque) => cheque.scheduleSeqNo === r.seqNo)?.chequeNumber?.trim() ||
+        (r.seqNo === 1 || idx === 0 ? (chequeNumber.trim() || chequesToSave[0]?.chequeNumber?.trim() || chequeRows[0]?.chequeNumber?.trim() || undefined) : undefined);
+
+      return {
+        dueDate: r.dueDate,
+        amountDue: r.amountDue,
+        chqNo: chq || undefined,
+        companySplits: r.companySplits,
+        remarks: r.remarks,
+      };
+    });
 
     const result = await createLoan({
       customerId: selectedCustomerId,
@@ -529,27 +620,45 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
     });
 
     if (result) {
-      if (hasChequeDetails && isChequeStepValid) {
-        const customerName =
-          customers.find((customer) => customer.id === selectedCustomerId)?.name ||
-          newCustomerName.trim() ||
-          customerSearch.trim();
-        for (const row of chequeRows) {
-          await createCheque({
+      const customerName =
+        customers.find((customer) => customer.id === selectedCustomerId)?.name ||
+        newCustomerName.trim() ||
+        customerSearch.trim();
+
+      const chequesToCreate: { chequeNumber: string; depositDate: string; amount: number }[] = [];
+
+      for (const row of chequesToSave) {
+        if (row.chequeNumber.trim() && row.depositDate && row.amount > 0) {
+          chequesToCreate.push({
             chequeNumber: row.chequeNumber.trim(),
-            customerId: selectedCustomerId,
-            customerName,
-            amount: row.amount,
             depositDate: row.depositDate,
+            amount: row.amount,
           });
         }
-      } else if (hasChequeDetails) {
-        showToast(
-          'Loan Created',
-          'The loan was saved, but cheque details were incomplete and no cheques were added.',
-          'warning'
-        );
       }
+
+      if (
+        chequeNumber.trim() &&
+        depositDate &&
+        !chequesToCreate.some((c) => c.chequeNumber.toLowerCase() === chequeNumber.trim().toLowerCase())
+      ) {
+        chequesToCreate.push({
+          chequeNumber: chequeNumber.trim(),
+          depositDate,
+          amount: formattedInstallments[0]?.amountDue || totalAmount,
+        });
+      }
+
+      for (const chq of chequesToCreate) {
+        await createCheque({
+          chequeNumber: chq.chequeNumber,
+          customerId: selectedCustomerId || undefined,
+          customerName,
+          amount: chq.amount,
+          depositDate: chq.depositDate,
+        });
+      }
+
       onClose();
     }
   };
@@ -667,13 +776,17 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
               setInstallmentCount={setInstallmentCount}
               startDate={startDate}
               setStartDate={setStartDate}
+              chequeNumber={chequeNumber}
+              setChequeNumber={handleTermsChequeNumberChange}
+              depositDate={depositDate}
+              setDepositDate={handleTermsDepositDateChange}
             />
           )}
 
           {currentStep === 3 && (
             <ChequesStep
               rows={chequeRows}
-              onChange={setChequeRows}
+              onChange={handleChequeRowsChange}
               onAddRow={addChequeRow}
               onRemoveRow={removeChequeRow}
               onClearEntries={clearChequeEntries}
@@ -733,7 +846,9 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
               installmentCount={installmentCount}
               frequency={frequency}
               startDate={startDate}
-              chequeRows={hasChequeDetails ? chequeRows : []}
+              chequeRows={chequesToSave.filter(
+                (row) => row.depositDate && row.amount > 0 && row.scheduleSeqNo !== null
+              )}
               selectedCompanies={selectedCompanies}
               companyPcts={companyPcts}
               companyManualAmounts={companyManualAmounts}

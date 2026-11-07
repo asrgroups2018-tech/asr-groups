@@ -1308,7 +1308,9 @@ export const LoansListView: React.FC = () => {
                                         </div>
                                       </td>
                                       <td className="p-2.5 text-slate-700 font-semibold">
-                                        {inst.depName || inst.chqNo || '—'}
+                                        {inst.depName && inst.chqNo
+                                          ? `${inst.depName} · #${inst.chqNo}`
+                                          : inst.depName || (inst.chqNo ? `#${inst.chqNo}` : '—')}
                                       </td>
                                       <td className="p-2.5 text-slate-500 truncate max-w-[120px]">
                                         {inst.remarks || '—'}

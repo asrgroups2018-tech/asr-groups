@@ -114,6 +114,7 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({
               <table className="w-full min-w-[440px] text-left text-xs">
                 <thead className="bg-[#160810] text-slate-400">
                   <tr>
+                    <th className="px-3 py-2">EMI</th>
                     <th className="px-3 py-2">Cheque No.</th>
                     <th className="px-3 py-2">Deposit Date</th>
                     <th className="px-3 py-2 text-right">Amount</th>
@@ -122,6 +123,9 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({
                 <tbody className="divide-y divide-[#2C1420]">
                   {chequeRows.map((row) => (
                     <tr key={row.id}>
+                      <td className="px-3 py-2">
+                        {row.scheduleSeqNo === null ? 'Not linked' : `EMI ${row.scheduleSeqNo}`}
+                      </td>
                       <td className="px-3 py-2 font-mono">{row.chequeNumber.trim()}</td>
                       <td className="px-3 py-2">{row.depositDate}</td>
                       <td className="px-3 py-2 text-right">₹{row.amount.toLocaleString('en-IN')}</td>

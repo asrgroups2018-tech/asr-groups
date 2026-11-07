@@ -14,6 +14,7 @@ export interface ScheduleStepRow {
   amountDue: number;
   companySplits: Record<string, number>;
   remarks?: string;
+  chqNo?: string;
 }
 
 export interface RowBalance {
@@ -96,8 +97,9 @@ export const ScheduleStep: React.FC<ScheduleStepProps> = ({
           <thead>
             <tr className="bg-[#240F1D] border-b border-[#3D1A2C] text-slate-300 font-mono">
               <th className="p-2 w-[5%] text-center">#</th>
-              <th className="p-2 w-[17%]">Due Date</th>
-              <th className="p-2 w-[16%] text-right font-bold text-[#EED8A1]">Installment (₹)</th>
+              <th className="p-2 w-[16%]">Due Date</th>
+              <th className="p-2 w-[14%]">Chq No</th>
+              <th className="p-2 w-[15%] text-right font-bold text-[#EED8A1]">Installment (₹)</th>
               {selectedCompanies.map((c) => (
                 <th key={c.id} className="p-2 font-bold text-[#EED8A1] text-right align-bottom">
                   <div className="text-[10px] font-bold text-white leading-tight break-words">{c.name}</div>
@@ -106,7 +108,7 @@ export const ScheduleStep: React.FC<ScheduleStepProps> = ({
                   </div>
                 </th>
               ))}
-              <th className="p-2 w-[9%] text-center">Status</th>
+              <th className="p-2 w-[8%] text-center">Status</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[#2C1420]">
@@ -126,6 +128,20 @@ export const ScheduleStep: React.FC<ScheduleStepProps> = ({
                       theme="dark"
                       size="sm"
                       compact={true}
+                    />
+                  </td>
+                  <td className="p-1.5">
+                    <input
+                      type="text"
+                      value={row.chqNo || ''}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setScheduleRows((prev) =>
+                          prev.map((r) => (r.seqNo === row.seqNo ? { ...r, chqNo: val } : r))
+                        );
+                      }}
+                      placeholder="CHQ"
+                      className="w-full bg-[#240F1D] border border-[#3D1A2C] rounded px-1.5 py-1 text-[11px] font-mono text-slate-100 placeholder:text-slate-600 focus:outline-hidden focus:border-[#C5A059]"
                     />
                   </td>
                   <td className="p-1.5">
@@ -177,6 +193,7 @@ export const ScheduleStep: React.FC<ScheduleStepProps> = ({
             <tr>
               <td className="p-1.5 text-center text-slate-400">TOTAL</td>
               <td className="p-1.5 text-slate-400 font-normal">{scheduleRows.length} EMIs</td>
+              <td className="p-1.5 text-slate-500 font-normal"></td>
               <td className="p-1.5 text-right font-extrabold text-[#EED8A1]">
                 ₹{scheduledTotal.toLocaleString('en-IN')}
               </td>

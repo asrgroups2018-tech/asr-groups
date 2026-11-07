@@ -208,6 +208,7 @@ interface AppContextType {
     installments: {
       dueDate: string;
       amountDue: number;
+      chqNo?: string;
       companySplits: Record<string, number>;
       remarks?: string;
     }[];
@@ -664,6 +665,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     installments: {
       dueDate: string;
       amountDue: number;
+      chqNo?: string;
       companySplits: Record<string, number>;
       remarks?: string;
     }[];
@@ -694,6 +696,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         `Loan for ₹${loanData.totalAmount.toLocaleString('en-IN')} with ${loanData.installments.length} EMIs saved to ledger.`,
         'success'
       );
+
+      if (json.data) {
+        setLoans((prev) => [json.data, ...prev.filter((loan) => loan.id !== json.data.id)]);
+      }
 
       // Re-trigger global propagation across dashboard, customers, companies, loans, receipts
       refreshAll(false);
