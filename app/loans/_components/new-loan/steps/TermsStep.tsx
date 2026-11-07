@@ -11,6 +11,9 @@ import { DraftNumberInput } from '@/components/ui/DraftNumberInput';
 interface TermsStepProps {
   totalAmount: number;
   setTotalAmount: (amount: number) => void;
+  includeTotalAmount: boolean;
+  setIncludeTotalAmount: (include: boolean) => void;
+  setIsOpeningBalanceOnly: (openingBalanceOnly: boolean) => void;
   disbursedAmount: number;
   setDisbursedAmount: (amount: number) => void;
   interestAmount: number;
@@ -32,6 +35,9 @@ interface TermsStepProps {
 export const TermsStep: React.FC<TermsStepProps> = ({
   totalAmount,
   setTotalAmount,
+  includeTotalAmount,
+  setIncludeTotalAmount,
+  setIsOpeningBalanceOnly,
   disbursedAmount,
   setDisbursedAmount,
   interestAmount,
@@ -60,10 +66,36 @@ export const TermsStep: React.FC<TermsStepProps> = ({
     <div className="space-y-6">
       {/* Total Loan Capital Amount */}
       <div className="bg-[#240F1D] p-5 rounded-xl border border-[#3D1A2C] space-y-3">
-        <label className="text-sm font-semibold text-[#EED8A1] flex items-center gap-2">
-          <IndianRupee className="w-4 h-4 text-[#C5A059]" /> Total Loan Account Amount (₹)
-        </label>
-        <AmountInput
+        <div className="flex items-center justify-between gap-3">
+          <label className="text-sm font-semibold text-[#EED8A1] flex items-center gap-2">
+            <IndianRupee className="w-4 h-4 text-[#C5A059]" /> Total Loan Account Amount (₹)
+          </label>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={includeTotalAmount}
+            onClick={() => {
+              const nextValue = !includeTotalAmount;
+              setIncludeTotalAmount(nextValue);
+              setIsOpeningBalanceOnly(!nextValue);
+              if (!nextValue) {
+                setTotalAmount(openingBalance);
+                setDisbursedAmount(0);
+                setInterestAmount(0);
+                setIncludeInterest(false);
+              }
+            }}
+            className={`inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-[10px] font-bold transition-colors ${
+              includeTotalAmount
+                ? 'border-amber-400/50 bg-amber-400/20 text-amber-200'
+                : 'border-slate-600 bg-slate-800/70 text-slate-400'
+            }`}
+          >
+            <span className={`h-2 w-2 rounded-full ${includeTotalAmount ? 'bg-amber-300' : 'bg-slate-500'}`} />
+            {includeTotalAmount ? 'ON' : 'OFF'}
+          </button>
+        </div>
+        {includeTotalAmount ? <AmountInput
           value={totalAmount}
           onChange={(val) => {
             setTotalAmount(val);
@@ -93,9 +125,12 @@ export const TermsStep: React.FC<TermsStepProps> = ({
               setDisbursedAmount(val);
             }
           }}
-        />
+        /> : (
+          <div className="flex min-h-20 items-center rounded-lg border border-dashed border-slate-600/70 bg-slate-900/30 px-3 text-xs text-slate-400">
+            Total loan account amount is off. Only the opening balance will be tracked.
+          </div>
+        )}
       </div>
-
       {/* Optional Opening Balance */}
       <div className="bg-[#240F1D] p-4.5 rounded-xl border border-[#3D1A2C] space-y-2">
         <div className="flex items-center justify-between gap-3">
@@ -107,7 +142,21 @@ export const TermsStep: React.FC<TermsStepProps> = ({
         <div className="grid grid-cols-[1fr_auto] gap-2 items-start">
           <AmountInput
             value={openingBalance}
-            onChange={setOpeningBalance}
+            onChange={(amount) => {
+              setOpeningBalance(amount);
+              if (amount > 0) {
+                setIncludeTotalAmount(false);
+                setIsOpeningBalanceOnly(true);
+                setTotalAmount(amount);
+                setDisbursedAmount(0);
+                setInterestAmount(0);
+                setIncludeInterest(false);
+              } else if (!includeTotalAmount) {
+                setIncludeTotalAmount(true);
+                setIsOpeningBalanceOnly(false);
+                setTotalAmount(0);
+              }
+            }}
             placeholder="e.g. 1,00,000"
             theme="dark"
             size="md"

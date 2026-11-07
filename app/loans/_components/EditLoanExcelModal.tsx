@@ -77,6 +77,24 @@ function formatToIso(dStr: string | null | undefined): string {
   return '';
 }
 
+function getScheduledDueDate(anchorDate: string, index: number, scheduleFrequency: RepaymentFrequency): string {
+  const [year, month, day] = anchorDate.split('-').map(Number);
+  const dueDate = new Date(year, month - 1, day);
+
+  if (scheduleFrequency === 'Weekly') {
+    dueDate.setDate(dueDate.getDate() + index * 7);
+  } else if (scheduleFrequency === 'Bi-Weekly') {
+    dueDate.setDate(dueDate.getDate() + index * 14);
+  } else {
+    dueDate.setMonth(dueDate.getMonth() + index);
+  }
+
+  const dueYear = dueDate.getFullYear();
+  const dueMonth = String(dueDate.getMonth() + 1).padStart(2, '0');
+  const dueDay = String(dueDate.getDate()).padStart(2, '0');
+  return `${dueYear}-${dueMonth}-${dueDay}`;
+}
+
 export interface CompanyColumnDef {
   key: string;
   label: string;
@@ -262,6 +280,23 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
   const [rows, setRows] = useState<EditableInstallmentRow[]>([]);
   const [isSaving, setIsSaving] = useState(false);
 
+  const handleFrequencyChange = (value: string) => {
+    const nextFrequency = value as RepaymentFrequency;
+    setFrequency(nextFrequency);
+
+    if (nextFrequency === 'Custom') return;
+
+    setRows((currentRows) => {
+      const firstDueDate = currentRows[0]?.dueDate || startDate;
+      if (!firstDueDate) return currentRows;
+
+      return currentRows.map((row, index) => ({
+        ...row,
+        dueDate: getScheduledDueDate(firstDueDate, index, nextFrequency),
+      }));
+    });
+  };
+
   // Column View Filter
   const [categoryFilter, setCategoryFilter] = useState<'ALL' | 'SELECTED_ONLY' | 'ASR_ONLY' | 'OUTSIDE_ONLY'>('SELECTED_ONLY');
   const [isPropsExpanded, setIsPropsExpanded] = useState(false);
@@ -285,7 +320,8 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
     setStatus(normalizeLoanStatus(loan.status));
     setDisbursedAmount(loan.disbursedAmount != null ? loan.disbursedAmount : '');
     setInterestAmount(loan.interestAmount != null ? loan.interestAmount : '');
-    setOpeningBalance(Number(loan.openingBalance || 0));
+    const loanOpeningBalance = loan.openingBalance ?? (loan as Loan & { opening_balance?: number }).opening_balance;
+    setOpeningBalance(Number(loanOpeningBalance ?? 0));
     setOpeningBalanceType(loan.openingBalanceType === 'CREDIT' ? 'CREDIT' : 'DEBIT');
 
     const mappedRows: EditableInstallmentRow[] = (loan.installments || []).map((inst, idx) => {
@@ -335,10 +371,8 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
   }, [rows, paidRowsCount]);
 
   const totalPendingAmount = useMemo(() => {
-    const signedOpening = openingBalanceType === 'CREDIT' ? -openingBalance : openingBalance;
-    const scheduledBalance = loan?.isOpeningBalanceOnly ? 0 : totalLoanAmount;
-    return Math.max(0, signedOpening + scheduledBalance - totalPaidAmount);
-  }, [loan?.isOpeningBalanceOnly, openingBalance, openingBalanceType, totalLoanAmount, totalPaidAmount]);
+    return Math.max(0, totalLoanAmount - totalPaidAmount);
+  }, [totalLoanAmount, totalPaidAmount]);
 
   // Auto-adjust top loan status when all installments are fully paid or unpaid
   useEffect(() => {
@@ -828,6 +862,13 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
                     amountClassName={totalPendingAmount === 0 ? 'text-emerald-950 font-bold' : 'text-rose-950 font-bold'}
                   />
                 </span>
+
+                {openingBalance > 0 && (
+                  <span className="font-mono text-[10px] sm:text-xs font-bold px-2.5 py-0.5 rounded-lg bg-blue-50 text-blue-950 border border-blue-200 flex items-center gap-1 shrink-0 shadow-2xs">
+                    <span className="text-blue-800">Opening {openingBalanceType === 'CREDIT' ? 'Cr' : 'Dr'}:</span>
+                    <MoneyDisplay amount={openingBalance} size="xs" amountClassName="text-blue-950 font-bold" />
+                  </span>
+                )}
               </div>
               <p className="text-[10px] sm:text-[11px] text-slate-500 font-mono mt-0.5 hidden sm:block">
                 Capital Limit: ₹{capitalAmount.toLocaleString('en-IN')} ({numberToIndianWords(capitalAmount)}) • Paid: ₹{totalPaidAmount.toLocaleString('en-IN')} ({paidRowsCount} Paid) • Pending: ₹{totalPendingAmount.toLocaleString('en-IN')} ({pendingRowsCount} EMIs) • Atomic Sync
@@ -899,8 +940,8 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
         </div>
 
         {/* ─── Excel Metadata Properties Bar ─── */}
-        <div className={`${isPropsExpanded ? 'grid' : 'hidden sm:grid'} px-3.5 sm:px-5 py-3 bg-[#FDFCFA] border-b border-[#D0C8B8] grid-cols-2 sm:grid-cols-4 lg:grid-cols-10 gap-2.5 sm:gap-3 text-xs shrink-0 max-h-[35vh] sm:max-h-none overflow-y-auto`}>
-          <div className="col-span-2 sm:col-span-2 lg:col-span-1">
+        <div className={`${isPropsExpanded ? 'grid' : 'hidden sm:grid'} px-3.5 sm:px-5 py-3 bg-[#FDFCFA] border-b border-[#D0C8B8] grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 2xl:grid-cols-12 gap-2.5 sm:gap-3 text-xs shrink-0 max-h-[35vh] sm:max-h-none overflow-y-auto [&>div>label]:mb-1 [&>div>label]:flex [&>div>label]:h-9 [&>div>label]:items-end [&>div>label]:leading-tight [&>div>input]:h-9`}>
+          <div className="col-span-2 sm:col-span-2 lg:col-span-1 2xl:col-span-2">
             <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1 font-mono">
               Borrower Name *
             </label>
@@ -946,7 +987,7 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
               theme={theme}
               size="sm"
               className="w-full"
-              buttonClassName="w-full py-1.5 text-xs"
+              buttonClassName="w-full h-9 py-1.5 text-xs"
             />
           </div>
 
@@ -965,7 +1006,7 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
                   setInterestAmount(capitalAmount - val);
                 }
               }}
-              className="w-full px-2.5 py-1.5 rounded border border-slate-300 bg-white font-mono font-bold text-slate-900 focus:outline-2 focus:outline-[#701A35] text-xs"
+              className="h-9 w-full px-2.5 py-1.5 rounded border border-slate-300 bg-white font-mono font-bold text-slate-900 focus:outline-2 focus:outline-[#701A35] text-xs"
             />
           </div>
 
@@ -985,26 +1026,27 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
                   setDisbursedAmount(capitalAmount - val);
                 }
               }}
-              className="w-full px-2.5 py-1.5 rounded border border-amber-300 bg-amber-50/70 font-mono font-bold text-amber-950 focus:outline-2 focus:outline-[#701A35] text-xs"
+              className="h-9 w-full px-2.5 py-1.5 rounded border border-amber-300 bg-amber-50/70 font-mono font-bold text-amber-950 focus:outline-2 focus:outline-[#701A35] text-xs"
             />
           </div>
 
-          <div>
+          <div className="2xl:col-span-2">
             <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1 font-mono">
               Opening Balance (₹)
             </label>
-            <div className="flex gap-1">
+            <div className="flex min-w-0 gap-1">
               <FastGridCellInput
+                key={`${loan?.id ?? 'loan'}-${openingBalance}`}
                 value={openingBalance}
                 numeric
                 placeholder="e.g. 25,000"
                 onCommit={(value) => setOpeningBalance(Math.max(0, Number(value) || 0))}
-                className="min-w-0 flex-1 px-2.5 py-1.5 rounded border border-[#C5A059] bg-amber-50/60 font-mono font-bold text-slate-900 focus:outline-2 focus:outline-[#701A35] text-xs"
+                className="h-9 min-w-0 flex-1 px-2.5 py-1.5 rounded border border-[#C5A059] bg-amber-50/60 font-mono font-bold text-slate-900 focus:outline-2 focus:outline-[#701A35] text-xs"
               />
               <select
                 value={openingBalanceType}
                 onChange={(event) => setOpeningBalanceType(event.target.value as 'DEBIT' | 'CREDIT')}
-                className="w-16 rounded border border-slate-300 bg-white px-1 text-[10px] font-bold text-slate-800 focus:outline-2 focus:outline-[#701A35]"
+                className="h-9 w-16 rounded border border-slate-300 bg-white px-1 text-[10px] font-bold text-slate-800 focus:outline-2 focus:outline-[#701A35]"
                 aria-label="Loan opening balance type"
               >
                 <option value="DEBIT">Dr</option>
@@ -1017,7 +1059,7 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
             <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1 font-mono">
               Loan Closing Balance (₹)
             </label>
-            <div className={`w-full px-2.5 py-1.5 rounded border font-mono font-bold text-xs ${
+            <div className={`flex h-9 w-full items-center px-2.5 py-1.5 rounded border font-mono font-bold text-xs ${
               totalPendingAmount === 0
                 ? 'border-emerald-300 bg-emerald-50 text-emerald-900'
                 : 'border-rose-300 bg-rose-50 text-rose-900'
@@ -1035,7 +1077,7 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
               numeric
               placeholder="e.g. 25,000"
               onCommit={(value) => setCustomerClosingBalance(Math.max(0, Number(value) || 0))}
-              className="w-full px-2.5 py-1.5 rounded border border-blue-300 bg-blue-50/70 font-mono font-bold text-blue-950 focus:outline-2 focus:outline-[#701A35] text-xs"
+              className="h-9 w-full px-2.5 py-1.5 rounded border border-blue-300 bg-blue-50/70 font-mono font-bold text-blue-950 focus:outline-2 focus:outline-[#701A35] text-xs"
             />
           </div>
 
@@ -1046,10 +1088,10 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
             <CustomSelect
               value={frequency}
               options={FREQUENCY_OPTIONS}
-              onChange={(val) => setFrequency(val as RepaymentFrequency)}
+              onChange={handleFrequencyChange}
               size="sm"
               noTruncate
-              buttonClassName="bg-white border-slate-300 py-1.5"
+              buttonClassName="bg-white border-slate-300 h-9 py-1.5"
             />
           </div>
 
@@ -1062,7 +1104,7 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
               options={LOAN_STATUS_OPTIONS}
               onChange={(val) => setStatus(val as TopLoanStatus)}
               size="sm"
-              buttonClassName="bg-white border-slate-300 py-1.5"
+              buttonClassName="bg-white border-slate-300 h-9 py-1.5"
             />
           </div>
         </div>

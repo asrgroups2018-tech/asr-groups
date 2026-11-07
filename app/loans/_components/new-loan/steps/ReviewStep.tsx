@@ -14,6 +14,7 @@ interface ReviewStepProps {
   disbursedAmount: number;
   interestAmount: number;
   includeInterest: boolean;
+  includeTotalAmount: boolean;
   openingBalance: number;
   openingBalanceType: 'DEBIT' | 'CREDIT';
   installmentCount: number;
@@ -32,6 +33,7 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({
   disbursedAmount,
   interestAmount,
   includeInterest,
+  includeTotalAmount,
   openingBalance,
   openingBalanceType,
   installmentCount,
@@ -58,14 +60,16 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({
           </div>
           <div>
             <span className="text-slate-500 block text-[10px] uppercase tracking-wider font-bold">Total Capital</span>
-            <MoneyDisplay
-              amount={totalAmount}
-              size="sm"
-              amountClassName="font-bold text-[#EED8A1] block text-sm"
-            />
-            <span className="text-[10px] text-amber-300/80 font-sans block truncate" title={numberToIndianWords(totalAmount)}>
-              {numberToIndianWords(totalAmount)}
-            </span>
+            {includeTotalAmount ? <>
+              <MoneyDisplay
+                amount={totalAmount}
+                size="sm"
+                amountClassName="font-bold text-[#EED8A1] block text-sm"
+              />
+              <span className="text-[10px] text-amber-300/80 font-sans block truncate" title={numberToIndianWords(totalAmount)}>
+                {numberToIndianWords(totalAmount)}
+              </span>
+            </> : <span className="font-bold text-slate-400 text-sm">Not applied</span>}
           </div>
           <div>
             <span className="text-slate-500 block text-[10px] uppercase tracking-wider font-bold">Installments</span>

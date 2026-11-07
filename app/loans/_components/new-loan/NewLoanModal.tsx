@@ -40,6 +40,7 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
   const [disbursedAmount, setDisbursedAmount] = useState<number>(0);
   const [interestAmount, setInterestAmount] = useState<number>(0);
   const [includeInterest, setIncludeInterest] = useState<boolean>(true);
+  const [includeTotalAmount, setIncludeTotalAmount] = useState<boolean>(true);
   const [openingBalance, setOpeningBalance] = useState<number>(0);
   const [openingBalanceType, setOpeningBalanceType] = useState<'DEBIT' | 'CREDIT'>('DEBIT');
   const [isOpeningBalanceOnly, setIsOpeningBalanceOnly] = useState(false);
@@ -77,6 +78,7 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
       setDisbursedAmount(0);
       setInterestAmount(0);
       setIncludeInterest(true);
+      setIncludeTotalAmount(true);
       setOpeningBalance(0);
       setOpeningBalanceType('DEBIT');
       setIsOpeningBalanceOnly(false);
@@ -405,8 +407,8 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
         return;
       }
 
-      // Existing borrowers with a balance are migrations from the offline
-      // ledger, so they can skip the new-loan terms step.
+      // Existing borrowers with a balance start in opening-balance-only mode,
+      // but still review the terms before continuing.
       if (!isCreatingNewCustomer && selectedCustomerId) {
         if (openingBalance <= 0) {
           setCurrentStep(2);
@@ -416,15 +418,27 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
         setDisbursedAmount(0);
         setInterestAmount(0);
         setIncludeInterest(false);
+        setIncludeTotalAmount(false);
         setIsOpeningBalanceOnly(true);
-        prepareChequeRowsFromTerms(openingBalance);
-        setCurrentStep(3);
+        setCurrentStep(2);
         return;
+      }
+      if (openingBalance > 0) {
+        setTotalAmount(openingBalance);
+        setDisbursedAmount(0);
+        setInterestAmount(0);
+        setIncludeInterest(false);
+        setIncludeTotalAmount(false);
+        setIsOpeningBalanceOnly(true);
       }
       setCurrentStep(2);
     } else if (currentStep === 2) {
-      if (totalAmount <= 0) {
+      if (includeTotalAmount && totalAmount <= 0) {
         showToast('Validation Error', 'Total loan capital amount must be greater than zero.', 'warning');
+        return;
+      }
+      if (!includeTotalAmount && openingBalance <= 0) {
+        showToast('Validation Error', 'Enter an opening balance when total loan account amount is off.', 'warning');
         return;
       }
       if (installmentCount <= 0) {
@@ -505,7 +519,7 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
       interestAmount: includeInterest && interestAmount > 0 ? interestAmount : null,
       openingBalance,
       openingBalanceType,
-      isOpeningBalanceOnly,
+      isOpeningBalanceOnly: isOpeningBalanceOnly || !includeTotalAmount,
       splits: formattedSplits,
       installments: formattedInstallments,
     });
@@ -630,6 +644,9 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
             <TermsStep
               totalAmount={totalAmount}
               setTotalAmount={setTotalAmount}
+              includeTotalAmount={includeTotalAmount}
+              setIncludeTotalAmount={setIncludeTotalAmount}
+              setIsOpeningBalanceOnly={setIsOpeningBalanceOnly}
               disbursedAmount={disbursedAmount}
               setDisbursedAmount={setDisbursedAmount}
               interestAmount={interestAmount}
@@ -706,6 +723,7 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
               disbursedAmount={disbursedAmount}
               interestAmount={interestAmount}
               includeInterest={includeInterest}
+              includeTotalAmount={includeTotalAmount}
               openingBalance={openingBalance}
               openingBalanceType={openingBalanceType}
               installmentCount={installmentCount}
