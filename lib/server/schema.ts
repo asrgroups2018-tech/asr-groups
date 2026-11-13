@@ -91,6 +91,10 @@ export const SCHEMA_STATEMENTS = [
     status TEXT NOT NULL DEFAULT 'Pending',
     recd_date TEXT,
     chq_no TEXT,
+    payment_through TEXT,
+    deposit_date TEXT,
+    register_code TEXT,
+    borrower_code TEXT,
     place TEXT,
     dep_name TEXT,
     bank TEXT,
@@ -100,6 +104,19 @@ export const SCHEMA_STATEMENTS = [
   `CREATE INDEX IF NOT EXISTS idx_installments_loan ON installments(loan_id);`,
   `CREATE INDEX IF NOT EXISTS idx_installments_status ON installments(status);`,
   `CREATE INDEX IF NOT EXISTS idx_installments_due_date ON installments(due_date);`,
+
+  // Database-managed dropdown values used by loan and receipt workflows.
+  `CREATE TABLE IF NOT EXISTS dropdown_options (
+    id TEXT PRIMARY KEY,
+    option_type TEXT NOT NULL,
+    value TEXT NOT NULL,
+    label TEXT NOT NULL,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    is_active INTEGER NOT NULL DEFAULT 1,
+    created_at TEXT NOT NULL,
+    UNIQUE(option_type, value)
+  );`,
+  `CREATE INDEX IF NOT EXISTS idx_dropdown_options_type ON dropdown_options(option_type, is_active, sort_order);`,
 
   // 6. Installment Company Splits (Per-Installment breakdown)
   `CREATE TABLE IF NOT EXISTS installment_company_splits (
@@ -308,6 +325,19 @@ export const SCHEMA_STATEMENTS = [
     updated_at TEXT NOT NULL,
     updated_by TEXT
   );`,
+
+  // Reusable balance-sheet reports. The legacy singleton above remains for
+  // backwards compatibility and is migrated into this table on first read.
+  `CREATE TABLE IF NOT EXISTS balance_sheet_reports (
+    id TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    as_of_date TEXT NOT NULL,
+    entries TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    updated_by TEXT
+  );`,
+  `CREATE INDEX IF NOT EXISTS idx_balance_sheet_reports_date ON balance_sheet_reports(as_of_date);`,
 ];
 
 const AUTH_SCHEMA_STATEMENTS = [
@@ -401,6 +431,8 @@ export function initializeSchema(client: Client): Promise<void> {
       // Add columns introduced after the original schema was deployed.
       // Each statement is intentionally idempotent for existing Turso/SQLite databases.
       for (const statement of [
+        'ALTER TABLE customers ADD COLUMN code_no TEXT',
+        'ALTER TABLE customers ADD COLUMN closing_balance REAL NOT NULL DEFAULT 0',
         'ALTER TABLE approval_requests ADD COLUMN requester_email TEXT',
         'ALTER TABLE access_requests ADD COLUMN request_payload TEXT',
         'ALTER TABLE audit_logs ADD COLUMN page_id TEXT',
@@ -415,6 +447,14 @@ export function initializeSchema(client: Client): Promise<void> {
         'ALTER TABLE cheques ADD COLUMN deposited_by_id TEXT',
         'ALTER TABLE cheques ADD COLUMN deposited_by_name TEXT',
         'ALTER TABLE cheques ADD COLUMN deposited_by_email TEXT',
+        'ALTER TABLE installments ADD COLUMN place TEXT',
+        'ALTER TABLE installments ADD COLUMN dep_name TEXT',
+        'ALTER TABLE installments ADD COLUMN bank TEXT',
+        'ALTER TABLE installments ADD COLUMN remarks TEXT',
+        'ALTER TABLE installments ADD COLUMN payment_through TEXT',
+        'ALTER TABLE installments ADD COLUMN deposit_date TEXT',
+        'ALTER TABLE installments ADD COLUMN register_code TEXT',
+        'ALTER TABLE installments ADD COLUMN borrower_code TEXT',
       ]) {
         try {
           await client.execute(statement);
@@ -422,6 +462,40 @@ export function initializeSchema(client: Client): Promise<void> {
           // The column already exists.
         }
       }
+
+      // This index must be created after the idempotent column migrations
+      // above because older databases do not have payment_through yet.
+      await client.execute('CREATE INDEX IF NOT EXISTS idx_installments_payment_through ON installments(payment_through)');
+
+      // Defaults are stored as rows in the database so the application never
+      // relies on a hard-coded list. Administrators can add or deactivate them
+      // through the dropdown-options API.
+      const now = new Date().toISOString();
+      await client.batch([
+        ['CASH', 'Cash'],
+        ['CHEQUE', 'Cheque'],
+        ['BANK_TRANSFER', 'Bank Transfer'],
+        ['UPI', 'UPI'],
+        ['NEFT', 'NEFT'],
+        ['RTGS', 'RTGS'],
+        ['OTHER', 'Other'],
+      ].map(([value, label], index) => ({
+        sql: `INSERT OR IGNORE INTO dropdown_options (id, option_type, value, label, sort_order, is_active, created_at)
+              VALUES (?, 'PAYMENT_THROUGH', ?, ?, ?, 1, ?)`,
+        args: [`OPT-PAYMENT-${value}`, value, label, index + 1, now],
+      })), 'write');
+
+      // Promote existing borrower codes into the managed list without
+      // inventing values in the UI. This keeps legacy TN/CBE-style codes
+      // available immediately after the migration.
+      await client.execute(`
+        INSERT OR IGNORE INTO dropdown_options (id, option_type, value, label, sort_order, is_active, created_at)
+        SELECT 'OPT-BORROWER-CODE-' || lower(replace(replace(trim(code_no), ' ', '-'), '/', '-')),
+               'BORROWER_CODE', upper(trim(code_no)), upper(trim(code_no)),
+               1000, 1, ?
+        FROM customers
+        WHERE code_no IS NOT NULL AND trim(code_no) <> ''
+      `, [now]);
 
       // Create these only after the idempotent column migrations above. This
       // keeps upgrades safe for databases created before structured audit

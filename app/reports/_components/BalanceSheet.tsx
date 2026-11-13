@@ -54,17 +54,22 @@ function groupEntries(entries: BalanceSheetEntry[], side: BalanceSheetSide) {
 export const BalanceSheet: React.FC = () => {
   const { showToast } = useApp();
   const [document, setDocument] = useState<BalanceSheetDocument | null>(null);
+  const [documents, setDocuments] = useState<BalanceSheetDocument[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
+  const [isCreatingBalanceSheet, setIsCreatingBalanceSheet] = useState(false);
+  const [newBalanceSheetTitle, setNewBalanceSheetTitle] = useState('');
+  const [newBalanceSheetDate, setNewBalanceSheetDate] = useState(() => new Date().toISOString().slice(0, 10));
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (documentId?: string) => {
     setIsLoading(true);
     try {
-      const response = await fetch('/api/reports/balance-sheet', { cache: 'no-store' });
+      const response = await fetch(`/api/reports/balance-sheet${documentId ? `?id=${encodeURIComponent(documentId)}` : ''}`, { cache: 'no-store' });
       const json = await response.json().catch(() => ({}));
       if (!response.ok || !json.success) throw new Error(json.error || 'Unable to load balance sheet.');
       setDocument(json.data);
+      setDocuments(json.documents || (json.data ? [json.data] : []));
       setIsDirty(false);
     } catch (error) {
       showToast('Balance sheet unavailable', error instanceof Error ? error.message : 'Please try again.', 'error');
@@ -77,6 +82,26 @@ export const BalanceSheet: React.FC = () => {
     const timer = window.setTimeout(() => void load(), 0);
     return () => window.clearTimeout(timer);
   }, [load]);
+
+  const createNewBalanceSheet = async () => {
+    const title = newBalanceSheetTitle.trim();
+    if (!title) return;
+    try {
+      const response = await fetch('/api/reports/balance-sheet', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, asOfDate: newBalanceSheetDate }),
+      });
+      const json = await response.json();
+      if (!response.ok || !json.success) throw new Error(json.error || 'Unable to create balance sheet.');
+      await load(json.data.id);
+      setIsCreatingBalanceSheet(false);
+      setNewBalanceSheetTitle('');
+      showToast('Balance sheet created', `${title} is now saved in the database.`, 'success');
+    } catch (error) {
+      showToast('Create failed', error instanceof Error ? error.message : 'Unable to create balance sheet.', 'error');
+    }
+  };
 
   const totals = useMemo(() => {
     const entries = document?.entries || [];
@@ -249,6 +274,14 @@ export const BalanceSheet: React.FC = () => {
             <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#A07A39]">Tally — Balance Sheet</p>
             <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-center">
               <Scale className="hidden h-7 w-7 shrink-0 text-[#701A35] sm:block" />
+              <select
+                value={document.id || ''}
+                onChange={(event) => void load(event.target.value)}
+                aria-label="Select balance sheet"
+                className="max-w-[220px] rounded-lg border border-slate-200 bg-[#FCFBF9] px-2.5 py-2 text-sm font-bold text-[#24131B] outline-none focus:border-[#C5A059]"
+              >
+                {documents.map((item) => <option key={item.id} value={item.id}>{item.title} · {item.asOfDate}</option>)}
+              </select>
               <input
                 value={document.title}
                 onChange={(event) => editDocument((current) => ({ ...current, title: event.target.value }))}
@@ -269,12 +302,18 @@ export const BalanceSheet: React.FC = () => {
             <p className="mt-2 max-w-3xl text-sm text-slate-500">Editable Tally-style statement. Click any group, ledger or amount to change it; totals and balance status update instantly.</p>
           </div>
           <div className="flex flex-wrap items-center gap-2 xl:max-w-[430px] xl:justify-end">
+            <button type="button" onClick={() => setIsCreatingBalanceSheet((open) => !open)} className="inline-flex items-center gap-1.5 rounded-xl border border-[#C5A059] bg-[#FFF9EC] px-3 py-2.5 text-xs font-bold text-[#701A35] hover:bg-[#FFF2CF]"><Plus className="h-4 w-4" /> New balance sheet</button>
             <button type="button" onClick={exportPdf} className="inline-flex items-center gap-1.5 rounded-xl border border-rose-200 bg-white px-3 py-2.5 text-xs font-bold text-rose-700 hover:bg-rose-50"><FileText className="h-4 w-4" /> PDF</button>
             <button type="button" onClick={exportExcel} className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-200 bg-white px-3 py-2.5 text-xs font-bold text-emerald-700 hover:bg-emerald-50"><FileSpreadsheet className="h-4 w-4" /> Excel</button>
             <button type="button" onClick={() => window.print()} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50"><Printer className="h-4 w-4" /> Print</button>
             <button type="button" onClick={() => void save()} disabled={!isDirty || isSaving} className="inline-flex items-center gap-1.5 rounded-xl bg-[#701A35] px-3 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-[#5c142b] disabled:cursor-not-allowed disabled:opacity-45"><Save className="h-4 w-4" /> {isSaving ? 'Saving…' : 'Save changes'}</button>
           </div>
         </div>
+        {isCreatingBalanceSheet && <div className="mt-5 flex flex-col gap-2 rounded-2xl border border-[#E7D3A6] bg-[#FFF9EC] p-3 sm:flex-row sm:items-end">
+          <label className="flex-1 text-[10px] font-bold uppercase tracking-wide text-[#701A35]">Report name<input value={newBalanceSheetTitle} onChange={(event) => setNewBalanceSheetTitle(event.target.value)} placeholder="e.g. October 2026 Balance Sheet" className="mt-1 h-9 w-full rounded-lg border border-[#E7D3A6] bg-white px-2.5 text-xs font-semibold text-slate-800 outline-none focus:border-[#C5A059]" /></label>
+          <label className="text-[10px] font-bold uppercase tracking-wide text-[#701A35]">As at<input type="date" value={newBalanceSheetDate} onChange={(event) => setNewBalanceSheetDate(event.target.value)} className="mt-1 h-9 rounded-lg border border-[#E7D3A6] bg-white px-2.5 text-xs font-semibold text-slate-800 outline-none focus:border-[#C5A059]" /></label>
+          <button type="button" onClick={() => void createNewBalanceSheet()} disabled={!newBalanceSheetTitle.trim()} className="h-9 rounded-lg bg-[#701A35] px-3 text-xs font-bold text-white disabled:opacity-50">Create</button>
+        </div>}
         <div className="mt-6 grid grid-cols-1 gap-2 border-t border-[#EEE8DE] pt-5 sm:grid-cols-3">
           <SummaryCard label="Total liabilities" value={totals.liabilities} tone="maroon" />
           <SummaryCard label="Total assets" value={totals.assets} tone="blue" />
@@ -352,7 +391,7 @@ function BalanceSide({
                 </tr>
                 {groupEntriesForSide.map((entry) => <tr key={entry.id} className="border-b border-slate-100 transition-colors hover:bg-[#FCFAF7]">
                   <td className="px-4 py-2.5"><input value={entry.label} onFocus={(event) => event.currentTarget.select()} onChange={(event) => onUpdateEntry(entry.id, { label: event.target.value })} aria-label={`${groupName} ledger name`} className="w-full bg-transparent text-xs font-semibold text-slate-700 outline-none placeholder:text-slate-300 focus:rounded-md focus:bg-[var(--surface-raised)] focus:ring-1 focus:ring-[#C5A059]" placeholder="Ledger name" /></td>
-                  <td className="px-4 py-2.5"><input type="number" min="0" step="0.01" value={entry.amount} onFocus={(event) => event.currentTarget.select()} onChange={(event) => onUpdateEntry(entry.id, { amount: Math.max(0, Number(event.target.value) || 0) })} aria-label={`${entry.label} amount`} className="w-full rounded-md bg-transparent px-2 py-1 text-right text-xs font-bold tabular-nums text-slate-800 outline-none hover:bg-white focus:bg-[var(--surface-raised)] focus:ring-1 focus:ring-[#C5A059]" /></td>
+                  <td className="px-4 py-2.5"><input type="number" min="0" step="0.01" value={entry.amount} readOnly={Boolean(entry.sourceKey && entry.sourceKey !== 'MANUAL')} onFocus={(event) => event.currentTarget.select()} onChange={(event) => onUpdateEntry(entry.id, { amount: Math.max(0, Number(event.target.value) || 0) })} aria-label={`${entry.label} amount`} title={entry.sourceKey && entry.sourceKey !== 'MANUAL' ? 'Calculated from loan and collection data' : 'Manual ledger amount'} className={`w-full rounded-md bg-transparent px-2 py-1 text-right text-xs font-bold tabular-nums outline-none focus:ring-1 focus:ring-[#C5A059] ${entry.sourceKey && entry.sourceKey !== 'MANUAL' ? 'cursor-not-allowed text-slate-500' : 'text-slate-800 hover:bg-white focus:bg-[var(--surface-raised)]'}`} /></td>
                   <td className="px-2 py-2.5 text-center"><button type="button" onClick={() => onRemoveEntry(entry.id)} aria-label={`Delete ${entry.label}`} title="Delete ledger" className="rounded-md p-1.5 text-slate-300 hover:bg-rose-50 hover:text-rose-600"><Trash2 className="h-3.5 w-3.5" /></button></td>
                 </tr>)}
                 <tr><td colSpan={3} className="px-4 py-2"><button type="button" onClick={() => onAddEntry(groupName)} className={`inline-flex items-center gap-1 text-[10px] font-bold ${accent.text} hover:underline`}><Plus className="h-3 w-3" /> Add ledger under {groupName}</button></td></tr>

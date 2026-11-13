@@ -7,6 +7,7 @@ import { numberToIndianWords } from '@/lib/utils/numberToWords';
 import { formatIndianCommas } from '@/lib/utils/numberToWords';
 import { DatePicker } from '@/components/ui/DatePicker';
 import { DraftNumberInput } from '@/components/ui/DraftNumberInput';
+import { DatabaseSelect } from '@/components/ui/DatabaseSelect';
 
 export interface ScheduleStepRow {
   seqNo: number;
@@ -14,7 +15,11 @@ export interface ScheduleStepRow {
   amountDue: number;
   companySplits: Record<string, number>;
   remarks?: string;
+  paymentThrough?: string;
   chqNo?: string;
+  depositDate?: string;
+  registerCode?: string;
+  borrowerCode?: string;
 }
 
 export interface RowBalance {
@@ -98,7 +103,7 @@ export const ScheduleStep: React.FC<ScheduleStepProps> = ({
             <tr className="bg-[#240F1D] border-b border-[#3D1A2C] text-slate-300 font-mono">
               <th className="p-2 w-[5%] text-center">#</th>
               <th className="p-2 w-[16%]">Due Date</th>
-              <th className="p-2 w-[14%]">Chq No</th>
+              <th className="p-2 w-[18%]">Payment Through</th>
               <th className="p-2 w-[15%] text-right font-bold text-[#EED8A1]">Installment (₹)</th>
               {selectedCompanies.map((c) => (
                 <th key={c.id} className="p-2 font-bold text-[#EED8A1] text-right align-bottom">
@@ -130,19 +135,23 @@ export const ScheduleStep: React.FC<ScheduleStepProps> = ({
                       compact={true}
                     />
                   </td>
-                  <td className="p-1.5">
-                    <input
-                      type="text"
-                      value={row.chqNo || ''}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setScheduleRows((prev) =>
-                          prev.map((r) => (r.seqNo === row.seqNo ? { ...r, chqNo: val } : r))
-                        );
-                      }}
-                      placeholder="CHQ"
-                      className="w-full bg-[#240F1D] border border-[#3D1A2C] rounded px-1.5 py-1 text-[11px] font-mono text-slate-100 placeholder:text-slate-600 focus:outline-hidden focus:border-[#C5A059]"
+                  <td className="p-1.5 align-top">
+                    <DatabaseSelect
+                      optionType="PAYMENT_THROUGH"
+                      value={row.paymentThrough || ''}
+                      onChange={(value) => setScheduleRows((prev) => prev.map((r) => r.seqNo === row.seqNo ? { ...r, paymentThrough: value, ...(value.toUpperCase() === 'CHEQUE' ? {} : { chqNo: '', depositDate: '', registerCode: '', borrowerCode: '' }) } : r))}
+                      placeholder="Select payment"
+                      compact
+                      allowManage={idx === 0}
                     />
+                    {row.paymentThrough?.toUpperCase() === 'CHEQUE' && (
+                      <div className="mt-1 grid grid-cols-2 gap-1">
+                        <input value={row.chqNo || ''} onChange={(event) => setScheduleRows((prev) => prev.map((r) => r.seqNo === row.seqNo ? { ...r, chqNo: event.target.value } : r))} placeholder="Cheque no." className="h-7 min-w-0 rounded border border-[#3D1A2C] bg-[#240F1D] px-1 text-[10px] text-slate-100" />
+                        <input type="date" value={row.depositDate || ''} onChange={(event) => setScheduleRows((prev) => prev.map((r) => r.seqNo === row.seqNo ? { ...r, depositDate: event.target.value } : r))} className="h-7 min-w-0 rounded border border-[#3D1A2C] bg-[#240F1D] px-1 text-[10px] text-slate-100" />
+                        <DatabaseSelect optionType="REGISTER_CODE" value={row.registerCode || ''} onChange={(value) => setScheduleRows((prev) => prev.map((r) => r.seqNo === row.seqNo ? { ...r, registerCode: value } : r))} placeholder="Register" compact />
+                        <DatabaseSelect optionType="BORROWER_CODE" value={row.borrowerCode || ''} onChange={(value) => setScheduleRows((prev) => prev.map((r) => r.seqNo === row.seqNo ? { ...r, borrowerCode: value } : r))} placeholder="Borrower code" compact />
+                      </div>
+                    )}
                   </td>
                   <td className="p-1.5">
                     <DraftNumberInput

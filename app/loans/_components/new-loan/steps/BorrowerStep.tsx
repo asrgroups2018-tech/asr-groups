@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Users, IndianRupee, Check } from 'lucide-react';
 import { Customer } from '@/lib/types';
 import { AmountInput } from '@/components/ui/AmountInput';
 import { FloatingPopover } from '@/components/ui/FloatingPopover';
+import { DatabaseSelect } from '@/components/ui/DatabaseSelect';
 
 interface BorrowerStepProps {
   customers: Customer[];
@@ -18,8 +19,10 @@ interface BorrowerStepProps {
   setNewCustomerName: (name: string) => void;
   newCustomerPlace: string;
   setNewCustomerPlace: (place: string) => void;
-  newCustomerCodeNo: string;
-  setNewCustomerCodeNo: (code: string) => void;
+  newCustomerCodePrefix: string;
+  setNewCustomerCodePrefix: (code: string) => void;
+  newCustomerCodeValue: string;
+  setNewCustomerCodeValue: (code: string) => void;
   openingBalance: number;
   setOpeningBalance: (amount: number) => void;
   openingBalanceType: 'DEBIT' | 'CREDIT';
@@ -38,8 +41,10 @@ export const BorrowerStep: React.FC<BorrowerStepProps> = ({
   setNewCustomerName,
   newCustomerPlace,
   setNewCustomerPlace,
-  newCustomerCodeNo,
-  setNewCustomerCodeNo,
+  newCustomerCodePrefix,
+  setNewCustomerCodePrefix,
+  newCustomerCodeValue,
+  setNewCustomerCodeValue,
   openingBalance,
   setOpeningBalance,
   openingBalanceType,
@@ -50,7 +55,15 @@ export const BorrowerStep: React.FC<BorrowerStepProps> = ({
   const [searchDraft, setSearchDraft] = useState(customerSearch);
   const [newNameDraft, setNewNameDraft] = useState(newCustomerName);
   const [newPlaceDraft, setNewPlaceDraft] = useState(newCustomerPlace);
-  const [newCodeDraft, setNewCodeDraft] = useState(newCustomerCodeNo);
+  const [newCodePrefixDraft, setNewCodePrefixDraft] = useState(newCustomerCodePrefix);
+  const [newCodeValueDraft, setNewCodeValueDraft] = useState(newCustomerCodeValue);
+
+  useEffect(() => {
+    setNewNameDraft(newCustomerName);
+    setNewPlaceDraft(newCustomerPlace);
+    setNewCodePrefixDraft(newCustomerCodePrefix);
+    setNewCodeValueDraft(newCustomerCodeValue);
+  }, [newCustomerName, newCustomerPlace, newCustomerCodePrefix, newCustomerCodeValue]);
 
   const searchTerm = searchDraft.trim().toLowerCase();
   const filteredCustomers = searchTerm
@@ -193,20 +206,35 @@ export const BorrowerStep: React.FC<BorrowerStepProps> = ({
                 className="w-full bg-[#240F1D] border border-[#3D1A2C] rounded-md px-3 py-1.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-hidden focus:border-[#C5A059]"
               />
             </div>
-            <div>
-              <label className="text-[11px] text-slate-400 block mb-1">Code No</label>
-              <input
-                type="text"
-                placeholder="e.g. 101, A-12"
-                value={newCodeDraft}
-                onChange={(e) => {
-                  setNewCodeDraft(e.target.value);
-                  setNewCustomerCodeNo(e.target.value);
-                }}
-                className="w-full bg-[#240F1D] border border-[#3D1A2C] rounded-md px-3 py-1.5 text-xs text-slate-100 font-mono placeholder-slate-500 focus:outline-hidden focus:border-[#C5A059]"
-              />
+            <div className="sm:col-span-2">
+              <label className="text-[11px] text-slate-400 block mb-1">Code No (Optional)</label>
+              <div className="grid grid-cols-1 sm:grid-cols-[minmax(190px,0.7fr)_minmax(0,1.3fr)] gap-2">
+                <div className="min-w-0">
+                  <DatabaseSelect
+                    optionType="BORROWER_CODE_PREFIX"
+                    value={newCodePrefixDraft}
+                    onChange={(value) => {
+                      setNewCodePrefixDraft(value);
+                      setNewCustomerCodePrefix(value);
+                    }}
+                    placeholder="Select prefix"
+                    allowManage
+                  />
+                </div>
+                <input
+                  type="text"
+                  value={newCodeValueDraft}
+                  onChange={(event) => {
+                    setNewCodeValueDraft(event.target.value);
+                    setNewCustomerCodeValue(event.target.value);
+                  }}
+                  placeholder="Enter letters or numbers, e.g. 101 or A12"
+                  className="w-full min-w-0 h-10 bg-[#240F1D] border border-[#3D1A2C] rounded-md px-3 py-1.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-hidden focus:border-[#C5A059]"
+                />
+              </div>
+              <p className="mt-1.5 text-[10px] text-slate-500">Choose or create a prefix, then enter the code. It will be saved like <span className="font-semibold text-slate-400">TN-101</span>.</p>
             </div>
-            <div>
+            <div className="sm:col-span-2">
               <label className="text-[11px] text-slate-400 block mb-1">Opening Balance (Optional)</label>
               <AmountInput
                 value={openingBalance}

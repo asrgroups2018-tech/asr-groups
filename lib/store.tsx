@@ -208,7 +208,11 @@ interface AppContextType {
     installments: {
       dueDate: string;
       amountDue: number;
+      paymentThrough?: string;
       chqNo?: string;
+      depositDate?: string | null;
+      registerCode?: string;
+      borrowerCode?: string;
       companySplits: Record<string, number>;
       remarks?: string;
     }[];
@@ -221,7 +225,11 @@ interface AppContextType {
       recdDate?: string | null;
       amountDue?: number;
       dueDate?: string;
+      paymentThrough?: string;
       chqNo?: string;
+      depositDate?: string | null;
+      registerCode?: string;
+      borrowerCode?: string;
       depName?: string;
       place?: string;
       remarks?: string;
@@ -247,7 +255,11 @@ interface AppContextType {
         amountDue: number;
         status: string;
         recdDate?: string | null;
+        paymentThrough?: string | null;
         chqNo?: string | null;
+        depositDate?: string | null;
+        registerCode?: string | null;
+        borrowerCode?: string | null;
         place?: string | null;
         depName?: string | null;
         remarks?: string | null;
@@ -665,7 +677,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     installments: {
       dueDate: string;
       amountDue: number;
+      paymentThrough?: string;
       chqNo?: string;
+      depositDate?: string | null;
+      registerCode?: string;
+      borrowerCode?: string;
       companySplits: Record<string, number>;
       remarks?: string;
     }[];
@@ -717,7 +733,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       recdDate?: string | null;
       amountDue?: number;
       dueDate?: string;
+      paymentThrough?: string;
       chqNo?: string;
+      depositDate?: string | null;
+      registerCode?: string;
+      borrowerCode?: string;
       depName?: string;
       place?: string;
       remarks?: string;
@@ -773,7 +793,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         amountDue: number;
         status: string;
         recdDate?: string | null;
+        paymentThrough?: string | null;
         chqNo?: string | null;
+        depositDate?: string | null;
+        registerCode?: string | null;
+        borrowerCode?: string | null;
         place?: string | null;
         depName?: string | null;
         remarks?: string | null;

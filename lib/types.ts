@@ -408,7 +408,11 @@ export interface Installment {
   amountDue: number; // Total amount customer owes for this installment
   status: CollectionStatus; // Allowed: Pending, Cleared, NEFT, RTGS, Cash
   recdDate?: string | null; // Date payment was actually received
-  chqNo?: string; // Cheque number or reference text ("NEFT", "CS", "000194")
+  paymentThrough?: string; // Database-managed payment method
+  chqNo?: string; // Legacy cheque number / payment reference
+  depositDate?: string | null;
+  registerCode?: string;
+  borrowerCode?: string;
   place?: string; // Place (e.g. "CHENNAI", "CBE")
   depName?: string; // Deposit account company name
   bank?: string; // Bank account / name
@@ -417,6 +421,16 @@ export interface Installment {
   createdAt: string;
   isMismatch?: boolean;
   mismatchDiff?: number;
+}
+
+export interface DropdownOption {
+  id: string;
+  optionType: string;
+  value: string;
+  label: string;
+  sortOrder: number;
+  isActive: boolean;
+  createdAt: string;
 }
 
 // 6. Loan (Client-level Aggregated Entity)

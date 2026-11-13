@@ -92,7 +92,8 @@ export async function getLoans(query?: string, customerId?: string): Promise<Loa
     {
       sql: `
         SELECT i.id, i.loan_id, i.seq_no, i.due_date, i.amount_due, i.status, i.recd_date,
-               i.chq_no, i.place, i.dep_name, i.remarks, i.created_at
+               i.chq_no, i.payment_through, i.deposit_date, i.register_code, i.borrower_code,
+               i.place, i.dep_name, i.bank, i.remarks, i.created_at
         FROM installments i${installmentCustomerFilter}
         ORDER BY i.seq_no ASC
       `,
@@ -151,9 +152,14 @@ export async function getLoans(query?: string, customerId?: string): Promise<Loa
       amountDue,
       status: (r.status as any) || 'PENDING',
       recdDate: r.recd_date ? String(r.recd_date) : null,
+      paymentThrough: r.payment_through ? String(r.payment_through) : undefined,
       chqNo: r.chq_no ? String(r.chq_no) : undefined,
+      depositDate: r.deposit_date ? String(r.deposit_date) : null,
+      registerCode: r.register_code ? String(r.register_code) : undefined,
+      borrowerCode: r.borrower_code ? String(r.borrower_code) : undefined,
       place: r.place ? String(r.place) : undefined,
       depName: r.dep_name ? String(r.dep_name) : undefined,
+      bank: r.bank ? String(r.bank) : undefined,
       remarks: r.remarks ? String(r.remarks) : undefined,
       companySplits,
       createdAt: String(r.created_at || new Date().toISOString().slice(0, 10)),
@@ -275,7 +281,11 @@ export async function createLoan(data: {
   installments: {
     dueDate: string;
     amountDue: number;
+      paymentThrough?: string;
     chqNo?: string;
+      depositDate?: string | null;
+      registerCode?: string;
+      borrowerCode?: string;
     companySplits: Record<string, number>;
     remarks?: string;
   }[];
@@ -331,8 +341,9 @@ export async function createLoan(data: {
 
     statements.push({
       sql: `INSERT INTO installments (
-        id, loan_id, seq_no, due_date, amount_due, status, recd_date, chq_no, place, dep_name, remarks, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        id, loan_id, seq_no, due_date, amount_due, status, recd_date, chq_no, payment_through, deposit_date,
+        register_code, borrower_code, place, dep_name, remarks, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       args: [
         instId,
         loanId,
@@ -342,6 +353,10 @@ export async function createLoan(data: {
         'PENDING',
         null,
         inst.chqNo?.trim() || null,
+        inst.paymentThrough?.trim() || null,
+        inst.depositDate?.trim() || null,
+        inst.registerCode?.trim() || null,
+        inst.borrowerCode?.trim() || null,
         'CHENNAI',
         null,
         inst.remarks || null,
@@ -386,7 +401,11 @@ export async function updateLoanInstallment(
     recdDate?: string | null;
     amountDue?: number;
     dueDate?: string;
+    paymentThrough?: string;
     chqNo?: string;
+    depositDate?: string | null;
+    registerCode?: string;
+    borrowerCode?: string;
     depName?: string;
     place?: string;
     remarks?: string;
@@ -410,17 +429,21 @@ export async function updateLoanInstallment(
   const newRecdDate = updates.recdDate !== undefined ? updates.recdDate : current.recd_date;
   const newAmount = updates.amountDue !== undefined ? updates.amountDue : current.amount_due;
   const newDueDate = updates.dueDate !== undefined ? updates.dueDate : current.due_date;
+  const newPaymentThrough = updates.paymentThrough !== undefined ? updates.paymentThrough : current.payment_through;
   const newChqNo = updates.chqNo !== undefined ? updates.chqNo : current.chq_no;
+  const newDepositDate = updates.depositDate !== undefined ? updates.depositDate : current.deposit_date;
+  const newRegisterCode = updates.registerCode !== undefined ? updates.registerCode : current.register_code;
+  const newBorrowerCode = updates.borrowerCode !== undefined ? updates.borrowerCode : current.borrower_code;
   const newDepName = updates.depName !== undefined ? updates.depName : current.dep_name;
   const newPlace = updates.place !== undefined ? updates.place : current.place;
   const newRemarks = updates.remarks !== undefined ? updates.remarks : current.remarks;
 
   statements.push({
     sql: `UPDATE installments SET
-      status = ?, recd_date = ?, amount_due = ?, due_date = ?, chq_no = ?,
-      dep_name = ?, place = ?, remarks = ?
+      status = ?, recd_date = ?, amount_due = ?, due_date = ?, chq_no = ?, payment_through = ?,
+      deposit_date = ?, register_code = ?, borrower_code = ?, dep_name = ?, place = ?, remarks = ?
     WHERE id = ?`,
-    args: [newStatus, newRecdDate, newAmount, newDueDate, newChqNo, newDepName, newPlace, newRemarks, installmentId],
+    args: [newStatus, newRecdDate, newAmount, newDueDate, newChqNo, newPaymentThrough, newDepositDate, newRegisterCode, newBorrowerCode, newDepName, newPlace, newRemarks, installmentId],
   });
 
   if (updates.companySplits) {
@@ -540,7 +563,11 @@ export async function updateFullLoan(
       amountDue: number;
       status: string;
       recdDate?: string | null;
+      paymentThrough?: string | null;
       chqNo?: string | null;
+      depositDate?: string | null;
+      registerCode?: string | null;
+      borrowerCode?: string | null;
       place?: string | null;
       depName?: string | null;
       bank?: string | null;
@@ -703,8 +730,9 @@ export async function updateFullLoan(
 
     statements.push({
       sql: `INSERT INTO installments (
-              id, loan_id, seq_no, due_date, amount_due, status, recd_date, chq_no, place, dep_name, bank, remarks, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+              id, loan_id, seq_no, due_date, amount_due, status, recd_date, chq_no, payment_through, deposit_date,
+              register_code, borrower_code, place, dep_name, bank, remarks, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(id) DO UPDATE SET
               loan_id = excluded.loan_id,
               seq_no = excluded.seq_no,
@@ -713,6 +741,10 @@ export async function updateFullLoan(
               status = excluded.status,
               recd_date = excluded.recd_date,
               chq_no = excluded.chq_no,
+              payment_through = excluded.payment_through,
+              deposit_date = excluded.deposit_date,
+              register_code = excluded.register_code,
+              borrower_code = excluded.borrower_code,
               place = excluded.place,
               dep_name = excluded.dep_name,
               bank = excluded.bank,
@@ -726,6 +758,10 @@ export async function updateFullLoan(
         inst.status || 'Pending',
         inst.recdDate || null,
         inst.chqNo || null,
+        inst.paymentThrough || null,
+        inst.depositDate || null,
+        inst.registerCode || null,
+        inst.borrowerCode || null,
         inst.place || data.place || currentLoan.place || 'CHENNAI',
         inst.depName || null,
         inst.bank || null,

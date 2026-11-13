@@ -12,7 +12,7 @@ export async function POST(
   try {
     const { id: loanId } = await context.params;
     const body = await req.json();
-    const { installmentId, status, recdDate, amountDue, dueDate, chqNo, depName, place, remarks, companySplits } = body;
+    const { installmentId, status, recdDate, amountDue, dueDate, paymentThrough, chqNo, depositDate, registerCode, borrowerCode, depName, place, remarks, companySplits } = body;
 
     if (!installmentId) {
       return NextResponse.json(
@@ -28,7 +28,7 @@ export async function POST(
       entityType: 'historical_receipt',
       entityId: installmentId,
       beforePayload: null,
-      proposedPayload: { installmentId, updates: { status, recdDate, amountDue, dueDate, chqNo, depName, place, remarks, companySplits } },
+      proposedPayload: { installmentId, updates: { status, recdDate, amountDue, dueDate, paymentThrough, chqNo, depositDate, registerCode, borrowerCode, depName, place, remarks, companySplits } },
     });
     if (queued) return queued;
 
@@ -37,7 +37,11 @@ export async function POST(
       recdDate,
       amountDue: amountDue !== undefined ? Number(amountDue) : undefined,
       dueDate,
+      paymentThrough,
       chqNo,
+      depositDate,
+      registerCode,
+      borrowerCode,
       depName,
       place,
       remarks,

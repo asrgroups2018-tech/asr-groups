@@ -7,6 +7,7 @@ import { AmountInput } from '@/components/ui/AmountInput';
 import { DatePicker } from '@/components/ui/DatePicker';
 import { RepaymentFrequency } from '@/lib/types';
 import { DraftNumberInput } from '@/components/ui/DraftNumberInput';
+import { DatabaseSelect } from '@/components/ui/DatabaseSelect';
 
 interface TermsStepProps {
   totalAmount: number;
@@ -34,6 +35,12 @@ interface TermsStepProps {
   setChequeNumber?: (chequeNumber: string) => void;
   depositDate?: string;
   setDepositDate?: (date: string) => void;
+  paymentThrough?: string;
+  setPaymentThrough?: (value: string) => void;
+  registerCode?: string;
+  setRegisterCode?: (value: string) => void;
+  borrowerCode?: string;
+  setBorrowerCode?: (value: string) => void;
 }
 
 export const TermsStep: React.FC<TermsStepProps> = ({
@@ -62,6 +69,12 @@ export const TermsStep: React.FC<TermsStepProps> = ({
   setChequeNumber,
   depositDate,
   setDepositDate,
+  paymentThrough = '',
+  setPaymentThrough,
+  registerCode = '',
+  setRegisterCode,
+  borrowerCode = '',
+  setBorrowerCode,
 }) => {
   const frequencyOptions: { label: string; value: RepaymentFrequency; subtitle?: string }[] = [
     { label: 'Monthly', value: 'Monthly' },
@@ -139,37 +152,19 @@ export const TermsStep: React.FC<TermsStepProps> = ({
           </div>
         )}
 
-        {/* Cheque No. & Deposit Date (Optional) */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3 border-t border-[#3D1A2C]/60">
-          <label className="block text-xs font-mono uppercase text-slate-300 font-bold">
-            Cheque No. <span className="normal-case font-normal text-slate-500">(Optional)</span>
-            <input
-              type="text"
-              value={chequeNumber || ''}
-              onChange={(event) => setChequeNumber?.(event.target.value)}
-              placeholder="e.g. 000194"
-              className="mt-1.5 w-full h-10 rounded-xl border border-[#3D1A2C] bg-[#160810] px-3 text-sm font-mono font-normal normal-case text-slate-100 outline-none focus:border-[#C5A059]"
-            />
-          </label>
-          <div>
-            <label className="mb-1.5 block text-xs font-mono font-bold uppercase text-slate-300">
-              Deposit Date <span className="normal-case font-normal text-slate-500">(Optional)</span>
-            </label>
-            <DatePicker
-              value={depositDate || null}
-              onChange={(d) => setDepositDate?.(d)}
-              theme="dark"
-              size="md"
-              placeholder="Select deposit date"
-              className="w-full"
-              buttonClassName="w-full h-10"
-              showPresets={false}
-            />
-          </div>
+        <div className="border-t border-[#3D1A2C]/60 pt-3">
+          <label className="mb-1.5 block text-xs font-mono font-bold uppercase text-slate-300">Payment Through <span className="normal-case font-normal text-slate-500">(Optional)</span></label>
+          <DatabaseSelect optionType="PAYMENT_THROUGH" value={paymentThrough} onChange={setPaymentThrough || (() => undefined)} placeholder="Select payment method" allowManage />
         </div>
-        <p className="text-[11px] text-slate-400">
-          Cheque is added to the Cheques page only when both details are entered.
-        </p>
+        {paymentThrough.toUpperCase() === 'CHEQUE' && (
+          <div className="grid grid-cols-1 gap-3 border-t border-[#3D1A2C]/60 pt-3 sm:grid-cols-2">
+            <label className="block text-xs font-mono uppercase text-slate-300 font-bold">Cheque No.<input type="text" value={chequeNumber || ''} onChange={(event) => setChequeNumber?.(event.target.value)} placeholder="e.g. 000194" className="mt-1.5 h-10 w-full rounded-xl border border-[#3D1A2C] bg-[#160810] px-3 text-sm font-mono text-slate-100 outline-none focus:border-[#C5A059]" /></label>
+            <div><label className="mb-1.5 block text-xs font-mono font-bold uppercase text-slate-300">Deposit Date</label><DatePicker value={depositDate || null} onChange={(d) => setDepositDate?.(d)} theme="dark" size="md" placeholder="Select deposit date" className="w-full" buttonClassName="h-10 w-full" showPresets={false} /></div>
+            <label className="block text-xs font-mono uppercase text-slate-300 font-bold">Register Code<DatabaseSelect optionType="REGISTER_CODE" value={registerCode} onChange={setRegisterCode || (() => undefined)} placeholder="Select register" allowManage /></label>
+            <label className="block text-xs font-mono uppercase text-slate-300 font-bold">Borrower Code<DatabaseSelect optionType="BORROWER_CODE" value={borrowerCode} onChange={setBorrowerCode || (() => undefined)} placeholder="Select borrower code" allowManage /></label>
+          </div>
+        )}
+        <p className="text-[11px] text-slate-400">Cheque-only fields are saved with the installment and are hidden for other payment methods.</p>
       </div>
       {/* Optional Opening Balance */}
       <div className="bg-[#240F1D] p-4.5 rounded-xl border border-[#3D1A2C] space-y-2">

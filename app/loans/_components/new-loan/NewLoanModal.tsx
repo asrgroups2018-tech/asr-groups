@@ -36,7 +36,8 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
   const [isCreatingNewCustomer, setIsCreatingNewCustomer] = useState<boolean>(false);
   const [newCustomerName, setNewCustomerName] = useState<string>('');
   const [newCustomerPlace, setNewCustomerPlace] = useState<string>('');
-  const [newCustomerCodeNo, setNewCustomerCodeNo] = useState<string>('');
+  const [newCustomerCodePrefix, setNewCustomerCodePrefix] = useState<string>('');
+  const [newCustomerCodeValue, setNewCustomerCodeValue] = useState<string>('');
   const [totalAmount, setTotalAmount] = useState<number>(0);
   const [disbursedAmount, setDisbursedAmount] = useState<number>(0);
   const [interestAmount, setInterestAmount] = useState<number>(0);
@@ -54,6 +55,9 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
   });
   const [chequeNumber, setChequeNumber] = useState<string>('');
   const [depositDate, setDepositDate] = useState<string>('');
+  const [paymentThrough, setPaymentThrough] = useState<string>('');
+  const [registerCode, setRegisterCode] = useState<string>('');
+  const [borrowerCode, setBorrowerCode] = useState<string>('');
 
   // Step 3: Companies & Overall Split
   const [selectedCompanyIds, setSelectedCompanyIds] = useState<string[]>([]);
@@ -77,7 +81,8 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
       setIsCreatingNewCustomer(false);
       setNewCustomerName('');
       setNewCustomerPlace('');
-      setNewCustomerCodeNo('');
+      setNewCustomerCodePrefix('');
+      setNewCustomerCodeValue('');
       setTotalAmount(0);
       setDisbursedAmount(0);
       setInterestAmount(0);
@@ -91,6 +96,9 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
       setStartDate(toIsoDate(new Date()));
       setChequeNumber('');
       setDepositDate('');
+      setPaymentThrough('');
+      setRegisterCode('');
+      setBorrowerCode('');
       setScheduleRows([]);
       setChequeRows([]);
       setSelectedCompanyIds([]);
@@ -192,6 +200,10 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
         amountDue: equalEmi,
         companySplits: splits,
         chqNo: rowChq,
+        paymentThrough: i === 0 ? paymentThrough : '',
+        depositDate: i === 0 ? depositDate : '',
+        registerCode: i === 0 ? registerCode : '',
+        borrowerCode: i === 0 ? borrowerCode : '',
       });
     }
 
@@ -254,7 +266,7 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
   const hasDuplicateChequeScheduleLinks =
     new Set(chequeScheduleSeqNos).size !== chequeScheduleSeqNos.length;
   const isChequeStepValid =
-    !hasChequeDetails ||
+    (paymentThrough.toUpperCase() !== 'CHEQUE' && !hasChequeDetails) ||
     (areChequeRowsComplete &&
       areChequeRowsLinked &&
       !hasDuplicateChequeScheduleLinks &&
@@ -368,6 +380,17 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
     });
   };
 
+  const handleTermsPaymentThroughChange = (val: string) => {
+    setPaymentThrough(val);
+    if (val.toUpperCase() !== 'CHEQUE') {
+      setChequeNumber('');
+      setDepositDate('');
+      setRegisterCode('');
+      setBorrowerCode('');
+      setChequeRows((prev) => prev.map((row) => ({ ...row, chequeNumber: '', depositDate: '', isUsed: false })));
+    }
+  };
+
   const handleChequeRowsChange = (nextRows: LoanChequeRow[]) => {
     setChequeRows(nextRows);
     const firstRow = nextRows.find((r) => r.scheduleSeqNo === 1) || nextRows[0];
@@ -474,10 +497,11 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
           return;
         }
         setIsCreatingBorrower(true);
+        const codeNo = [newCustomerCodePrefix.trim(), newCustomerCodeValue.trim()].filter(Boolean).join('-');
         const created = await createLoanBorrower({
           name: newCustomerName.trim(),
           place: newCustomerPlace.trim() || undefined,
-          codeNo: newCustomerCodeNo.trim() || undefined,
+          codeNo: codeNo || undefined,
         });
         setIsCreatingBorrower(false);
         if (created) {
@@ -529,6 +553,10 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
       }
       if (installmentCount <= 0) {
         showToast('Validation Error', 'Number of EMIs must be at least 1.', 'warning');
+        return;
+      }
+      if (paymentThrough.toUpperCase() === 'CHEQUE' && (!chequeNumber.trim() || !depositDate)) {
+        showToast('Cheque Details Required', 'Select a cheque number and deposit date when Payment Through is Cheque.', 'warning');
         return;
       }
       prepareChequeRowsFromTerms();
@@ -599,7 +627,11 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
       return {
         dueDate: r.dueDate,
         amountDue: r.amountDue,
+        paymentThrough: r.paymentThrough || (idx === 0 ? paymentThrough : undefined),
         chqNo: chq || undefined,
+        depositDate: r.depositDate || (idx === 0 ? depositDate || undefined : undefined),
+        registerCode: r.registerCode || (idx === 0 ? registerCode || undefined : undefined),
+        borrowerCode: r.borrowerCode || (idx === 0 ? borrowerCode || undefined : undefined),
         companySplits: r.companySplits,
         remarks: r.remarks,
       };
@@ -744,8 +776,10 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
               setNewCustomerName={setNewCustomerName}
               newCustomerPlace={newCustomerPlace}
               setNewCustomerPlace={setNewCustomerPlace}
-              newCustomerCodeNo={newCustomerCodeNo}
-              setNewCustomerCodeNo={setNewCustomerCodeNo}
+              newCustomerCodePrefix={newCustomerCodePrefix}
+              setNewCustomerCodePrefix={setNewCustomerCodePrefix}
+              newCustomerCodeValue={newCustomerCodeValue}
+              setNewCustomerCodeValue={setNewCustomerCodeValue}
               openingBalance={openingBalance}
               setOpeningBalance={setOpeningBalance}
               openingBalanceType={openingBalanceType}
@@ -780,6 +814,12 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
               setChequeNumber={handleTermsChequeNumberChange}
               depositDate={depositDate}
               setDepositDate={handleTermsDepositDateChange}
+              paymentThrough={paymentThrough}
+              setPaymentThrough={handleTermsPaymentThroughChange}
+              registerCode={registerCode}
+              setRegisterCode={setRegisterCode}
+              borrowerCode={borrowerCode}
+              setBorrowerCode={setBorrowerCode}
             />
           )}
 

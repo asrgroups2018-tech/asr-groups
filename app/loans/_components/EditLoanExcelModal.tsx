@@ -9,6 +9,7 @@ import { Loan, AppStatus, LoanStatus, RepaymentFrequency } from '@/lib/types';
 import { MoneyDisplay } from '@/components/ui/MoneyDisplay';
 import { DatePicker } from '@/components/ui/DatePicker';
 import { CustomSelect } from '@/components/ui/CustomSelect';
+import { DatabaseSelect } from '@/components/ui/DatabaseSelect';
 import {
   numberToIndianWords,
   formatIndianCommas,
@@ -39,7 +40,11 @@ interface EditableInstallmentRow {
   amountDue: number;
   status: AppStatus | string;
   recdDate: string;
+  paymentThrough: string;
   chqNo: string;
+  depositDate: string;
+  registerCode: string;
+  borrowerCode: string;
   place: string;
   depName: string;
   bank?: string;
@@ -75,6 +80,15 @@ function formatToIso(dStr: string | null | undefined): string {
     return parsed.toISOString().slice(0, 10);
   }
   return '';
+}
+
+function splitBorrowerCode(value: string): { prefix: string; code: string } {
+  const raw = value.trim();
+  if (!raw) return { prefix: '', code: '' };
+  const separated = raw.match(/^([A-Za-z][A-Za-z0-9]*)[-\s]+(.+)$/);
+  if (separated) return { prefix: separated[1], code: separated[2] };
+  const letters = raw.match(/^([A-Za-z]+)(.*)$/);
+  return letters ? { prefix: letters[1], code: letters[2] } : { prefix: '', code: raw };
 }
 
 function getScheduledDueDate(anchorDate: string, index: number, scheduleFrequency: RepaymentFrequency): string {
@@ -266,7 +280,8 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
   // Top Loan Form Fields
   const [customerName, setCustomerName] = useState('');
   const [customerClosingBalance, setCustomerClosingBalance] = useState<number>(0);
-  const [codeNo, setCodeNo] = useState('');
+  const [codePrefix, setCodePrefix] = useState('');
+  const [codeValue, setCodeValue] = useState('');
   const [place, setPlace] = useState('');
   const [startDate, setStartDate] = useState('');
   const [frequency, setFrequency] = useState<RepaymentFrequency>('Monthly');
@@ -313,7 +328,9 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
 
     setCustomerName(loan.customerName || '');
     setCustomerClosingBalance(Number(loan.customerClosingBalance || 0));
-    setCodeNo(loan.codeNo || '');
+    const codeParts = splitBorrowerCode(loan.codeNo || '');
+    setCodePrefix(codeParts.prefix);
+    setCodeValue(codeParts.code);
     setPlace(loan.place || 'CHENNAI');
     setStartDate(formatToIso(loan.startDate) || new Date().toISOString().slice(0, 10));
     setFrequency((loan.frequency as RepaymentFrequency) || 'Monthly');
@@ -344,7 +361,11 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
         amountDue: inst.amountDue || 0,
         status: normalizeStatus(inst.status),
         recdDate: formatToIso(inst.recdDate) || '',
+        paymentThrough: inst.paymentThrough || (inst.chqNo || (inst as any).chq_no || fallbackChq ? 'CHEQUE' : ''),
         chqNo: inst.chqNo || (inst as any).chq_no || fallbackChq || '',
+        depositDate: formatToIso(inst.depositDate) || '',
+        registerCode: inst.registerCode || '',
+        borrowerCode: inst.borrowerCode || '',
         place: inst.place || loan.place || 'CHENNAI',
         depName: inst.depName || '',
         bank: inst.bank || '',
@@ -665,6 +686,16 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
     });
   };
 
+  const handlePaymentThroughChange = (index: number, value: string) => {
+    setRows((prev) => prev.map((row, rowIndex) => {
+      if (rowIndex !== index) return row;
+      if (value.toUpperCase() !== 'CHEQUE') {
+        return { ...row, paymentThrough: value, chqNo: '', depositDate: '', registerCode: '', borrowerCode: '' };
+      }
+      return { ...row, paymentThrough: value };
+    }));
+  };
+
   // Auto-balance remaining difference to capital
   const handleAutoBalanceRemainder = () => {
     const diff = capitalAmount - totalLoanAmount;
@@ -680,7 +711,11 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
       amountDue: diff,
       status: 'Pending',
       recdDate: '',
+      paymentThrough: '',
       chqNo: '',
+      depositDate: '',
+      registerCode: '',
+      borrowerCode: '',
       place: place || 'CHENNAI',
       depName: '',
       remarks: 'Auto-balanced remainder',
@@ -715,7 +750,11 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
       amountDue: defaultAmt,
       status: 'Pending',
       recdDate: '',
+      paymentThrough: '',
       chqNo: '',
+      depositDate: '',
+      registerCode: '',
+      borrowerCode: '',
       place: place || 'CHENNAI',
       depName: '',
       remarks: '',
@@ -774,7 +813,7 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
     const payload = {
       customerName: customerName.trim(),
       customerClosingBalance,
-      codeNo: codeNo.trim() || undefined,
+      codeNo: [codePrefix.trim(), codeValue.trim()].filter(Boolean).join('-') || undefined,
       place: place.trim() || 'CHENNAI',
       status,
       frequency,
@@ -796,7 +835,11 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
           amountDue: Number(r.amountDue) || 0,
           status: normalizeStatus(r.status),
           recdDate: r.recdDate && r.recdDate.trim() ? r.recdDate.trim() : null,
+          paymentThrough: r.paymentThrough || null,
           chqNo: r.chqNo && r.chqNo.trim() ? r.chqNo.trim() : null,
+          depositDate: r.depositDate && r.depositDate.trim() ? r.depositDate.trim() : null,
+          registerCode: r.registerCode && r.registerCode.trim() ? r.registerCode.trim() : null,
+          borrowerCode: r.borrowerCode && r.borrowerCode.trim() ? r.borrowerCode.trim() : null,
           place: r.place || place || 'CHENNAI',
           depName: r.depName && r.depName.trim() ? r.depName.trim() : null,
           bank: r.bank && r.bank.trim() ? r.bank.trim() : null,
@@ -956,16 +999,30 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
             />
           </div>
 
-          <div>
+          <div className="lg:col-span-2">
             <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1 font-mono">
-              Code No
+              Code No (Optional)
             </label>
-            <input
-              type="text"
-              value={codeNo}
-              onChange={(e) => setCodeNo(e.target.value)}
-              className="w-full px-2.5 py-1.5 rounded border border-slate-300 bg-white font-mono text-slate-800 focus:outline-2 focus:outline-[#701A35] text-xs"
-            />
+            <div className="grid grid-cols-1 sm:grid-cols-[minmax(150px,0.7fr)_minmax(0,1.3fr)] gap-1.5">
+              <div className="min-w-0">
+                <DatabaseSelect
+                  optionType="BORROWER_CODE_PREFIX"
+                  value={codePrefix}
+                  onChange={setCodePrefix}
+                  placeholder="Select prefix"
+                  allowManage
+                  className="h-9 bg-white text-slate-800"
+                />
+              </div>
+              <input
+                type="text"
+                value={codeValue}
+                onChange={(event) => setCodeValue(event.target.value)}
+                placeholder="Enter letters or numbers, e.g. 101 or A12"
+                className="w-full min-w-0 h-9 px-2.5 py-1.5 rounded border border-slate-300 bg-white text-slate-800 focus:outline-2 focus:outline-[#701A35] text-xs"
+              />
+            </div>
+            <p className="mt-1 text-[10px] text-slate-500">Saved as Prefix-Code, for example TN-101.</p>
           </div>
 
           <div>
@@ -1163,7 +1220,7 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
                 <th className="p-2 w-28">Due Date</th>
                 <th className="p-2 w-20">Place</th>
                 <th className="p-2 w-20">Dep Name</th>
-                <th className="p-2 w-20">Chq No</th>
+                <th className="p-2 w-48">Payment Through</th>
                 <th className="p-2 w-28 text-right font-bold text-amber-950 bg-amber-100/80">Amount Due (₹)</th>
                 <th className="p-2 w-24 text-center">Status</th>
                 <th className="p-2 w-28">Recd Date</th>
@@ -1265,19 +1322,50 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
                       />
                     </td>
 
-                    {/* Chq No */}
-                    <td className={`p-0 ${isRowPaid ? 'bg-emerald-100/90' : ''}`}>
-                      <FastGridCellInput
-                        value={row.chqNo}
-                        onCommit={(value) => handleCellChange(idx, 'chqNo', String(value))}
-                        onEnter={() => focusNextGridCell(`${idx}:chqNo`)}
-                        onNavigate={(direction) => navigateGridCell(`${idx}:chqNo`, direction)}
-                        registerRef={registerGridCell(`${idx}:chqNo`)}
-                        placeholder="CHQ"
-                        className={`w-full h-full px-2.5 py-2 bg-transparent focus:bg-white focus:outline-2 focus:outline-[#701A35] font-mono ${
-                          isRowPaid ? 'text-emerald-950 font-bold' : 'text-slate-700'
-                        }`}
+                    {/* Payment Through + cheque-only metadata */}
+                    <td className={`p-1.5 align-top ${isRowPaid ? 'bg-emerald-100/90' : ''}`}>
+                      <DatabaseSelect
+                        optionType="PAYMENT_THROUGH"
+                        value={row.paymentThrough}
+                        onChange={(value) => handlePaymentThroughChange(idx, value)}
+                        placeholder="Select payment"
+                        compact
+                        allowManage={idx === 0}
+                        className={isRowPaid ? 'bg-emerald-50 text-emerald-950' : ''}
                       />
+                      {row.paymentThrough.toUpperCase() === 'CHEQUE' && (
+                        <div className="mt-1.5 grid grid-cols-2 gap-1">
+                          <input
+                            value={row.chqNo}
+                            onChange={(event) => handleCellChange(idx, 'chqNo', event.target.value)}
+                            placeholder="Cheque no."
+                            className="h-7 min-w-0 rounded border border-[#C5A059]/50 bg-white px-1.5 text-[10px] text-slate-800 outline-none focus:border-[#701A35]"
+                          />
+                          <DatePicker
+                            value={row.depositDate}
+                            onChange={(value) => handleCellChange(idx, 'depositDate', value)}
+                            theme={theme}
+                            size="sm"
+                            compact
+                            placeholder="Deposit date"
+                            buttonClassName="h-7 w-full text-[10px]"
+                          />
+                          <DatabaseSelect
+                            optionType="REGISTER_CODE"
+                            value={row.registerCode}
+                            onChange={(value) => handleCellChange(idx, 'registerCode', value)}
+                            placeholder="Register code"
+                            compact
+                          />
+                          <DatabaseSelect
+                            optionType="BORROWER_CODE"
+                            value={row.borrowerCode}
+                            onChange={(value) => handleCellChange(idx, 'borrowerCode', value)}
+                            placeholder="Borrower code"
+                            compact
+                          />
+                        </div>
+                      )}
                     </td>
 
                     {/* Amount Due (With capital restriction & paid green highlight) */}
