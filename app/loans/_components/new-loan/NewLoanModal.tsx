@@ -555,10 +555,6 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
         showToast('Validation Error', 'Number of EMIs must be at least 1.', 'warning');
         return;
       }
-      if (paymentThrough.toUpperCase() === 'CHEQUE' && (!chequeNumber.trim() || !depositDate)) {
-        showToast('Cheque Details Required', 'Select a cheque number and deposit date when Payment Through is Cheque.', 'warning');
-        return;
-      }
       prepareChequeRowsFromTerms();
       setCurrentStep(3);
     } else if (currentStep === 3) {
@@ -810,16 +806,10 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
               setInstallmentCount={setInstallmentCount}
               startDate={startDate}
               setStartDate={setStartDate}
-              chequeNumber={chequeNumber}
-              setChequeNumber={handleTermsChequeNumberChange}
               depositDate={depositDate}
               setDepositDate={handleTermsDepositDateChange}
               paymentThrough={paymentThrough}
               setPaymentThrough={handleTermsPaymentThroughChange}
-              registerCode={registerCode}
-              setRegisterCode={setRegisterCode}
-              borrowerCode={borrowerCode}
-              setBorrowerCode={setBorrowerCode}
             />
           )}
 

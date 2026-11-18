@@ -66,15 +66,24 @@ export const BorrowerStep: React.FC<BorrowerStepProps> = ({
   }, [newCustomerName, newCustomerPlace, newCustomerCodePrefix, newCustomerCodeValue]);
 
   const searchTerm = searchDraft.trim().toLowerCase();
-  const filteredCustomers = searchTerm
+  const filteredCustomers = searchTerm.length > 0
     ? customers
-        .filter(
-          (c) =>
-            c.name.toLowerCase().includes(searchTerm) ||
-            (c.place && c.place.toLowerCase().includes(searchTerm)) ||
-            (c.codeNo && c.codeNo.toLowerCase().includes(searchTerm))
-        )
-        .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }))
+        .filter((c) => {
+          const term = searchTerm;
+          return (
+            c.name.toLowerCase().includes(term) ||
+            (c.place && c.place.toLowerCase().includes(term)) ||
+            (c.codeNo && c.codeNo.toLowerCase().includes(term))
+          );
+        })
+        .sort((a, b) => {
+          // Exact starts-with match ranked first
+          const aStarts = a.name.toLowerCase().startsWith(searchTerm);
+          const bStarts = b.name.toLowerCase().startsWith(searchTerm);
+          if (aStarts && !bStarts) return -1;
+          if (!aStarts && bStarts) return 1;
+          return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
+        })
     : [];
 
   return (
@@ -108,9 +117,18 @@ export const BorrowerStep: React.FC<BorrowerStepProps> = ({
                 type="text"
                 placeholder="Search or select borrower name (e.g. ABI ASSOCIATES)..."
                 value={searchDraft}
-                onFocus={() => setIsDropdownOpen(true)}
+                onFocus={() => {
+                  // If nothing is selected yet, clear stale draft so previous search doesn't re-show
+                  if (!selectedCustomerId) {
+                    setSearchDraft('');
+                    setCustomerSearch('');
+                  }
+                  setIsDropdownOpen(true);
+                }}
                 onChange={(e) => {
-                  setSearchDraft(e.target.value);
+                  const val = e.target.value;
+                  setSearchDraft(val);
+                  setCustomerSearch(val);
                   setSelectedCustomerId('');
                   setIsDropdownOpen(true);
                 }}
@@ -136,7 +154,8 @@ export const BorrowerStep: React.FC<BorrowerStepProps> = ({
                       setSearchDraft('');
                       setCustomerSearch('');
                       setSelectedCustomerId('');
-                      setIsDropdownOpen(true);
+                      setIsDropdownOpen(false);
+                      borrowerInputRef.current?.focus();
                     }}
                     className="text-slate-400 hover:text-white text-xs px-1.5 py-0.5 rounded cursor-pointer"
                     title="Clear search"
