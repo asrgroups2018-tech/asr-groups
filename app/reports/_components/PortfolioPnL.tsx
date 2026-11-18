@@ -427,7 +427,6 @@ export const PortfolioPnL: React.FC = () => {
           {/* P&L Summary Grid */}
           <div className="grid grid-cols-2 gap-3 border-t border-[#EEE8DE] pt-5 sm:grid-cols-3 lg:grid-cols-4">
             <PnLCard icon={<IndianRupee className="h-4 w-4" />} label="Total Portfolio (Repayable)" value={formatINR(pnl.totalPortfolio)} tone="amber" />
-            <PnLCard icon={<IndianRupee className="h-4 w-4" />} label="Principal Deployed" value={formatINR(pnl.principalDeployed)} tone="slate" />
             <PnLCard icon={<TrendingUp className="h-4 w-4" />} label="Gross Collections" value={formatINR(pnl.grossCollections)} tone="green" />
             <PnLCard icon={<IndianRupee className="h-4 w-4" />} label="Outstanding Balance" value={formatINR(pnl.totalOutstanding)} tone="blue" />
             <PnLCard icon={<Percent className="h-4 w-4" />} label="Recovery Rate" value={`${pnl.recoveryRate.toFixed(2)}%`} tone={pnl.recoveryRate >= 60 ? 'green' : 'red'} />
@@ -456,7 +455,7 @@ export const PortfolioPnL: React.FC = () => {
           </div>
           {/* Capital / Deployed Side */}
           <div className="p-5 sm:p-6">
-            <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#A07A39] mb-3">Capital Deployed (Dr)</p>
+            <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#A07A39] mb-3">Portfolio Overview (Reference)</p>
             <div className="space-y-3">
               <PnLLine label="Total Portfolio (All Loans)" value={pnl.totalPortfolio} bold />
               <PnLLine label="Principal Deployed (Cash Out)" value={pnl.principalDeployed} sub />

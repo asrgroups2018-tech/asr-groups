@@ -1060,9 +1060,11 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
               numeric
               placeholder="e.g. 8,50,000"
               onCommit={(value) => {
-                const val = Number(value) || 0;
+                const raw = String(value ?? '').trim();
+                const val = raw === '' ? '' : Number(value) || 0;
                 setDisbursedAmount(val);
-                if (capitalAmount > 0 && val <= capitalAmount) {
+                // Only auto-calculate interest when user enters a real positive value
+                if (raw !== '' && typeof val === 'number' && val > 0 && capitalAmount > 0 && val <= capitalAmount) {
                   setInterestAmount(capitalAmount - val);
                 }
               }}
@@ -1080,9 +1082,11 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
               numeric
               placeholder="e.g. 1,50,000"
               onCommit={(value) => {
-                const val = Number(value) || 0;
+                const raw = String(value ?? '').trim();
+                const val = raw === '' ? '' : Number(value) || 0;
                 setInterestAmount(val);
-                if (capitalAmount > 0 && val <= capitalAmount) {
+                // Only auto-calculate disbursed when user enters a real positive value
+                if (raw !== '' && typeof val === 'number' && val > 0 && capitalAmount > 0 && val <= capitalAmount) {
                   setDisbursedAmount(capitalAmount - val);
                 }
               }}
@@ -1211,19 +1215,18 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
         </div>
 
         {/* ─── Excel Main Data Grid Table ─── */}
-        <div className="flex-1 overflow-auto bg-white [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <table className="w-full text-xs text-left border-collapse min-w-[1080px]">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden bg-white">
+          <table className="w-full text-xs text-left border-collapse table-fixed">
             {/* Table Header */}
             <thead className="bg-[#EBE5DC] text-slate-800 font-mono text-[11px] uppercase tracking-wider font-bold border-b-2 border-slate-400 sticky top-0 z-20 shadow-2xs">
               <tr className="divide-x divide-slate-300">
-                <th className="p-2 w-9 text-center sticky left-0 bg-[#E5DFC7] z-30 border-r border-slate-400">#</th>
-                <th className="p-2 w-28">Due Date</th>
-                <th className="p-2 w-20">Place</th>
-                <th className="p-2 w-20">Dep Name</th>
-                <th className="p-2 w-48">Payment Through</th>
-                <th className="p-2 w-28 text-right font-bold text-amber-950 bg-amber-100/80">Amount Due (₹)</th>
-                <th className="p-2 w-24 text-center">Status</th>
-                <th className="p-2 w-28">Recd Date</th>
+                <th className="p-2 w-8 text-center sticky left-0 bg-[#E5DFC7] z-30 border-r border-slate-400">#</th>
+                <th className="p-2 w-[120px]">Due Date</th>
+                <th className="p-2 w-[80px]">Place</th>
+                <th className="p-2 w-[70px]">Dep Name</th>
+                <th className="p-2 w-[110px] text-right font-bold text-amber-950 bg-amber-100/80">Amount Due (₹)</th>
+                <th className="p-2 w-[90px] text-center">Status</th>
+                <th className="p-2 w-[110px]">Recd Date</th>
 
                 {/* Dynamic Funding Company Headers */}
                 {visibleCompanyColumns.map((col) => {
@@ -1231,7 +1234,7 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
                   return (
                     <th
                       key={col.key}
-                      className={`p-2 text-right w-24 transition-colors ${
+                      className={`p-2 text-right w-[90px] transition-colors ${
                         !isSelected
                           ? 'bg-slate-200/50 text-slate-400 font-medium opacity-60 select-none'
                           : col.isOutside
@@ -1247,8 +1250,8 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
                   );
                 })}
 
-                <th className="p-2 w-24">Remarks</th>
-                <th className="p-2 w-16 text-center">Action</th>
+                <th className="p-2 w-[90px]">Remarks</th>
+                <th className="p-2 w-[64px] text-center">Action</th>
               </tr>
             </thead>
 
@@ -1301,7 +1304,7 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
                         onEnter={() => focusNextGridCell(`${idx}:place`)}
                         onNavigate={(direction) => navigateGridCell(`${idx}:place`, direction)}
                         registerRef={registerGridCell(`${idx}:place`)}
-                        className={`w-full h-full px-2.5 py-2 bg-transparent focus:bg-white focus:outline-2 focus:outline-[#701A35] ${
+                        className={`w-full h-full px-2.5 py-2.5 bg-transparent focus:bg-white focus:outline-2 focus:outline-[#701A35] uppercase ${
                           isRowPaid ? 'text-emerald-950 font-bold' : 'text-slate-800'
                         }`}
                       />
@@ -1316,57 +1319,13 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
                         onNavigate={(direction) => navigateGridCell(`${idx}:depName`, direction)}
                         registerRef={registerGridCell(`${idx}:depName`)}
                         placeholder="DEP"
-                        className={`w-full h-full px-2.5 py-2 bg-transparent focus:bg-white focus:outline-2 focus:outline-[#701A35] uppercase ${
+                        className={`w-full h-full px-2.5 py-2.5 bg-transparent focus:bg-white focus:outline-2 focus:outline-[#701A35] uppercase ${
                           isRowPaid ? 'text-emerald-950 font-black' : 'font-bold text-slate-800'
                         }`}
                       />
                     </td>
 
-                    {/* Payment Through + cheque-only metadata */}
-                    <td className={`p-1.5 align-top ${isRowPaid ? 'bg-emerald-100/90' : ''}`}>
-                      <DatabaseSelect
-                        optionType="PAYMENT_THROUGH"
-                        value={row.paymentThrough}
-                        onChange={(value) => handlePaymentThroughChange(idx, value)}
-                        placeholder="Select payment"
-                        compact
-                        allowManage={idx === 0}
-                        className={isRowPaid ? 'bg-emerald-50 text-emerald-950' : ''}
-                      />
-                      {row.paymentThrough.toUpperCase() === 'CHEQUE' && (
-                        <div className="mt-1.5 grid grid-cols-2 gap-1">
-                          <input
-                            value={row.chqNo}
-                            onChange={(event) => handleCellChange(idx, 'chqNo', event.target.value)}
-                            placeholder="Cheque no."
-                            className="h-7 min-w-0 rounded border border-[#C5A059]/50 bg-white px-1.5 text-[10px] text-slate-800 outline-none focus:border-[#701A35]"
-                          />
-                          <DatePicker
-                            value={row.depositDate}
-                            onChange={(value) => handleCellChange(idx, 'depositDate', value)}
-                            theme={theme}
-                            size="sm"
-                            compact
-                            placeholder="Deposit date"
-                            buttonClassName="h-7 w-full text-[10px]"
-                          />
-                          <DatabaseSelect
-                            optionType="REGISTER_CODE"
-                            value={row.registerCode}
-                            onChange={(value) => handleCellChange(idx, 'registerCode', value)}
-                            placeholder="Register code"
-                            compact
-                          />
-                          <DatabaseSelect
-                            optionType="BORROWER_CODE"
-                            value={row.borrowerCode}
-                            onChange={(value) => handleCellChange(idx, 'borrowerCode', value)}
-                            placeholder="Borrower code"
-                            compact
-                          />
-                        </div>
-                      )}
-                    </td>
+
 
                     {/* Amount Due (With capital restriction & paid green highlight) */}
                     <td className={`p-0 transition-colors ${
@@ -1526,7 +1485,6 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
                 <td className="p-2.5 text-slate-700 font-bold">
                   {rows.length} EMIs
                 </td>
-                <td className="p-2.5" />
                 <td className="p-2.5" />
                 <td className="p-2.5" />
                 <td className={`p-2.5 text-right font-extrabold border-x border-slate-400 ${
