@@ -38,6 +38,9 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
   const [newCustomerPlace, setNewCustomerPlace] = useState<string>('');
   const [newCustomerCodePrefix, setNewCustomerCodePrefix] = useState<string>('');
   const [newCustomerCodeValue, setNewCustomerCodeValue] = useState<string>('');
+  // Loan code for existing borrower (typed manually, saved as loan's codeNo)
+  const [loanCodePrefix, setLoanCodePrefix] = useState<string>('');
+  const [loanCodeValue, setLoanCodeValue] = useState<string>('');
   const [totalAmount, setTotalAmount] = useState<number>(0);
   const [disbursedAmount, setDisbursedAmount] = useState<number>(0);
   const [interestAmount, setInterestAmount] = useState<number>(0);
@@ -64,6 +67,9 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
   const [splitMode, setSplitMode] = useState<'PERCENT' | 'MANUAL'>('PERCENT');
   const [companyPcts, setCompanyPcts] = useState<Record<string, number>>({});
   const [companyManualAmounts, setCompanyManualAmounts] = useState<Record<string, number>>({});
+  // Track whether we've already done the one-time default company seed for this modal session.
+  // Using a ref (not state) so toggling it doesn't cause a re-render loop.
+  const hasSeededCompanies = React.useRef(false);
 
   // Step 4: Schedule Rows (Installment-level grid)
   const [scheduleRows, setScheduleRows] = useState<ScheduleStepRow[]>([]);
@@ -83,6 +89,8 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
       setNewCustomerPlace('');
       setNewCustomerCodePrefix('');
       setNewCustomerCodeValue('');
+      setLoanCodePrefix('');
+      setLoanCodeValue('');
       setTotalAmount(0);
       setDisbursedAmount(0);
       setInterestAmount(0);
@@ -105,13 +113,16 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
       setSplitMode('PERCENT');
       setCompanyPcts({});
       setCompanyManualAmounts({});
+      // Reset the seed flag so defaults are applied fresh each time the modal opens
+      hasSeededCompanies.current = false;
     }
   }, [isOpen]);
 
   // Companies can arrive after the modal has opened. Seed the default split
-  // once, without coupling the wizard lifecycle to collection refreshes.
+  // once per modal session. Using a ref flag prevents re-seeding when the user
+  // manually clears or unchecks companies (which would drop length back to 0).
   useEffect(() => {
-    if (!isOpen || selectedCompanyIds.length > 0 || companies.length === 0) return;
+    if (!isOpen || hasSeededCompanies.current || companies.length === 0) return;
 
     const activeAsr = companies.filter((c) => !c.isOutsideParty && c.isActive !== false);
     const ids = activeAsr.slice(0, 3).map((c) => c.id);
@@ -129,7 +140,9 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
     }
     setSelectedCompanyIds(ids);
     setCompanyPcts(initialPcts);
-  }, [companies, isOpen, selectedCompanyIds.length]);
+    // Mark as seeded — further changes (clear all, uncheck) won't re-trigger
+    hasSeededCompanies.current = true;
+  }, [companies, isOpen]);
 
   // Selected company objects
   const selectedCompanies = useMemo(() => {
@@ -635,6 +648,10 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
 
     const result = await createLoan({
       customerId: selectedCustomerId,
+      codeNo: (() => {
+        const parts = [loanCodePrefix.trim(), loanCodeValue.trim()].filter(Boolean);
+        return parts.length > 0 ? parts.join('-') : undefined;
+      })(),
       totalAmount,
       startDate,
       frequency,
@@ -776,6 +793,10 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
               setNewCustomerCodePrefix={setNewCustomerCodePrefix}
               newCustomerCodeValue={newCustomerCodeValue}
               setNewCustomerCodeValue={setNewCustomerCodeValue}
+              loanCodePrefix={loanCodePrefix}
+              setLoanCodePrefix={setLoanCodePrefix}
+              loanCodeValue={loanCodeValue}
+              setLoanCodeValue={setLoanCodeValue}
               openingBalance={openingBalance}
               setOpeningBalance={setOpeningBalance}
               openingBalanceType={openingBalanceType}

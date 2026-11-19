@@ -333,8 +333,7 @@ export const CollectionSheet: React.FC<{ dateRange: DateRange; period: Period; p
                   <span className="text-[9px] text-slate-400">{r.customerId}{r.place ? ` · ${r.place}` : ''}</span>
                 </td>
                 <td className="px-3 py-2">
-                  <span className="block font-mono text-[10px] font-semibold text-slate-700 truncate">{r.loanId}</span>
-                  {r.codeNo && <span className="text-[9px] text-slate-400">{r.codeNo}</span>}
+                  <span className="block font-mono text-[10px] font-semibold text-slate-700 truncate">{r.codeNo || r.loanId}</span>
                 </td>
                 <td className="px-2 py-2 text-center font-mono text-[11px] text-slate-600">{r.seqNo}</td>
                 <td className="px-3 py-2 text-[11px] font-medium text-slate-700">

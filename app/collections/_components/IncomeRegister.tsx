@@ -147,7 +147,7 @@ export const IncomeRegister: React.FC<{ dateRange: DateRange; period: Period; pe
       head: [['S.No', 'Recd. Date', 'Customer', 'Loan / Code', 'Inst.', 'Mode', 'Reference', 'Deposit A/c', 'Credit (₹)']],
       body: filtered.map((r) => [
         String(r.sNo), fmtDate(r.recdDate), `${r.customerName} (${r.customerId})`,
-        `${r.loanId}${r.codeNo ? ` (${r.codeNo})` : ''}`, String(r.seqNo),
+        `${r.codeNo || r.loanId}`, String(r.seqNo),
         r.mode, r.reference || '—', r.depositAccount || '—', pdfMoney(r.credit),
       ]),
       foot: [['', '', `TOTAL · ${filtered.length} receipts`, '', '', '', '', '', pdfMoney(grandTotal)]],
@@ -322,8 +322,7 @@ function IncomeTable({ rows, showMode }: { rows: IncomeRow[]; showMode: boolean 
               <span className="text-[9px] text-slate-400">{r.customerId} · {r.place}</span>
             </td>
             <td className="px-3 py-2.5">
-              <span className="block font-mono text-[10px] text-slate-700 truncate">{r.loanId}</span>
-              {r.codeNo && <span className="text-[9px] text-slate-400">{r.codeNo}</span>}
+              <span className="block font-mono text-[10px] text-slate-700 truncate">{r.codeNo || r.loanId}</span>
             </td>
             <td className="px-2 py-2.5 text-center text-[11px] text-slate-600">{r.seqNo}</td>
             {showMode && (

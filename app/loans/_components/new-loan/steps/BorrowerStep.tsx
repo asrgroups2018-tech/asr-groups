@@ -5,7 +5,6 @@ import { Users, IndianRupee, Check } from 'lucide-react';
 import { Customer } from '@/lib/types';
 import { AmountInput } from '@/components/ui/AmountInput';
 import { FloatingPopover } from '@/components/ui/FloatingPopover';
-import { DatabaseSelect } from '@/components/ui/DatabaseSelect';
 
 interface BorrowerStepProps {
   customers: Customer[];
@@ -23,6 +22,11 @@ interface BorrowerStepProps {
   setNewCustomerCodePrefix: (code: string) => void;
   newCustomerCodeValue: string;
   setNewCustomerCodeValue: (code: string) => void;
+  // Loan code for existing borrower (each loan gets its own code)
+  loanCodePrefix: string;
+  setLoanCodePrefix: (v: string) => void;
+  loanCodeValue: string;
+  setLoanCodeValue: (v: string) => void;
   openingBalance: number;
   setOpeningBalance: (amount: number) => void;
   openingBalanceType: 'DEBIT' | 'CREDIT';
@@ -45,6 +49,10 @@ export const BorrowerStep: React.FC<BorrowerStepProps> = ({
   setNewCustomerCodePrefix,
   newCustomerCodeValue,
   setNewCustomerCodeValue,
+  loanCodePrefix,
+  setLoanCodePrefix,
+  loanCodeValue,
+  setLoanCodeValue,
   openingBalance,
   setOpeningBalance,
   openingBalanceType,
@@ -57,13 +65,18 @@ export const BorrowerStep: React.FC<BorrowerStepProps> = ({
   const [newPlaceDraft, setNewPlaceDraft] = useState(newCustomerPlace);
   const [newCodePrefixDraft, setNewCodePrefixDraft] = useState(newCustomerCodePrefix);
   const [newCodeValueDraft, setNewCodeValueDraft] = useState(newCustomerCodeValue);
+  const [loanCodePrefixDraft, setLoanCodePrefixDraft] = useState(loanCodePrefix);
+  const [loanCodeValueDraft, setLoanCodeValueDraft] = useState(loanCodeValue);
 
   useEffect(() => {
     setNewNameDraft(newCustomerName);
     setNewPlaceDraft(newCustomerPlace);
     setNewCodePrefixDraft(newCustomerCodePrefix);
     setNewCodeValueDraft(newCustomerCodeValue);
-  }, [newCustomerName, newCustomerPlace, newCustomerCodePrefix, newCustomerCodeValue]);
+    setLoanCodePrefixDraft(loanCodePrefix);
+    setLoanCodeValueDraft(loanCodeValue);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [newCustomerName, newCustomerPlace, newCustomerCodePrefix, newCustomerCodeValue, loanCodePrefix, loanCodeValue]);
 
   const searchTerm = searchDraft.trim().toLowerCase();
   const filteredCustomers = searchTerm.length > 0
@@ -227,31 +240,34 @@ export const BorrowerStep: React.FC<BorrowerStepProps> = ({
             </div>
             <div className="sm:col-span-2">
               <label className="text-[11px] text-slate-400 block mb-1">Code No (Optional)</label>
-              <div className="grid grid-cols-1 sm:grid-cols-[minmax(190px,0.7fr)_minmax(0,1.3fr)] gap-2">
-                <div className="min-w-0">
-                  <DatabaseSelect
-                    optionType="BORROWER_CODE_PREFIX"
-                    value={newCodePrefixDraft}
-                    onChange={(value) => {
-                      setNewCodePrefixDraft(value);
-                      setNewCustomerCodePrefix(value);
-                    }}
-                    placeholder="Select prefix"
-                    allowManage
-                  />
-                </div>
+              <div className="grid grid-cols-2 gap-2">
+                <input
+                  type="text"
+                  value={newCodePrefixDraft}
+                  onChange={(e) => {
+                    setNewCodePrefixDraft(e.target.value);
+                    setNewCustomerCodePrefix(e.target.value);
+                  }}
+                  placeholder="Prefix e.g. BMC, TN, CL"
+                  className="w-full h-10 bg-[#240F1D] border border-[#3D1A2C] rounded-md px-3 py-1.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-hidden focus:border-[#C5A059]"
+                />
                 <input
                   type="text"
                   value={newCodeValueDraft}
-                  onChange={(event) => {
-                    setNewCodeValueDraft(event.target.value);
-                    setNewCustomerCodeValue(event.target.value);
+                  onChange={(e) => {
+                    setNewCodeValueDraft(e.target.value);
+                    setNewCustomerCodeValue(e.target.value);
                   }}
-                  placeholder="Enter letters or numbers, e.g. 101 or A12"
-                  className="w-full min-w-0 h-10 bg-[#240F1D] border border-[#3D1A2C] rounded-md px-3 py-1.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-hidden focus:border-[#C5A059]"
+                  placeholder="Number e.g. 12, 101, A12"
+                  className="w-full h-10 bg-[#240F1D] border border-[#3D1A2C] rounded-md px-3 py-1.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-hidden focus:border-[#C5A059]"
                 />
               </div>
-              <p className="mt-1.5 text-[10px] text-slate-500">Choose or create a prefix, then enter the code. It will be saved like <span className="font-semibold text-slate-400">TN-101</span>.</p>
+              <p className="mt-1.5 text-[10px] text-slate-500">
+                Type prefix and number separately. Saved as{' '}
+                <span className="font-semibold text-slate-400">
+                  {[newCodePrefixDraft.trim(), newCodeValueDraft.trim()].filter(Boolean).join('-') || 'e.g. BMC-12'}
+                </span>
+              </p>
             </div>
             <div className="sm:col-span-2">
               <label className="text-[11px] text-slate-400 block mb-1">Opening Balance (Optional)</label>
@@ -272,6 +288,41 @@ export const BorrowerStep: React.FC<BorrowerStepProps> = ({
       {/* Existing offline accounts are migrated with only their opening ledger balance. */}
       {!isCreatingNewCustomer && (
         <div className="bg-[#240F1D] p-4 rounded-xl border border-[#3D1A2C] space-y-3">
+          {/* Loan Code for existing borrower */}
+          <div>
+            <label className="text-sm font-semibold text-[#EED8A1] flex items-center gap-2">
+              Loan Code No <span className="text-xs font-normal text-slate-400">(Optional)</span>
+            </label>
+            <div className="grid grid-cols-2 gap-2 mt-2">
+              <input
+                type="text"
+                value={loanCodePrefixDraft}
+                onChange={(e) => {
+                  setLoanCodePrefixDraft(e.target.value);
+                  setLoanCodePrefix(e.target.value);
+                }}
+                placeholder="Prefix e.g. BMC, TN, CL"
+                className="w-full h-10 bg-[#160810] border border-[#3D1A2C] rounded-md px-3 py-1.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-hidden focus:border-[#C5A059]"
+              />
+              <input
+                type="text"
+                value={loanCodeValueDraft}
+                onChange={(e) => {
+                  setLoanCodeValueDraft(e.target.value);
+                  setLoanCodeValue(e.target.value);
+                }}
+                placeholder="Number e.g. 12, 101, A12"
+                className="w-full h-10 bg-[#160810] border border-[#3D1A2C] rounded-md px-3 py-1.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-hidden focus:border-[#C5A059]"
+              />
+            </div>
+            <p className="mt-1.5 text-[10px] text-slate-500">
+              Each loan gets its own code. Saved as{' '}
+              <span className="font-semibold text-slate-400">
+                {[loanCodePrefixDraft.trim(), loanCodeValueDraft.trim()].filter(Boolean).join('-') || 'e.g. BMC-12'}
+              </span>
+            </p>
+          </div>
+
           <label className="text-sm font-semibold text-[#EED8A1] flex items-center gap-2">
             <IndianRupee className="w-4 h-4 text-[#C5A059]" /> Existing Account Opening Balance (₹)
             <span className="text-xs font-normal text-slate-400">(Optional)</span>

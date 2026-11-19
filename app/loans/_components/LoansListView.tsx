@@ -1060,13 +1060,8 @@ export const LoansListView: React.FC = () => {
                           </div>
                           <div className="flex items-center gap-2 mt-0.5">
                             <span className="font-mono text-[10px] bg-[#701A35]/12 text-[#701A35] border border-[#701A35]/30 px-1.5 py-0.2 rounded font-bold">
-                              {loan.id}
+                              {loan.codeNo || loan.id}
                             </span>
-                            {loan.codeNo && (
-                              <span className="font-mono text-[10px] bg-slate-100 text-slate-800 border border-slate-300 px-1.5 py-0.2 rounded font-bold">
-                                {loan.codeNo}
-                              </span>
-                            )}
                             <span className="text-[10px] text-slate-500 font-medium truncate">
                               {loan.place || 'CHENNAI'}
                             </span>
@@ -1230,7 +1225,7 @@ export const LoansListView: React.FC = () => {
                                 </span>
                               )}
                               <span className="text-xs font-mono text-slate-700 bg-white px-2.5 py-1 rounded-lg border border-slate-300 font-semibold shadow-2xs">
-                                Loan ID: <strong className="text-[#701A35]">{loan.id}</strong>
+                                Loan ID: <strong className="text-[#701A35]">{loan.codeNo || loan.id}</strong>
                               </span>
                             </div>
                           </div>
@@ -1382,13 +1377,8 @@ export const LoansListView: React.FC = () => {
                       </h3>
                       <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                         <span className="font-mono text-[10px] bg-[#701A35]/10 text-[#701A35] border border-[#701A35]/25 px-1.5 py-0.5 rounded font-bold">
-                          {loan.id}
+                          {loan.codeNo || loan.id}
                         </span>
-                        {loan.codeNo && (
-                          <span className="font-mono text-[10px] bg-slate-100 text-slate-800 border border-slate-300 px-1.5 py-0.5 rounded font-bold">
-                            {loan.codeNo}
-                          </span>
-                        )}
                         <span className="text-[10px] text-slate-500 font-medium">
                           📍 {loan.place || 'CHENNAI'}
                         </span>

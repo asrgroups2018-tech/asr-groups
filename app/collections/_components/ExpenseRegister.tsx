@@ -162,7 +162,7 @@ export const ExpenseRegister: React.FC<{ dateRange: DateRange; period: Period; p
       head: [['S.No', 'Disbursed Date', 'Customer', 'Loan / Code', 'Place', 'Frequency', 'Disbursed (₹)', 'Interest (₹)', 'Total (₹)', 'Status', 'Company']],
       body: filtered.map((r) => [
         String(r.sNo), fmtDate(r.disbursedDate), `${r.customerName}\n${r.customerId}`,
-        `${r.loanId}${r.codeNo ? ` (${r.codeNo})` : ''}`, r.place || '—', r.frequency,
+        `${r.codeNo || r.loanId}`, r.place || '—', r.frequency,
         pdfMoney(r.disbursedAmount), r.interestAmount > 0 ? pdfMoney(r.interestAmount) : '—',
         pdfMoney(r.totalAmount), r.status, r.primaryCompany,
       ]),
@@ -301,8 +301,7 @@ export const ExpenseRegister: React.FC<{ dateRange: DateRange; period: Period; p
                     <span className="text-[9px] text-slate-400">{r.customerId} · {r.place}</span>
                   </td>
                   <td className="px-3 py-3">
-                    <span className="block font-mono text-[10px] text-slate-700 truncate">{r.loanId}</span>
-                    {r.codeNo && <span className="text-[9px] text-slate-400">{r.codeNo}</span>}
+                    <span className="block font-mono text-[10px] text-slate-700 truncate">{r.codeNo || r.loanId}</span>
                   </td>
                   <td className="px-3 py-3 text-[11px] text-slate-600 truncate">{r.place || '—'}</td>
                   <td className="px-3 py-3 text-[11px] text-slate-600">{r.frequency}</td>

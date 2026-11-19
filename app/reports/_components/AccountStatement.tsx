@@ -280,7 +280,7 @@ export const AccountStatement: React.FC = () => {
         String(i + 1),
         fmtDate(e.dueDate),
         e.recdDate ? fmtDate(e.recdDate) : '—',
-        `${e.loanId}${e.codeNo ? ` (${e.codeNo})` : ''}`,
+        `${e.codeNo || e.loanId}`,
         e.status,
         pdfMoney(e.amountDue),
         e.amountPaid > 0 ? pdfMoney(e.amountPaid) : '—',
@@ -494,8 +494,7 @@ export const AccountStatement: React.FC = () => {
                           <td className="px-2 py-1 border-b border-slate-100">{fmtDate(e.dueDate)}</td>
                           <td className="px-2 py-1 border-b border-slate-100">{e.recdDate ? fmtDate(e.recdDate) : '—'}</td>
                           <td className="px-2 py-1 border-b border-slate-100">
-                            <span className="font-mono text-[9px]">{e.loanId}</span>
-                            {e.codeNo && <span className="text-slate-400 ml-1">({e.codeNo})</span>}
+                            <span className="font-mono text-[9px]">{e.codeNo || e.loanId}</span>
                           </td>
                           <td className="px-2 py-1 border-b border-slate-100 font-semibold">{e.status}</td>
                           <td className="px-2 py-1 border-b border-slate-100 text-right">{formatINR(e.amountDue)}</td>

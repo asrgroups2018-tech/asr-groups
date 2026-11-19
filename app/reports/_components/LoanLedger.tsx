@@ -205,7 +205,7 @@ export const LoanLedger: React.FC = () => {
     doc.setFont('helvetica', 'bold'); doc.setFontSize(15); doc.setTextColor(255, 255, 255);
     doc.text('ASR GROUP · Loan Ledger', 32, 26);
     doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(238, 216, 161);
-    doc.text(`${row.customerName} · ${row.loanId}${row.codeNo ? ` (${row.codeNo})` : ''} · ${row.place}`, 32, 42);
+    doc.text(`${row.customerName} · ${row.codeNo || row.loanId} · ${row.place}`, 32, 42);
     doc.text(`${row.frequency} · ${entries.length} installments · Opening ${formatBalance(row.openingDebit, row.openingCredit)} · Closing ${formatBalance(row.closingDebit, row.closingCredit)}`, 32, 54);
 
     autoTable(doc, {
@@ -401,8 +401,7 @@ export const LoanLedger: React.FC = () => {
                           <span className="text-[10px] text-slate-400">{row.customerId} · {row.place}</span>
                         </div>
                         <div>
-                          <span className="block font-mono text-[10px] text-slate-600">{row.loanId}</span>
-                          {row.codeNo && <span className="text-[9px] text-slate-400">{row.codeNo}</span>}
+                          <span className="block font-mono text-[10px] text-slate-600">{row.codeNo || row.loanId}</span>
                         </div>
                         <div className="hidden sm:block">
                           <span className="text-[10px] text-slate-500">{fmtDate(row.startDate)} · {row.frequency} · {row.installmentCount} inst.</span>

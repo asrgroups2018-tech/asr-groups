@@ -882,7 +882,7 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
                   Spreadsheet: {loan.customerName}
                 </h2>
                 <span className="font-mono text-[10px] sm:text-xs font-bold px-2 py-0.5 rounded bg-[#701A35] text-white shrink-0">
-                  {loan.id}
+                  {loan.codeNo || loan.id}
                 </span>
                 <span className="font-mono text-[10px] sm:text-xs font-bold px-2.5 py-0.5 rounded-lg bg-amber-100 text-amber-950 border border-amber-300 flex items-center gap-1 shrink-0 shadow-2xs">
                   <span className="text-amber-800">Capital:</span>

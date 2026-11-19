@@ -154,7 +154,7 @@ export const DayBook: React.FC = () => {
       body: entries.map((e) => [
         String(e.sNo),
         `${e.customerName}\n${e.customerId}`,
-        `${e.loanId}${e.codeNo ? ` (${e.codeNo})` : ''}`,
+        `${e.codeNo || e.loanId}`,
         String(e.seqNo),
         e.mode,
         e.reference || '—',
@@ -358,8 +358,7 @@ export const DayBook: React.FC = () => {
                       <span className="mt-0.5 block truncate text-[10px] text-slate-400">{e.customerId}</span>
                     </td>
                     <td className="px-3 py-3">
-                      <span className="block truncate font-mono text-[10px] text-slate-700">{e.loanId}</span>
-                      {e.codeNo && <span className="mt-0.5 block text-[10px] text-slate-400">{e.codeNo}</span>}
+                      <span className="block truncate font-mono text-[10px] text-slate-700">{e.codeNo || e.loanId}</span>
                     </td>
                     <td className="px-3 py-3 text-center text-[11px] text-slate-600">{e.seqNo}</td>
                     <td className="px-3 py-3">
