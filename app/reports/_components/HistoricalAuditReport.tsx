@@ -6,6 +6,7 @@ import { DataTable, ColumnDef } from '@/components/ui/DataTable';
 import { MoneyDisplay } from '@/components/ui/MoneyDisplay';
 import { StatusPill } from '@/components/ui/StatusPill';
 import { HistoricalReceiptRow } from '@/lib/types';
+import { isPaidStatus } from '@/lib/utils/statusMapping';
 import { FileSpreadsheet, AlertCircle, CheckCircle2, ShieldCheck, Filter } from 'lucide-react';
 
 export const HistoricalAuditReport: React.FC = () => {
@@ -33,7 +34,7 @@ export const HistoricalAuditReport: React.FC = () => {
     const totalVolume = receipts.reduce((sum, r) => sum + (r.amount || 0), 0);
     const mismatchRows = receipts.filter((r) => r.isMismatch);
     const mismatchVolume = mismatchRows.reduce((sum, r) => sum + Math.abs(r.mismatchDiff || 0), 0);
-    const settledRows = receipts.filter((r) => ['PASS', 'NEFT', 'CASH', 'PAID'].includes(String(r.status).toUpperCase()));
+    const settledRows = receipts.filter((r) => isPaidStatus(String(r.status)));
     const settledVolume = settledRows.reduce((sum, r) => sum + (r.amount || 0), 0);
 
     return {

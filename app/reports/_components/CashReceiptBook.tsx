@@ -26,9 +26,8 @@ import { DateRangePicker } from '@/components/ui/DateRangePicker';
 import { getTodayIsoDate } from '@/components/ui/DatePicker';
 import { CustomSelect } from '@/components/ui/CustomSelect';
 import { CreateReceiptModal, downloadManualReceiptImage, downloadManualReceiptPdf } from './CreateReceiptModal';
+import { isPaidStatus as isPaid } from '@/lib/utils/statusMapping';
 
-const PAID_STATUSES = new Set(['PASS', 'NEFT', 'CASH', 'CLS', 'PAID']);
-const isPaid = (s: string) => PAID_STATUSES.has(String(s || '').trim().toUpperCase());
 const dateKey = (v: string) => String(v || '').slice(0, 10);
 const fmtDate = (v: string) => {
   if (!v) return '—';
@@ -80,7 +79,7 @@ function buildReceiptEntries(loans: Loan[]): ReceiptEntry[] {
       if (!isPaid(inst.status)) continue;
       entries.push({
         sNo: 0,
-        recdDate: inst.recdDate || inst.dueDate || '',
+        recdDate: inst.recdDate || '',
         dueDate: inst.dueDate || '',
         customerId: loan.customerId,
         customerName: loan.customerName,

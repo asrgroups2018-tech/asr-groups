@@ -13,6 +13,22 @@ import { AppStatus } from '@/lib/types';
 
 export const ALLOWED_STATUSES: AppStatus[] = ['Pending', 'Cleared', 'NEFT', 'RTGS', 'Cash'];
 
+// Keep legacy payment aliases in one place so summaries and ledgers agree.
+const PAID_STATUSES = new Set([
+  'CLEARED', 'PASS', 'PAID', 'CLS', 'CS', 'CLOSED', 'SETTLED',
+  'NEFT', 'RTGS', 'CASH', 'CSH',
+]);
+
+const BOUNCE_STATUSES = new Set(['RET', 'RET NEFT', 'RET PASS', 'BOUNCE', 'BOUNCED', 'RETURNED']);
+
+export function isPaidStatus(status: string | null | undefined): boolean {
+  return PAID_STATUSES.has(String(status || '').trim().toUpperCase());
+}
+
+export function isBounceStatus(status: string | null | undefined): boolean {
+  return BOUNCE_STATUSES.has(String(status || '').trim().toUpperCase());
+}
+
 export type StatusCategory = 'cleared' | 'neft' | 'rtgs' | 'cash' | 'pending' | 'other';
 
 export interface StatusMeta {
@@ -27,10 +43,14 @@ export function getStatusCategory(status: string | null | undefined): StatusCate
   if (!status) return 'pending';
   const norm = status.trim().toUpperCase();
 
+  // Returned instruments are unpaid even when the return mode contains a
+  // payment rail such as NEFT or PASS.
+  if (isBounceStatus(norm)) return 'pending';
+
   if (norm === 'CLEARED' || norm === 'PASS' || norm === 'PAID' || norm === 'CLS' || norm === 'CS' || norm === 'CLOSED' || norm === 'SETTLED') {
     return 'cleared';
   }
-  if (norm === 'NEFT' || norm === 'RET NEFT') {
+  if (norm === 'NEFT') {
     return 'neft';
   }
   if (norm === 'RTGS') {
@@ -45,13 +65,7 @@ export function getStatusCategory(status: string | null | undefined): StatusCate
   return 'other';
 }
 
-export function isPaidStatus(status: string | null | undefined): boolean {
-  const cat = getStatusCategory(status);
-  return cat === 'cleared' || cat === 'neft' || cat === 'rtgs' || cat === 'cash';
-}
-
 export function getStatusMeta(status: string | null | undefined): StatusMeta {
-  const norm = (status || 'Pending').trim().toUpperCase();
   const category = getStatusCategory(status);
 
   switch (category) {

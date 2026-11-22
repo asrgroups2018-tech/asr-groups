@@ -9,6 +9,7 @@ import {
 } from '@/lib/types';
 import { getCompanies, createCompany, resolveCompany } from './companies';
 import { logAudit } from './administration';
+import { getStatusCategory, isPaidStatus, isBounceStatus } from '@/lib/utils/statusMapping';
 
 let schemaInitialized = false;
 
@@ -178,7 +179,7 @@ export async function getLoans(query?: string, customerId?: string): Promise<Loa
 
     installments.forEach((ins) => {
       const st = String(ins.status || '').trim().toUpperCase();
-      if (['CLEARED', 'NEFT', 'RTGS', 'CASH', 'PASS', 'PAID', 'CLS', 'CS', 'SETTLED', 'CLOSED', 'RET NEFT', 'RET PASS'].includes(st)) {
+      if (isPaidStatus(st)) {
         totalCollected += ins.amountDue;
       } else if (!nextDueDate && ins.dueDate) {
         nextDueDate = ins.dueDate;
@@ -518,9 +519,7 @@ export async function updateLoanInstallment(
     args: [loanId],
   });
   const newTotal = allInstRes.rows.reduce((sum, r) => sum + Number(r.amount_due || 0), 0);
-  const allPaid = allInstRes.rows.every((r) =>
-    ['CLEARED', 'NEFT', 'RTGS', 'CASH', 'PASS', 'PAID', 'Paid', 'Closed', 'Settled'].includes(String(r.status || '').trim())
-  );
+  const allPaid = allInstRes.rows.length > 0 && allInstRes.rows.every((r) => isPaidStatus(String(r.status || '')));
   const parentStatus = allPaid ? 'Cleared' : 'Pending';
 
   await client.execute({
@@ -632,9 +631,7 @@ export async function updateFullLoan(
     );
   }
 
-  const allPaid = data.installments.every((r) =>
-    ['CLEARED', 'NEFT', 'RTGS', 'CASH', 'PASS', 'PAID', 'CLOSED', 'SETTLED'].includes(String(r.status || '').toUpperCase())
-  );
+  const allPaid = data.installments.length > 0 && data.installments.every((r) => isPaidStatus(r.status));
   const finalStatus = data.status || (allPaid ? 'Closed' : 'Active');
   const openingBalance = data.openingBalance !== undefined
     ? Math.max(0, Number(data.openingBalance) || 0)
@@ -912,7 +909,7 @@ export async function mergeLoans(targetLoanId: string, sourceLoanId: string, act
 
   const newTotal = allInstRes.rows.reduce((sum, r) => sum + Number(r.amount_due || 0), 0);
   const hasOverdue = allInstRes.rows.some((r) => ['RET', 'RET NEFT', 'RET PASS', 'Overdue'].includes(String(r.status)));
-  const allPaid = allInstRes.rows.length > 0 && allInstRes.rows.every((r) => ['PASS', 'NEFT', 'CASH', 'PAID', 'Paid'].includes(String(r.status)));
+  const allPaid = allInstRes.rows.length > 0 && allInstRes.rows.every((r) => isPaidStatus(String(r.status || '')));
   const parentStatus = hasOverdue ? 'Overdue' : allPaid ? 'Closed' : 'Active';
 
   // Recompute splits
@@ -992,7 +989,7 @@ export async function splitLoan(
   const newFrequency = extractedInsts.length >= 20 ? 'Daily' : extractedInsts.length >= 2 ? 'Weekly' : 'Monthly';
 
   const newHasOverdue = extractedInsts.some((r) => ['RET', 'RET NEFT', 'RET PASS', 'Overdue'].includes(String(r.status)));
-  const newAllPaid = extractedInsts.every((r) => ['PASS', 'NEFT', 'CASH', 'PAID', 'Paid'].includes(String(r.status)));
+  const newAllPaid = extractedInsts.length > 0 && extractedInsts.every((r) => isPaidStatus(r.status));
   const newStatus = newHasOverdue ? 'Overdue' : newAllPaid ? 'Closed' : 'Active';
 
   const statements: any[] = [
@@ -1035,7 +1032,7 @@ export async function splitLoan(
   // 4. Recompute parent loan totals and splits
   const parentNewTotal = remainingInsts.reduce((sum, i) => sum + i.amountDue, 0);
   const parentHasOverdue = remainingInsts.some((r) => ['RET', 'RET NEFT', 'RET PASS', 'Overdue'].includes(String(r.status)));
-  const parentAllPaid = remainingInsts.every((r) => ['PASS', 'NEFT', 'CASH', 'PAID', 'Paid'].includes(String(r.status)));
+  const parentAllPaid = remainingInsts.length > 0 && remainingInsts.every((r) => isPaidStatus(r.status));
   const parentFinalStatus = parentHasOverdue ? 'Overdue' : parentAllPaid ? 'Closed' : 'Active';
 
   const recomputeStatements: any[] = [
@@ -1166,7 +1163,7 @@ export async function commitReviewedImport(
           item.raw.date,
           item.raw.amount,
           item.raw.status || 'PENDING',
-          ['PASS', 'NEFT', 'CASH', 'PAID'].includes(String(item.raw.status).toUpperCase()) ? item.raw.date : null,
+          isPaidStatus(item.raw.status) ? item.raw.date : null,
           item.raw.chqNo || null,
           item.raw.place || targetLoan?.place || 'CHENNAI',
           item.raw.depName || null,
@@ -1238,7 +1235,7 @@ export async function commitReviewedImport(
           item.raw.date,
           item.raw.amount,
           item.raw.status || 'PENDING',
-          ['PASS', 'NEFT', 'CASH', 'PAID'].includes(String(item.raw.status).toUpperCase()) ? item.raw.date : null,
+          isPaidStatus(item.raw.status) ? item.raw.date : null,
           item.raw.chqNo || null,
           item.raw.place || 'CHENNAI',
           item.raw.depName || null,
@@ -1286,7 +1283,7 @@ export async function commitReviewedImport(
     });
     const newTot = allInstRes.rows.reduce((sum, r) => sum + Number(r.amount_due || 0), 0);
     const hasOverdue = allInstRes.rows.some((r) => ['RET', 'RET NEFT', 'RET PASS', 'Overdue'].includes(String(r.status)));
-    const allPaid = allInstRes.rows.every((r) => ['PASS', 'NEFT', 'CASH', 'PAID', 'Paid'].includes(String(r.status)));
+    const allPaid = allInstRes.rows.length > 0 && allInstRes.rows.every((r) => isPaidStatus(String(r.status || '')));
     const pStatus = hasOverdue ? 'Overdue' : allPaid ? 'Closed' : 'Active';
 
     await client.execute({
@@ -1442,9 +1439,12 @@ export async function getDashboardStats(customerId?: string) {
   await ensureDbInitialized();
   const client = getTursoClient();
 
-  const loans = await getLoans(undefined, customerId);
+  const [loans, companies] = await Promise.all([
+    getLoans(undefined, customerId),
+    customerId ? Promise.resolve([]) : getCompanies(),
+  ]);
   // 1. Portfolio-level Metrics (All-time, never affected by time filter)
-  const totalDisbursed = loans.reduce((sum, l) => sum + Number(l.totalAmount || 0), 0);
+  const totalDisbursed = loans.reduce((sum, l) => sum + (l.isOpeningBalanceOnly ? 0 : Number(l.totalAmount || 0)), 0);
   const totalRecovered = loans.reduce((sum, l) => sum + Number(l.totalCollected || 0), 0);
   const totalOutstanding = loans.reduce((sum, loan) => sum + Number(loan.totalOutstanding || 0), 0);
 
@@ -1468,15 +1468,15 @@ export async function getDashboardStats(customerId?: string) {
       const st = String(ins.status || '').toUpperCase();
       const amt = Number(ins.amountDue || 0);
 
-      if (['PASS', 'NEFT', 'CASH', 'PAID'].includes(st)) {
+      if (isPaidStatus(st)) {
         onTimeCount++;
-        if (ins.recdDate === todayDate || ins.dueDate === todayDate) {
+        if (ins.recdDate === todayDate) {
           todayCollections += amt;
         }
-      } else if (['RET', 'RET NEFT', 'RET PASS'].includes(st)) {
+      } else if (isBounceStatus(st)) {
         bouncedCount++;
         bouncedAmount += amt;
-      } else if (['CLS', 'CS'].includes(st)) {
+      } else if (getStatusCategory(st) === 'other') {
         unclassifiedCount++;
       } else {
         // PENDING or other
@@ -1502,7 +1502,7 @@ export async function getDashboardStats(customerId?: string) {
   // Company Funding Breakdown
   const companyFunding = customerId
     ? []
-    : (await getCompanies()).map((c) => ({
+    : companies.map((c) => ({
       name: c.name,
       shortCode: c.shortCode,
       isOutsideParty: c.isOutsideParty,
@@ -1527,15 +1527,15 @@ export async function getDashboardStats(customerId?: string) {
     let disbursed = 0;
     let collected = 0;
     loans.forEach((l) => {
-      const loanDate = l.createdAt ? new Date(l.createdAt) : (l.startDate ? new Date(l.startDate) : null);
+      const loanDate = l.startDate ? new Date(l.startDate) : (l.createdAt ? new Date(l.createdAt) : null);
       if (loanDate && !isNaN(loanDate.getTime()) && loanDate.getFullYear() === yNum && loanDate.getMonth() === mIdx) {
-        disbursed += Number(l.totalAmount || 0);
+        disbursed += l.isOpeningBalanceOnly ? 0 : Number(l.totalAmount || 0);
       }
       (l.installments || []).forEach((ins) => {
-        const insDate = ins.recdDate ? new Date(ins.recdDate) : (ins.dueDate ? new Date(ins.dueDate) : null);
+        const insDate = ins.recdDate ? new Date(ins.recdDate) : null;
         if (insDate && !isNaN(insDate.getTime()) && insDate.getFullYear() === yNum && insDate.getMonth() === mIdx) {
           const st = String(ins.status || '').toUpperCase();
-          if (['PASS', 'NEFT', 'CASH', 'PAID'].includes(st)) {
+          if (isPaidStatus(st)) {
             collected += Number(ins.amountDue || 0);
           }
         }

@@ -16,10 +16,7 @@ import * as XLSX from 'xlsx';
 import { useApp } from '@/lib/store';
 import { formatINR } from '@/lib/utils/formatCurrency';
 import { Loan, Installment } from '@/lib/types';
-
-const PAID_STATUSES = new Set(['PASS', 'NEFT', 'CASH', 'CLS', 'PAID']);
-const isPaid = (status: string) =>
-  PAID_STATUSES.has(String(status || '').trim().toUpperCase());
+import { isPaidStatus as isPaid } from '@/lib/utils/statusMapping';
 
 interface TrialRow {
   sNo: number;
@@ -49,12 +46,18 @@ function buildTrialRows(loans: Loan[]): TrialRow[] {
     existing.loanIds.add(loan.id);
 
     const installments: Installment[] = loan.installments || [];
-    for (const inst of installments) {
-      const due = Number(inst.amountDue || 0);
-      const paid = isPaid(inst.status) ? due : 0;
-      existing.debit += due;
-      existing.credit += paid;
-    }
+    const scheduleAmount = loan.isOpeningBalanceOnly
+      ? 0
+      : installments.length > 0
+        ? installments.reduce((sum, installment) => sum + Number(installment.amountDue || 0), 0)
+        : Number(loan.totalAmount || 0);
+    const collected = installments.reduce(
+      (sum, installment) => sum + (isPaid(installment.status) ? Number(installment.amountDue || 0) : 0),
+      0
+    );
+    const opening = Number(loan.openingBalance || 0);
+    existing.debit += scheduleAmount + (loan.openingBalanceType === 'CREDIT' ? 0 : opening);
+    existing.credit += collected + (loan.openingBalanceType === 'CREDIT' ? opening : 0);
     grouped.set(loan.customerId, existing);
   }
 

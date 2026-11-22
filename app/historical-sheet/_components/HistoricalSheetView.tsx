@@ -21,6 +21,7 @@ import {
 import * as XLSX from 'xlsx';
 import { MoneyDisplay } from '@/components/ui/MoneyDisplay';
 import { CustomSelect } from '@/components/ui/CustomSelect';
+import { isPaidStatus } from '@/lib/utils/statusMapping';
 
 export const HistoricalSheetView: React.FC = () => {
   const { receipts, fetchReceipts, updateHistoricalReceipt, showToast, isSavingReceipt, isLoading } = useApp();
@@ -454,7 +455,7 @@ export const HistoricalSheetView: React.FC = () => {
 
                     {/* Scrollable Col 8: AMOUNT (₹) */}
                     {(() => {
-                      const isPaid = ['PASS', 'NEFT', 'CASH', 'PAID', 'CLOSED', 'SETTLED', 'Paid'].includes(row.status?.trim().toUpperCase());
+                      const isPaid = isPaidStatus(row.status);
                       return (
                         <td className={`p-1.5 border-r border-[#EDE8DF] text-right ${isPaid ? 'bg-emerald-50/70' : ''}`}>
                           <input

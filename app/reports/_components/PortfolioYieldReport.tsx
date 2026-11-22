@@ -2,6 +2,7 @@
 
 import React, { useMemo } from 'react';
 import { useApp } from '@/lib/store';
+import { isPaidStatus } from '@/lib/utils/statusMapping';
 import { DataTable, ColumnDef } from '@/components/ui/DataTable';
 import { MoneyDisplay } from '@/components/ui/MoneyDisplay';
 import { StatusPill } from '@/components/ui/StatusPill';
@@ -30,14 +31,12 @@ export const PortfolioYieldReport: React.FC = () => {
   const reportData = useMemo(() => {
     return loans.map((l) => {
       const insts = l.installments || [];
-      const settledInsts = insts.filter((i) =>
-        ['PASS', 'NEFT', 'CASH', 'PAID', 'Paid'].includes(String(i.status).toUpperCase())
-      );
+      const settledInsts = insts.filter((i) => isPaidStatus(i.status));
       const settledCount = settledInsts.length;
       const pendingCount = insts.length - settledCount;
       const totalCollected = l.totalCollected || 0;
-      const totalAmount = l.totalAmount || 0;
-      const totalOutstanding = Math.max(0, totalAmount - totalCollected);
+      const totalAmount = l.isOpeningBalanceOnly ? 0 : (l.totalAmount || 0);
+      const totalOutstanding = Number(l.totalOutstanding ?? Math.max(0, totalAmount - totalCollected));
       const completionRate = totalAmount > 0 ? Number(((totalCollected / totalAmount) * 100).toFixed(1)) : 0;
 
       return {

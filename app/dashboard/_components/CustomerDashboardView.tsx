@@ -4,10 +4,10 @@ import React, { useMemo } from 'react';
 import { ArrowRight, CalendarClock, CreditCard, ReceiptText } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useApp } from '@/lib/store';
+import { isPaidStatus } from '@/lib/utils/statusMapping';
 import { MoneyDisplay } from '@/components/ui/MoneyDisplay';
 import { StatusPill } from '@/components/ui/StatusPill';
 
-const PAID_STATUSES = new Set(['PASS', 'NEFT', 'CASH', 'PAID', 'CLS', 'CS', 'SETTLED', 'CLOSED']);
 const formatDate = (value?: string | null) => {
   if (!value) return '—';
   const [year, month, day] = value.slice(0, 10).split('-');
@@ -17,11 +17,11 @@ const formatDate = (value?: string | null) => {
 export const CustomerDashboardView: React.FC = () => {
   const router = useRouter();
   const { currentActor, loans, isLoading } = useApp();
-  const payments = useMemo(() => loans.flatMap((loan) => loan.installments.map((installment) => ({ loan, installment }))).filter(({ installment }) => installment.dueDate && !PAID_STATUSES.has(String(installment.status).toUpperCase())).sort((a, b) => a.installment.dueDate.localeCompare(b.installment.dueDate)), [loans]);
+  const payments = useMemo(() => loans.flatMap((loan) => loan.installments.map((installment) => ({ loan, installment }))).filter(({ installment }) => installment.dueDate && !isPaidStatus(installment.status)).sort((a, b) => a.installment.dueDate.localeCompare(b.installment.dueDate)), [loans]);
   const nextPayment = payments[0];
   const totalAmount = loans.reduce((sum, loan) => sum + Number(loan.totalAmount || 0), 0);
   const totalPaid = loans.reduce((sum, loan) => sum + Number(loan.totalCollected || 0), 0);
-  const outstanding = Math.max(0, totalAmount - totalPaid);
+  const outstanding = loans.reduce((sum, loan) => sum + Number(loan.totalOutstanding || 0), 0);
 
   if (isLoading && loans.length === 0) return <div className="space-y-5 animate-pulse"><div className="h-40 rounded-3xl bg-slate-200" /><div className="grid gap-3 md:grid-cols-3"><div className="h-28 rounded-2xl bg-slate-200" /><div className="h-28 rounded-2xl bg-slate-200" /><div className="h-28 rounded-2xl bg-slate-200" /></div><div className="h-64 rounded-3xl bg-slate-200" /></div>;
 

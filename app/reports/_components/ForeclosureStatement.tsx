@@ -17,9 +17,7 @@ import { Loan } from '@/lib/types';
 import { DatePicker, getTodayIsoDate } from '@/components/ui/DatePicker';
 import { CustomSelect } from '@/components/ui/CustomSelect';
 import { FloatingPopover } from '@/components/ui/FloatingPopover';
-
-const PAID_STATUSES = new Set(['PASS', 'NEFT', 'CASH', 'CLS', 'PAID']);
-const isPaid = (s: string) => PAID_STATUSES.has(String(s || '').trim().toUpperCase());
+import { isPaidStatus as isPaid } from '@/lib/utils/statusMapping';
 
 const dateKey = (v: string) => String(v || '').slice(0, 10);
 const fmtDate = (v: string) => {

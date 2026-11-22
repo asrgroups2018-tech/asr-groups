@@ -1,6 +1,7 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { Loan } from '@/lib/types';
+import { isBounceStatus, isPaidStatus } from '@/lib/utils/statusMapping';
 
 export interface FlattenedLoanExportRow {
   loanId: string;
@@ -266,10 +267,10 @@ export async function exportLoansToExcel(loans: Loan[], dateRangeLabel?: string)
       // Status pill color coding
       if (col.key === 'status') {
         const st = String(cell.value || '').toUpperCase();
-        if (['PASS', 'PAID', 'NEFT', 'CASH', 'CLS'].includes(st)) {
+        if (isPaidStatus(st)) {
           cell.font = { name: 'Segoe UI', size: 9.5, bold: true, color: { argb: 'FF047857' } };
           cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFECFDF5' } };
-        } else if (['RET', 'RET NEFT', 'RET PASS', 'BOUNCED'].includes(st)) {
+        } else if (isBounceStatus(st)) {
           cell.font = { name: 'Segoe UI', size: 9.5, bold: true, color: { argb: 'FFB91C1C' } };
           cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEF2F2' } };
         } else if (st === 'PENDING') {

@@ -16,10 +16,8 @@ import { useApp } from '@/lib/store';
 import { formatINR } from '@/lib/utils/formatCurrency';
 import { Loan, Installment } from '@/lib/types';
 import { DatePicker, getTodayIsoDate } from '@/components/ui/DatePicker';
+import { isPaidStatus as isPaid } from '@/lib/utils/statusMapping';
 
-const PAID_STATUSES = new Set(['PASS', 'NEFT', 'CASH', 'CLS', 'PAID']);
-const isPaid = (status: string) =>
-  PAID_STATUSES.has(String(status || '').trim().toUpperCase());
 const dateKey = (v: string) => String(v || '').slice(0, 10);
 
 interface DayEntry {

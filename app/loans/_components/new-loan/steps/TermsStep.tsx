@@ -58,10 +58,6 @@ export const TermsStep: React.FC<TermsStepProps> = ({
   setInstallmentCount,
   startDate,
   setStartDate,
-  depositDate,
-  setDepositDate,
-  paymentThrough = '',
-  setPaymentThrough,
 }) => {
   const frequencyOptions: { label: string; value: RepaymentFrequency; subtitle?: string }[] = [
     { label: 'Monthly', value: 'Monthly' },
@@ -139,31 +135,6 @@ export const TermsStep: React.FC<TermsStepProps> = ({
           </div>
         )}
 
-        {/* Payment Through — two plain inputs: method text + date */}
-        <div className="border-t border-[#3D1A2C]/60 pt-3">
-          <label className="mb-2 block text-xs font-mono font-bold uppercase text-slate-300">
-            Payment Through <span className="normal-case font-normal text-slate-500">(Optional)</span>
-          </label>
-          <div className="grid grid-cols-2 gap-2">
-            <input
-              type="text"
-              value={paymentThrough}
-              onChange={(e) => setPaymentThrough?.(e.target.value)}
-              placeholder="e.g. NEFT, Cheque, Cash, UPI"
-              className="h-10 w-full rounded-xl border border-[#3D1A2C] bg-[#160810] px-3 text-sm font-mono text-slate-100 outline-none focus:border-[#C5A059] placeholder:text-slate-500 uppercase"
-            />
-            <DatePicker
-              value={depositDate || null}
-              onChange={(d) => setDepositDate?.(d)}
-              theme="dark"
-              size="md"
-              placeholder="Payment date"
-              className="w-full"
-              buttonClassName="h-10 w-full"
-              showPresets={false}
-            />
-          </div>
-        </div>
       </div>
       {/* Optional Opening Balance */}
       <div className="bg-[#240F1D] p-4.5 rounded-xl border border-[#3D1A2C] space-y-2">

@@ -20,14 +20,7 @@ import { formatINR } from '@/lib/utils/formatCurrency';
 import { Loan } from '@/lib/types';
 import { DateRangePicker } from '@/components/ui/DateRangePicker';
 import { CustomSelect } from '@/components/ui/CustomSelect';
-
-// Statuses that indicate instrument was returned/bounced
-const BOUNCE_STATUSES = new Set(['RET', 'RET NEFT', 'RET PASS', 'BOUNCE', 'RETURNED']);
-// Statuses that indicate subsequent recovery
-const RECOVERED_STATUSES = new Set(['PASS', 'NEFT', 'CASH', 'CLS', 'PAID']);
-
-const isBounced = (s: string) => BOUNCE_STATUSES.has(String(s || '').trim().toUpperCase());
-const isRecovered = (s: string) => RECOVERED_STATUSES.has(String(s || '').trim().toUpperCase());
+import { isBounceStatus as isBounced, isPaidStatus as isRecovered } from '@/lib/utils/statusMapping';
 
 const dateKey = (v: string) => String(v || '').slice(0, 10);
 const fmtDate = (v: string) => {

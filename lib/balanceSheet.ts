@@ -1,4 +1,5 @@
 import { Loan } from '@/lib/types';
+import { isPaidStatus } from '@/lib/utils/statusMapping';
 
 export type BalanceSheetSide = 'liabilities' | 'assets';
 
@@ -23,20 +24,7 @@ export interface BalanceSheetDocument {
   updatedBy?: string;
 }
 
-const PAID_STATUSES = new Set([
-  'PASS',
-  'NEFT',
-  'RTGS',
-  'CASH',
-  'CLS',
-  'PAID',
-  'CLEARED',
-  'CLOSED',
-  'SETTLED',
-  'CS',
-]);
-
-const isPaid = (status: string | undefined) => PAID_STATUSES.has(String(status || '').trim().toUpperCase());
+const isPaid = isPaidStatus;
 
 const entry = (
   id: string,

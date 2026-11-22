@@ -3,7 +3,7 @@
  */
 
 import { Loan, Installment } from '@/lib/types';
-import { isPaidStatus, getStatusCategory } from '@/lib/utils/statusMapping';
+import { isBounceStatus, isPaidStatus, getStatusCategory } from '@/lib/utils/statusMapping';
 
 export interface PortfolioLifetimeMetrics {
   totalDeployed: number;
@@ -36,8 +36,11 @@ export function computeLifetimePortfolioMetrics(
   loans: Loan[],
   allInstallments?: Installment[]
 ): PortfolioLifetimeMetrics {
-  // Total Capital Deployed is sum of distinct loan total_amounts
-  const totalDeployed = loans.reduce((sum, l) => sum + (Number(l.totalAmount) || 0), 0);
+  // Opening-balance-only accounts represent migrated debt, not new deployment.
+  const totalDeployed = loans.reduce(
+    (sum, loan) => sum + (loan.isOpeningBalanceOnly ? 0 : Number(loan.totalAmount) || 0),
+    0
+  );
 
   // Derive installments from loans if not passed separately
   const installments: Installment[] = allInstallments || loans.flatMap((l) => l.installments || []);
@@ -55,6 +58,8 @@ export function computeLifetimePortfolioMetrics(
     if (isPaidStatus(inst.status)) {
       totalRecovered += amount;
       settledCount++;
+    } else if (isBounceStatus(inst.status)) {
+      bouncedCount++;
     } else if (cat === 'pending') {
       pendingCount++;
     } else {
@@ -62,7 +67,16 @@ export function computeLifetimePortfolioMetrics(
     }
   });
 
-  const totalOutstanding = Math.max(0, totalDeployed - totalRecovered);
+  const totalOutstanding = loans.reduce((sum, loan) => {
+    if (Number.isFinite(Number(loan.totalOutstanding))) return sum + Number(loan.totalOutstanding);
+    const opening = Number(loan.openingBalance || 0) * (loan.openingBalanceType === 'CREDIT' ? -1 : 1);
+    const scheduled = loan.isOpeningBalanceOnly ? 0 : Number(loan.totalAmount || 0);
+    const recovered = (loan.installments || []).reduce(
+      (value, installment) => value + (isPaidStatus(installment.status) ? Number(installment.amountDue || 0) : 0),
+      0
+    );
+    return sum + Math.max(0, opening + scheduled - recovered);
+  }, 0);
   const collectionRate = totalDeployed > 0 ? (totalRecovered / totalDeployed) * 100 : 0;
   const activeLoansCount = loans.filter((l) => l.status !== 'Closed').length;
 
@@ -102,6 +116,7 @@ export function computePeriodScopedMetrics(
 
   installments.forEach((inst) => {
     const dueDate = inst.dueDate || '';
+    const receiptDate = inst.recdDate || '';
     const amount = Number(inst.amountDue) || 0;
     const isPaid = isPaidStatus(inst.status);
     const cat = getStatusCategory(inst.status);
@@ -115,14 +130,22 @@ export function computePeriodScopedMetrics(
       periodDueAmount += amount;
       periodDueCount++;
 
-      if (isPaid) {
+      const matchesReceiptRange = !startDate && !endDate
+        ? true
+        : Boolean(receiptDate && (!startDate || receiptDate >= startDate) && (!endDate || receiptDate <= endDate));
+      if (isPaid && matchesReceiptRange) {
         periodCollections += amount;
         periodCollectedCount++;
+      }
+
+      if (isBounceStatus(inst.status)) {
+        bouncedAmount += amount;
+        bouncedCount++;
       }
     }
 
     // Overdue check (due date before reference date and unpaid)
-    if (dueDate && dueDate < referenceDateStr && cat === 'pending') {
+    if (dueDate && dueDate < referenceDateStr && cat === 'pending' && !isBounceStatus(inst.status)) {
       unpaidPastDueAmount += amount;
       unpaidPastDueCount++;
     }

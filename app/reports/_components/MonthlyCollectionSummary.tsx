@@ -15,9 +15,8 @@ import { useApp } from '@/lib/store';
 import { formatINR } from '@/lib/utils/formatCurrency';
 import { Loan } from '@/lib/types';
 import { CustomSelect } from '@/components/ui/CustomSelect';
+import { isPaidStatus as isPaid } from '@/lib/utils/statusMapping';
 
-const PAID_STATUSES = new Set(['PASS', 'NEFT', 'CASH', 'CLS', 'PAID']);
-const isPaid = (s: string) => PAID_STATUSES.has(String(s || '').trim().toUpperCase());
 const dateKey = (v: string) => String(v || '').slice(0, 10);
 
 interface MonthlyRow {
@@ -41,23 +40,32 @@ function formatMonthLabel(key: string) {
 function buildMonthlyRows(loans: Loan[]): MonthlyRow[] {
   const map = new Map<
     string,
-    { due: number; collected: number; total: number; paid: number }
+    { due: number; collected: number; pending: number; total: number; paid: number }
   >();
 
   for (const loan of loans) {
     for (const inst of loan.installments || []) {
       const dueDate = dateKey(inst.dueDate || '');
-      if (!dueDate) continue;
-      const monthKey = dueDate.slice(0, 7);
+      const receiptDate = dateKey(inst.recdDate || '');
+      if (!dueDate && !(isPaid(inst.status) && receiptDate)) continue;
       const amountDue = Number(inst.amountDue || 0);
       const paid = isPaid(inst.status) ? amountDue : 0;
 
-      const existing = map.get(monthKey) || { due: 0, collected: 0, total: 0, paid: 0 };
-      existing.due += amountDue;
-      existing.collected += paid;
-      existing.total += 1;
-      existing.paid += isPaid(inst.status) ? 1 : 0;
-      map.set(monthKey, existing);
+      if (dueDate) {
+        const dueMonth = dueDate.slice(0, 7);
+        const dueTotals = map.get(dueMonth) || { due: 0, collected: 0, pending: 0, total: 0, paid: 0 };
+        dueTotals.due += amountDue;
+        dueTotals.total += 1;
+        dueTotals.paid += isPaid(inst.status) ? 1 : 0;
+        dueTotals.pending += amountDue - paid;
+        map.set(dueMonth, dueTotals);
+      }
+      if (paid > 0 && receiptDate) {
+        const receiptMonth = receiptDate.slice(0, 7);
+        const receiptTotals = map.get(receiptMonth) || { due: 0, collected: 0, pending: 0, total: 0, paid: 0 };
+        receiptTotals.collected += paid;
+        map.set(receiptMonth, receiptTotals);
+      }
     }
   }
 
@@ -69,7 +77,7 @@ function buildMonthlyRows(loans: Loan[]): MonthlyRow[] {
       monthLabel: formatMonthLabel(key),
       due: data.due,
       collected: data.collected,
-      pending: Math.max(0, data.due - data.collected),
+      pending: data.pending,
       collectionRate: data.due > 0 ? Math.round((data.collected / data.due) * 100) : 0,
       installmentsTotal: data.total,
       installmentsPaid: data.paid,

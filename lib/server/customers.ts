@@ -2,6 +2,7 @@ import { getTursoClient } from './turso';
 import { initializeSchema } from './schema';
 import { AuditActor, Customer } from '@/lib/types';
 import { logAudit } from './administration';
+import { isPaidStatus } from '@/lib/utils/statusMapping';
 
 let schemaInitialized = false;
 
@@ -76,7 +77,7 @@ export async function getCustomers(query?: string): Promise<Customer[]> {
       const insts = loanInstMap.get(String(l.id)) || [];
       insts.forEach((ins) => {
         const st = String(ins.status || '').toUpperCase();
-        if (['PASS', 'NEFT', 'CASH', 'PAID'].includes(st)) {
+        if (isPaidStatus(st)) {
           totalRepaid += Number(ins.amount_due || 0);
         }
       });
@@ -86,7 +87,7 @@ export async function getCustomers(query?: string): Promise<Customer[]> {
       const loanInstallments = loanInstMap.get(String(loan.id)) || [];
       const loanCollected = loanInstallments.reduce((collected, installment) => {
         const status = String(installment.status || '').trim().toUpperCase();
-        return ['CLEARED', 'NEFT', 'RTGS', 'CASH', 'PASS', 'PAID', 'CLS', 'CS', 'SETTLED', 'CLOSED'].includes(status)
+        return isPaidStatus(status)
           ? collected + Number(installment.amount_due || 0)
           : collected;
       }, 0);

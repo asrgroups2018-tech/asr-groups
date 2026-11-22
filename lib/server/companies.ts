@@ -2,6 +2,7 @@ import { getTursoClient } from './turso';
 import { initializeSchema } from './schema';
 import { AuditActor, Company } from '@/lib/types';
 import { logAudit } from './administration';
+import { isPaidStatus } from '@/lib/utils/statusMapping';
 
 let schemaInitialized = false;
 
@@ -62,7 +63,7 @@ export async function getCompanies(): Promise<Company[]> {
     const cid = String(is.company_id);
     const lid = String(is.loan_id);
     const st = String(is.status || '').toUpperCase();
-    if (['CLEARED', 'NEFT', 'RTGS', 'CASH', 'PASS', 'PAID', 'CLOSED', 'SETTLED', 'CLS', 'CS'].includes(st)) {
+    if (isPaidStatus(st)) {
       collectedMap.set(cid, (collectedMap.get(cid) || 0) + Number(is.amount || 0));
     }
     if (!loanSetMap.has(cid)) {

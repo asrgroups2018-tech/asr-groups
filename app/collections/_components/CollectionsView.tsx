@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
+import dynamic from 'next/dynamic';
 import {
   Banknote,
   BarChart3,
@@ -12,19 +13,20 @@ import {
 } from 'lucide-react';
 import { useApp } from '@/lib/store';
 import { formatINR } from '@/lib/utils/formatCurrency';
-import { CollectionSheet } from './CollectionSheet';
-import { IncomeRegister } from './IncomeRegister';
-import { ExpenseRegister } from './ExpenseRegister';
-import { LedgerSummary } from './LedgerSummary';
 import { DateRangePicker } from '@/components/ui/DateRangePicker';
 import { getTodayIsoDate } from '@/components/ui/DatePicker';
 import type { Loan } from '@/lib/types';
+import { isBounceStatus, isPaidStatus } from '@/lib/utils/statusMapping';
+
+const tabLoading = () => <div className="rounded-2xl border border-slate-200/60 bg-white p-6 text-sm text-slate-500">Loading view…</div>;
+const CollectionSheet = dynamic(() => import('./CollectionSheet').then((module) => module.CollectionSheet), { loading: tabLoading });
+const IncomeRegister = dynamic(() => import('./IncomeRegister').then((module) => module.IncomeRegister), { loading: tabLoading });
+const ExpenseRegister = dynamic(() => import('./ExpenseRegister').then((module) => module.ExpenseRegister), { loading: tabLoading });
+const LedgerSummary = dynamic(() => import('./LedgerSummary').then((module) => module.LedgerSummary), { loading: tabLoading });
 
 /* ─── Shared helpers (exported for sub-components) ─── */
-export const PAID_STATUSES = new Set(['PASS', 'NEFT', 'CASH', 'CLS', 'PAID']);
-export const BOUNCE_STATUSES = new Set(['RET', 'RET NEFT', 'RET PASS', 'BOUNCE']);
-export const isPaid = (s: string) => PAID_STATUSES.has(String(s || '').trim().toUpperCase());
-export const isBounce = (s: string) => BOUNCE_STATUSES.has(String(s || '').trim().toUpperCase());
+export const isPaid = isPaidStatus;
+export const isBounce = isBounceStatus;
 export const dateKey = (v: string) => String(v || '').slice(0, 10);
 
 export type Period = 'all' | 'daily' | 'weekly' | 'monthly' | 'custom';
@@ -61,10 +63,13 @@ export function buildStats(loans: Loan[]): CollectionStats {
   const mStart = monthStart(today); const mEnd = monthEnd(today);
   let dueToday = 0, dueThisWeek = 0, dueThisMonth = 0;
   let collectedToday = 0, collectedThisWeek = 0, collectedThisMonth = 0;
+  let pendingToday = 0, pendingThisMonth = 0;
   let bounceTotal = 0, bounceThisMonth = 0, disbursedThisMonth = 0, disbursedTotal = 0;
   for (const loan of loans) {
     const loanStart = dateKey(loan.startDate || '');
-    const disbursed = Number(loan.disbursedAmount || 0) || Math.max(0, Number(loan.totalAmount || 0) - Number(loan.interestAmount || 0));
+    const disbursed = loan.isOpeningBalanceOnly
+      ? 0
+      : Number(loan.disbursedAmount || 0) || Math.max(0, Number(loan.totalAmount || 0) - Number(loan.interestAmount || 0));
     disbursedTotal += disbursed;
     if (loanStart >= mStart && loanStart <= mEnd) disbursedThisMonth += disbursed;
     for (const inst of loan.installments || []) {
@@ -72,11 +77,16 @@ export function buildStats(loans: Loan[]): CollectionStats {
       const dDate = dateKey(inst.dueDate || ''); const rDate = dateKey(inst.recdDate || '');
       if (dDate === today) dueToday += due;
       if (dDate >= wStart && dDate <= wEnd) dueThisWeek += due;
-      if (dDate >= mStart && dDate <= mEnd) dueThisMonth += due;
+      const dueThisMonthFlag = dDate >= mStart && dDate <= mEnd;
+      if (dueThisMonthFlag) dueThisMonth += due;
+      if (!isPaid(inst.status)) {
+        if (dDate === today) pendingToday += due;
+        if (dueThisMonthFlag) pendingThisMonth += due;
+      }
       if (isPaid(inst.status)) {
-        if (rDate === today) collectedToday += due;
-        if (rDate >= wStart && rDate <= wEnd) collectedThisWeek += due;
-        if (rDate >= mStart && rDate <= mEnd) collectedThisMonth += due;
+        if (rDate && rDate === today) collectedToday += due;
+        if (rDate && rDate >= wStart && rDate <= wEnd) collectedThisWeek += due;
+        if (rDate && rDate >= mStart && rDate <= mEnd) collectedThisMonth += due;
       }
       if (isBounce(inst.status)) {
         bounceTotal += due;
@@ -84,7 +94,7 @@ export function buildStats(loans: Loan[]): CollectionStats {
       }
     }
   }
-  return { dueToday, dueThisWeek, dueThisMonth, collectedToday, collectedThisWeek, collectedThisMonth, pendingToday: Math.max(0, dueToday - collectedToday), pendingThisMonth: Math.max(0, dueThisMonth - collectedThisMonth), disbursedThisMonth, disbursedTotal, bounceTotal, bounceThisMonth };
+  return { dueToday, dueThisWeek, dueThisMonth, collectedToday, collectedThisWeek, collectedThisMonth, pendingToday, pendingThisMonth, disbursedThisMonth, disbursedTotal, bounceTotal, bounceThisMonth };
 }
 
 export function getDateRange(period: Period, anchor: string, custom?: { from: string; to: string }): DateRange {

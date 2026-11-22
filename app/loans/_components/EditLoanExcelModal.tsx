@@ -6,6 +6,7 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useApp } from '@/lib/store';
 import { useTheme } from '@/components/providers/ThemeProvider';
 import { Loan, AppStatus, LoanStatus, RepaymentFrequency } from '@/lib/types';
+import { isPaidStatus } from '@/lib/utils/statusMapping';
 import { MoneyDisplay } from '@/components/ui/MoneyDisplay';
 import { DatePicker } from '@/components/ui/DatePicker';
 import { CustomSelect } from '@/components/ui/CustomSelect';
@@ -225,9 +226,7 @@ export const ALLOWED_LOAN_STATUS_LIST = ['Active', 'Closed', 'Overdue'] as const
 export type TopLoanStatus = (typeof ALLOWED_LOAN_STATUS_LIST)[number];
 
 export function isStatusPaid(st: string | null | undefined): boolean {
-  if (!st) return false;
-  const u = st.trim().toUpperCase();
-  return ['CLEARED', 'NEFT', 'RTGS', 'CASH', 'PASS', 'CLS', 'CS', 'PAID', 'CLOSED', 'SETTLED'].includes(u);
+  return isPaidStatus(st);
 }
 
 export function normalizeLoanStatus(st: string | null | undefined): TopLoanStatus {
@@ -242,7 +241,7 @@ export function normalizeStatus(st: string | null | undefined): AppStatus {
   if (!st) return 'Pending';
   const u = st.trim().toUpperCase();
   if (['CLEARED', 'PASS', 'CLS', 'PAID', 'CS', 'CLOSED', 'SETTLED'].includes(u)) return 'Cleared';
-  if (['NEFT', 'RET NEFT'].includes(u)) return 'NEFT';
+  if (u === 'NEFT') return 'NEFT';
   if (['RTGS'].includes(u)) return 'RTGS';
   if (['CASH', 'CSH'].includes(u)) return 'Cash';
   return 'Pending';

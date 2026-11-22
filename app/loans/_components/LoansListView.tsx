@@ -1,9 +1,11 @@
 'use client';
 
 import React, { useState, useMemo, useRef } from 'react';
+import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { useApp } from '@/lib/store';
 import { Loan } from '@/lib/types';
+import { isPaidStatus } from '@/lib/utils/statusMapping';
 import {
   CreditCard,
   Plus,
@@ -25,9 +27,6 @@ import {
 } from 'lucide-react';
 import { StatusPill } from '@/components/ui/StatusPill';
 import { CompanySplitBadge } from '@/components/ui/CompanySplitBadge';
-import { NewLoanModal } from '@/app/loans/_components/new-loan/NewLoanModal';
-import { EditLoanExcelModal } from './EditLoanExcelModal';
-import { ImportReviewModal } from './ImportReviewModal';
 import { exportLoansToExcel, exportLoansToPDF } from '@/lib/utils/exportLoansLedger';
 import { DateRangePicker, DateRangeValue, getCurrentMonthRange } from '@/components/ui/DateRangePicker';
 import { FloatingPopover } from '@/components/ui/FloatingPopover';
@@ -36,6 +35,10 @@ import { MoneyDisplay } from '@/components/ui/MoneyDisplay';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { getAuthorizedLoansForExport, requestLoanExportAccess } from '@/lib/exportAuthorization';
 import { InlineOpeningBalanceEditor } from '@/components/ui/InlineOpeningBalanceEditor';
+
+const NewLoanModal = dynamic(() => import('@/app/loans/_components/new-loan/NewLoanModal').then((module) => module.NewLoanModal));
+const EditLoanExcelModal = dynamic(() => import('./EditLoanExcelModal').then((module) => module.EditLoanExcelModal));
+const ImportReviewModal = dynamic(() => import('./ImportReviewModal').then((module) => module.ImportReviewModal));
 
 function parseToDate(dStr: string | null | undefined): Date | null {
   if (!dStr) return null;
@@ -79,10 +82,7 @@ function isDateInRange(value: string | null | undefined, startDate: string | nul
   return Boolean(dateKey && startDate && endDate && dateKey >= startDate && dateKey <= endDate);
 }
 
-const PAID_INSTALLMENT_STATUSES = new Set([
-  'CLEARED', 'NEFT', 'RTGS', 'CASH', 'PASS', 'CLS', 'CS', 'PAID',
-  'CLOSED', 'SETTLED', 'RET NEFT', 'RET PASS',
-]);
+const isPaidInstallment = isPaidStatus;
 
 type SortField = 'customerName' | 'id' | 'startDate' | 'totalCollected' | 'interestAmount' | 'totalAmount' | 'openingBalance' | 'installmentCount' | 'fundedBy' | 'nextDueDate' | 'status';
 type SortDirection = 'asc' | 'desc';
@@ -101,7 +101,7 @@ export function getDerivedLoanStatus(loan: Loan, todayIso = getTodayIsoDate()): 
   const isAllPaid =
     insts.length > 0 &&
     insts.every((i) =>
-      PAID_INSTALLMENT_STATUSES.has(String(i.status || '').trim().toUpperCase())
+      isPaidInstallment(i.status)
     );
   const scheduledAmountSettled = (loan.totalCollected || 0) >= (loan.totalAmount || 0) && (loan.totalAmount || 0) > 0;
   const isFullyCollected = scheduledAmountSettled && getLoanClosingDebit(loan) <= 0;
@@ -112,7 +112,7 @@ export function getDerivedLoanStatus(loan: Loan, todayIso = getTodayIsoDate()): 
 
   // 2. If explicitly marked Overdue or has past-due unpaid installments
   const hasOverdueInst = insts.some((i) => {
-    const isPaid = PAID_INSTALLMENT_STATUSES.has(String(i.status || '').trim().toUpperCase());
+    const isPaid = isPaidInstallment(i.status);
     return !isPaid && i.dueDate && i.dueDate < todayIso;
   });
 
@@ -1019,7 +1019,7 @@ export const LoansListView: React.FC = () => {
                   : 0;
 
                 const isLoanPaid =
-                  PAID_INSTALLMENT_STATUSES.has(String(loan.status || '').trim().toUpperCase()) ||
+                  isPaidStatus(loan.status) ||
                   getLoanClosingDebit(loan) <= 0;
 
                 return (
@@ -1247,7 +1247,7 @@ export const LoansListView: React.FC = () => {
                               </thead>
                               <tbody className="divide-y divide-slate-100">
                                 {loan.installments.map((inst) => {
-                                  const isPaid = PAID_INSTALLMENT_STATUSES.has(inst.status?.trim().toUpperCase() || '');
+                                  const isPaid = isPaidInstallment(inst.status);
                                   const isInRange = isDateInRange(inst.dueDate, dateRange.startDate, dateRange.endDate) ||
                                     isDateInRange(inst.recdDate, dateRange.startDate, dateRange.endDate);
 
@@ -1351,7 +1351,7 @@ export const LoansListView: React.FC = () => {
               const total = loan.totalAmount || 0;
               const progress = total > 0 ? Math.min(100, Math.round((collected / total) * 100)) : 0;
               const isLoanPaid =
-                PAID_INSTALLMENT_STATUSES.has(String(loan.status || '').trim().toUpperCase()) ||
+                isPaidStatus(loan.status) ||
                 getLoanClosingDebit(loan) <= 0;
 
               return (
@@ -1612,7 +1612,7 @@ export const LoansListView: React.FC = () => {
                             </thead>
                             <tbody className="divide-y divide-[#EDE8DF]">
                               {loan.installments.map((inst) => {
-                                const isPaid = PAID_INSTALLMENT_STATUSES.has(inst.status?.trim().toUpperCase() || '');
+                                const isPaid = isPaidInstallment(inst.status);
                                 return (
                                   <tr
                                     key={inst.id}

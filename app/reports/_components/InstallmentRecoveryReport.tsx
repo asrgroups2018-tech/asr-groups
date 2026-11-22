@@ -7,6 +7,7 @@ import { MoneyDisplay } from '@/components/ui/MoneyDisplay';
 import { StatusPill } from '@/components/ui/StatusPill';
 import { Calendar, AlertCircle, CheckCircle2, DollarSign, Clock, Filter } from 'lucide-react';
 import { getTodayIsoDate } from '@/components/ui/DatePicker';
+import { isBounceStatus, isPaidStatus } from '@/lib/utils/statusMapping';
 
 interface InstallmentReportRow {
   id: string;
@@ -35,8 +36,8 @@ export const InstallmentRecoveryReport: React.FC = () => {
 
     loans.forEach((l) => {
       (l.installments || []).forEach((ins) => {
-        const isSettled = ['PASS', 'NEFT', 'CASH', 'PAID', 'Paid'].includes(String(ins.status).toUpperCase());
-        const isBounced = ['RET', 'RET NEFT', 'RET PASS'].includes(String(ins.status).toUpperCase());
+        const isSettled = isPaidStatus(ins.status);
+        const isBounced = isBounceStatus(ins.status);
 
         let delayDays = 0;
         if (isSettled && ins.recdDate && ins.dueDate) {
@@ -93,9 +94,9 @@ export const InstallmentRecoveryReport: React.FC = () => {
 
   const stats = useMemo(() => {
     const totalScheduled = reportData.reduce((sum, r) => sum + r.amountDue, 0);
-    const settledRows = reportData.filter((r) => ['PASS', 'NEFT', 'CASH', 'PAID'].includes(r.status.toUpperCase()));
+    const settledRows = reportData.filter((r) => isPaidStatus(r.status));
     const settledAmount = settledRows.reduce((sum, r) => sum + r.amountDue, 0);
-    const bouncedRows = reportData.filter((r) => ['RET', 'RET NEFT', 'RET PASS'].includes(r.status.toUpperCase()));
+    const bouncedRows = reportData.filter((r) => isBounceStatus(r.status));
     const bouncedAmount = bouncedRows.reduce((sum, r) => sum + r.amountDue, 0);
     const pendingRows = reportData.filter((r) => r.status.toUpperCase() === 'PENDING');
     const pendingAmount = pendingRows.reduce((sum, r) => sum + r.amountDue, 0);
@@ -154,7 +155,7 @@ export const InstallmentRecoveryReport: React.FC = () => {
       align: 'right',
       accessor: (r) => r.amountDue,
       render: (r) => {
-        const isPaid = ['PASS', 'NEFT', 'CASH', 'PAID', 'CLOSED', 'SETTLED', 'Paid'].includes(r.status?.trim().toUpperCase());
+        const isPaid = isPaidStatus(r.status);
         return (
           <MoneyDisplay
             amount={r.amountDue}

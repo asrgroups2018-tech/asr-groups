@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
+import dynamic from 'next/dynamic';
 import {
   AlertOctagon,
   AlertTriangle,
@@ -22,28 +23,29 @@ import {
   User,
   X,
 } from 'lucide-react';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
-import * as XLSX from 'xlsx';
+import type jsPDF from 'jspdf';
 import { useApp } from '@/lib/store';
 import { Customer, Installment, Loan } from '@/lib/types';
 import { formatINR } from '@/lib/utils/formatCurrency';
-import { TrialBalance } from './TrialBalance';
-import { DayBook } from './DayBook';
-import { AgeingReport } from './AgeingReport';
-import { MonthlyCollectionSummary } from './MonthlyCollectionSummary';
-import { AccountStatement } from './AccountStatement';
-import { PortfolioPnL } from './PortfolioPnL';
-import { CashReceiptBook } from './CashReceiptBook';
-import { LoanLedger } from './LoanLedger';
-import { BounceReturnRegister } from './BounceReturnRegister';
-import { AreaWiseReport } from './AreaWiseReport';
-import { ForeclosureStatement } from './ForeclosureStatement';
-import { CompanySyndicationReport } from './CompanySyndicationReport';
-import { BalanceSheet } from './BalanceSheet';
 import { DateRangePicker } from '@/components/ui/DateRangePicker';
 import { CustomSelect } from '@/components/ui/CustomSelect';
 import { ModalFrame } from '@/components/ui/ModalFrame';
+import { isPaidStatus as isPaid } from '@/lib/utils/statusMapping';
+
+const reportLoading = () => <div className="rounded-2xl border border-slate-200/10 bg-slate-900/30 p-6 text-sm text-slate-400">Loading report…</div>;
+const TrialBalance = dynamic(() => import('./TrialBalance').then((module) => module.TrialBalance), { loading: reportLoading });
+const DayBook = dynamic(() => import('./DayBook').then((module) => module.DayBook), { loading: reportLoading });
+const AgeingReport = dynamic(() => import('./AgeingReport').then((module) => module.AgeingReport), { loading: reportLoading });
+const MonthlyCollectionSummary = dynamic(() => import('./MonthlyCollectionSummary').then((module) => module.MonthlyCollectionSummary), { loading: reportLoading });
+const AccountStatement = dynamic(() => import('./AccountStatement').then((module) => module.AccountStatement), { loading: reportLoading });
+const PortfolioPnL = dynamic(() => import('./PortfolioPnL').then((module) => module.PortfolioPnL), { loading: reportLoading });
+const CashReceiptBook = dynamic(() => import('./CashReceiptBook').then((module) => module.CashReceiptBook), { loading: reportLoading });
+const LoanLedger = dynamic(() => import('./LoanLedger').then((module) => module.LoanLedger), { loading: reportLoading });
+const BounceReturnRegister = dynamic(() => import('./BounceReturnRegister').then((module) => module.BounceReturnRegister), { loading: reportLoading });
+const AreaWiseReport = dynamic(() => import('./AreaWiseReport').then((module) => module.AreaWiseReport), { loading: reportLoading });
+const ForeclosureStatement = dynamic(() => import('./ForeclosureStatement').then((module) => module.ForeclosureStatement), { loading: reportLoading });
+const CompanySyndicationReport = dynamic(() => import('./CompanySyndicationReport').then((module) => module.CompanySyndicationReport), { loading: reportLoading });
+const BalanceSheet = dynamic(() => import('./BalanceSheet').then((module) => module.BalanceSheet), { loading: reportLoading });
 
 interface LedgerRow {
   id: string;
@@ -81,8 +83,6 @@ interface LedgerEntry extends LedgerRow {
   runningBalance: number;
 }
 
-const PAID_STATUSES = new Set(['PASS', 'NEFT', 'RTGS', 'CASH', 'CLS', 'PAID', 'CLEARED']);
-const isPaid = (status: string) => PAID_STATUSES.has(String(status || '').trim().toUpperCase());
 const dateKey = (value: string) => String(value || '').slice(0, 10);
 const formatDate = (value: string) => {
   if (!value) return '—';
@@ -126,7 +126,7 @@ function makeCustomerReports(rows: LedgerRow[], customers: Customer[], loans: Lo
 }
 
 function makeLedgerEntries(report: CustomerReport): LedgerEntry[] {
-  let runningBalance = report.profileClosingBalance;
+  let runningBalance = 0;
   return report.transactions.map((row) => {
     runningBalance += row.amountDue - row.amountPaid;
     return { ...row, runningBalance: Math.max(0, runningBalance) };
@@ -198,9 +198,10 @@ export const ReportsView: React.FC = () => {
   const clearFilters = () => { setQuery(''); setStatus('All statuses'); setMonth('all'); setFromDate(''); setToDate(''); setSelectedCustomerIds(new Set()); };
   const setLedger = (report: CustomerReport) => setLedgerCustomer(report);
 
-  const exportExcel = (reports: CustomerReport[], ledgerOnly = false) => {
+  const exportExcel = async (reports: CustomerReport[], ledgerOnly = false) => {
     if (!reports.length) { showToast('Nothing to export', 'Select at least one customer or adjust the filters.', 'warning'); return; }
-    const summary = reports.map((report) => ({ 'Customer ID': report.id, 'Customer name': report.name, Place: report.place, 'Loan count': report.loanCount, Principal: report.principal, Collected: report.collected, Balance: report.balance, 'Closing Balance': report.profileClosingBalance + report.balance, Status: report.status }));
+    const XLSX = await import('xlsx');
+    const summary = reports.map((report) => ({ 'Customer ID': report.id, 'Customer name': report.name, Place: report.place, 'Loan count': report.loanCount, Principal: report.principal, Collected: report.collected, Balance: report.balance, 'Closing Balance': report.balance, Status: report.status }));
     const ledger = reports.flatMap((report) => makeLedgerEntries(report).map((entry) => ({ 'Customer ID': report.id, 'Customer name': report.name, Date: entry.date, 'Due date': entry.dueDate, 'Received date': entry.receivedDate, 'Loan ID': entry.loanId, 'Loan code': entry.codeNo, 'S.No': entry.sequence, Status: entry.status, 'Amount due': entry.amountDue, Paid: entry.amountPaid, 'Running balance': entry.runningBalance, Reference: entry.reference, 'Deposit account': entry.depositName, Remarks: entry.remarks })));
     const workbook = XLSX.utils.book_new();
     if (!ledgerOnly) XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(summary), 'Customer summary');
@@ -210,9 +211,10 @@ export const ReportsView: React.FC = () => {
     showToast('Excel downloaded', `${reports.length} customer ledger${reports.length === 1 ? '' : 's'} exported.`, 'success');
   };
 
-  const exportPdf = (reports: CustomerReport[], ledgerOnly = false) => {
+  const exportPdf = async (reports: CustomerReport[], ledgerOnly = false) => {
     if (!reports.length) { showToast('Nothing to export', 'Select at least one customer or adjust the filters.', 'warning'); return; }
-    const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
+    const [{ default: JsPDF }, { default: autoTable }] = await Promise.all([import('jspdf'), import('jspdf-autotable')]);
+    const doc = new JsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
     const title = reports.length === 1 ? `${reports[0].name} · Ledger Statement` : ledgerOnly ? 'Full Customer Ledgers' : 'Customer Master Report';

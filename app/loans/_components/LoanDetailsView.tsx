@@ -20,6 +20,7 @@ import { MoneyDisplay } from '@/components/ui/MoneyDisplay';
 import { StatusPill } from '@/components/ui/StatusPill';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { getDerivedLoanStatus } from './LoansListView';
+import { isPaidStatus } from '@/lib/utils/statusMapping';
 
 const COMPANY_COLORS = [
   '#701A35',
@@ -413,7 +414,7 @@ export const LoanDetailsView: React.FC = () => {
                         {row.dueDate}
                       </td>
                       {(() => {
-                        const isPaid = ['PASS', 'NEFT', 'CASH', 'PAID', 'CLOSED', 'SETTLED', 'Paid'].includes(row.status?.trim().toUpperCase());
+                        const isPaid = isPaidStatus(row.status);
                         return (
                           <td className={`p-2.5 border-r border-slate-200 text-right font-bold ${isPaid ? 'bg-emerald-50/70' : ''}`}>
                             <MoneyDisplay

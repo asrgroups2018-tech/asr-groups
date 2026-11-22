@@ -38,7 +38,7 @@ export const BorrowerExposureReport: React.FC = () => {
       .map((c) => {
         const totalBorrowed = c.totalBorrowed || 0;
         const totalRepaid = c.totalRepaid || 0;
-        const outstanding = Math.max(0, totalBorrowed - totalRepaid);
+        const outstanding = Number(c.outstandingAmount || 0);
         const concentrationShare = totalPortfolioBorrowed > 0 ? Number(((totalBorrowed / totalPortfolioBorrowed) * 100).toFixed(2)) : 0;
 
         const statuses = customerLoanStatusMap.get(c.id) || [];

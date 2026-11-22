@@ -20,9 +20,8 @@ import { APP_BRAND } from '@/lib/branding';
 import { formatINR } from '@/lib/utils/formatCurrency';
 import { Loan, Company } from '@/lib/types';
 import { CustomSelect } from '@/components/ui/CustomSelect';
+import { isPaidStatus as isPaid } from '@/lib/utils/statusMapping';
 
-const PAID_STATUSES = new Set(['PASS', 'NEFT', 'CASH', 'CLS', 'PAID']);
-const isPaid = (s: string) => PAID_STATUSES.has(String(s || '').trim().toUpperCase());
 const dateKey = (v: string) => String(v || '').slice(0, 10);
 const safeFileName = (v: string) =>
   v.replace(/[^a-z0-9_-]+/gi, '_').replace(/^_+|_+$/g, '').toLowerCase() || 'report';
@@ -85,14 +84,17 @@ function buildPnL(loans: Loan[]): PnLSummary {
   let overdueLoans = 0;
 
   for (const loan of loans) {
-    totalPortfolio += Number(loan.totalAmount || 0);
+    const loanPortfolio = loan.isOpeningBalanceOnly ? 0 : Number(loan.totalAmount || 0);
+    totalPortfolio += loanPortfolio;
 
     // disbursedAmount = actual cash out, fallback to totalAmount - interestAmount
     const interest = Number(loan.interestAmount || 0);
     const disbursed = Number(loan.disbursedAmount || 0);
-    const deployed = disbursed > 0 ? disbursed : Math.max(0, Number(loan.totalAmount || 0) - interest);
+    const deployed = loan.isOpeningBalanceOnly
+      ? 0
+      : disbursed > 0 ? disbursed : Math.max(0, Number(loan.totalAmount || 0) - interest);
     principalDeployed += deployed;
-    interestIncome += interest;
+    if (!loan.isOpeningBalanceOnly) interestIncome += interest;
 
     // Collect paid installments
     for (const inst of loan.installments || []) {
@@ -107,7 +109,17 @@ function buildPnL(loans: Loan[]): PnLSummary {
     else activeLoans++;
   }
 
-  const totalOutstanding = Math.max(0, totalPortfolio - grossCollections);
+  const totalOutstanding = loans.reduce((sum, loan) => {
+    const value = loan.totalOutstanding;
+    if (value !== undefined && value !== null) return sum + Number(value || 0);
+    const scheduled = loan.isOpeningBalanceOnly ? 0 : Number(loan.totalAmount || 0);
+    const opening = Number(loan.openingBalance || 0) * (loan.openingBalanceType === 'CREDIT' ? -1 : 1);
+    const recovered = (loan.installments || []).reduce(
+      (total, installment) => total + (isPaid(installment.status) ? Number(installment.amountDue || 0) : 0),
+      0
+    );
+    return sum + Math.max(0, opening + scheduled - recovered);
+  }, 0);
   const recoveryRate = totalPortfolio > 0 ? (grossCollections / totalPortfolio) * 100 : 0;
   const interestYield = principalDeployed > 0 ? (interestIncome / principalDeployed) * 100 : 0;
 
@@ -139,15 +151,17 @@ function buildMonthlyPnL(loans: Loan[]): MonthlyPnL[] {
       const existing = deployByMonth.get(startMonth) || { deployed: 0, interest: 0, disbursed: 0, portfolio: 0 };
       const interest = Number(loan.interestAmount || 0);
       const disbursed = Number(loan.disbursedAmount || 0);
-      existing.interest += interest;
-      existing.disbursed += disbursed > 0 ? disbursed : Math.max(0, Number(loan.totalAmount || 0) - interest);
-      existing.portfolio += Number(loan.totalAmount || 0);
+      existing.interest += loan.isOpeningBalanceOnly ? 0 : interest;
+      existing.disbursed += loan.isOpeningBalanceOnly
+        ? 0
+        : disbursed > 0 ? disbursed : Math.max(0, Number(loan.totalAmount || 0) - interest);
+      existing.portfolio += loan.isOpeningBalanceOnly ? 0 : Number(loan.totalAmount || 0);
       deployByMonth.set(startMonth, existing);
     }
 
     for (const inst of loan.installments || []) {
       if (!isPaid(inst.status)) continue;
-      const recdMonth = dateKey(inst.recdDate || inst.dueDate || '').slice(0, 7);
+      const recdMonth = dateKey(inst.recdDate || '').slice(0, 7);
       if (recdMonth) {
         collByMonth.set(recdMonth, (collByMonth.get(recdMonth) || 0) + Number(inst.amountDue || 0));
       }

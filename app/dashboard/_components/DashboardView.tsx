@@ -23,6 +23,7 @@ import {
 import { StatusPill } from '@/components/ui/StatusPill';
 import { MoneyDisplay } from '@/components/ui/MoneyDisplay';
 import { toIsoDate } from '@/components/ui/DatePicker';
+import { getStatusCategory, isBounceStatus, isPaidStatus } from '@/lib/utils/statusMapping';
 
 // Helper to parse dates formatted as '1-Jul-2026', '2026-07-01', '13-Sep-2026', etc.
 function parseDateString(dStr: string | null | undefined): Date | null {
@@ -81,8 +82,11 @@ export const DashboardView: React.FC = () => {
   // =========================================================================
   const portfolioMetrics = useMemo(() => {
     if (loans && loans.length > 0) {
-      const totalDeployed = loans.reduce((sum, l) => sum + Number(l.totalAmount || 0), 0);
+      const totalDeployed = loans.reduce((sum, loan) => {
+        return sum + (loan.isOpeningBalanceOnly ? 0 : Number(loan.totalAmount || 0));
+      }, 0);
       let totalRecovered = 0;
+      let totalOutstanding = 0;
       let totalInstallments = 0;
       let settledCount = 0;
       let bouncedCount = 0;
@@ -105,23 +109,23 @@ export const DashboardView: React.FC = () => {
           const amt = Number(ins.amountDue || 0);
 
           // Confirmed Settled: PASS, NEFT, CASH, PAID
-          if (['PASS', 'NEFT', 'CASH', 'PAID'].includes(st)) {
+          if (isPaidStatus(st)) {
             totalRecovered += amt;
             settledCount++;
-            if (st.includes('NEFT')) {
+            if (st === 'NEFT') {
               neftCount++;
               neftAmount += amt;
-            } else if (st.includes('CASH')) {
+            } else if (st === 'CASH' || st === 'CSH') {
               cashCount++;
               cashAmount += amt;
             } else {
               passCount++;
               passAmount += amt;
             }
-          } else if (['RET', 'RET NEFT', 'RET PASS'].includes(st)) {
+          } else if (isBounceStatus(st)) {
             bouncedCount++;
             bouncedAmount += amt;
-          } else if (['CLS', 'CS'].includes(st)) {
+          } else if (getStatusCategory(st) === 'other') {
             unclassifiedCount++;
           } else {
             pendingCount++;
@@ -130,7 +134,17 @@ export const DashboardView: React.FC = () => {
         });
       });
 
-      const totalOutstanding = Math.max(0, totalDeployed - totalRecovered);
+      totalOutstanding = loans.reduce((sum, loan) => {
+        if (Number.isFinite(Number(loan.totalOutstanding))) return sum + Number(loan.totalOutstanding);
+        const scheduled = loan.isOpeningBalanceOnly ? 0 : Number(loan.totalAmount || 0);
+        const opening = Number(loan.openingBalance || 0) * (loan.openingBalanceType === 'CREDIT' ? -1 : 1);
+        const recovered = (loan.installments || []).reduce(
+          (paid, installment) => paid + (isPaidStatus(installment.status) ? Number(installment.amountDue || 0) : 0),
+          0
+        );
+        return sum + Math.max(0, opening + scheduled - recovered);
+      }, 0);
+
       const collectionRate = totalDeployed > 0 ? (totalRecovered / totalDeployed) * 100 : 0;
       const activeLoansCount = loans.filter((l) => l.status !== 'Closed').length;
 
@@ -245,26 +259,31 @@ export const DashboardView: React.FC = () => {
           const amt = Number(ins.amountDue || 0);
 
           const isDueInPeriod = dueMs !== null && dueMs >= startMs && dueMs <= endMs;
-          const isRecdInPeriod = recdMs !== null && recdMs >= startMs && recdMs <= endMs;
+          const isRecdInPeriod = timeFilter === 'all'
+            ? isPaidStatus(st)
+            : recdMs !== null && recdMs >= startMs && recdMs <= endMs;
 
           // Confirmed Settled in this period
-          if (['PASS', 'NEFT', 'CASH', 'PAID'].includes(st)) {
-            if (isRecdInPeriod || isDueInPeriod) {
+          if (isPaidStatus(st)) {
+            if (isRecdInPeriod) {
               periodCollections += amt;
             }
-          } else if (['RET', 'RET NEFT', 'RET PASS'].includes(st)) {
+          } else if (isBounceStatus(st)) {
             if (isDueInPeriod) {
               periodBounced += amt;
               periodBouncedCount++;
             }
-          } else if (st === 'PENDING') {
-            if (isDueInPeriod) {
+          } else if (getStatusCategory(st) !== 'other') {
+            const todayStart = new Date();
+            todayStart.setHours(0, 0, 0, 0);
+            const dueBeforeToday = dueD !== null && dueD.getTime() < todayStart.getTime();
+            if (isDueInPeriod && dueBeforeToday) {
               periodUnpaidPastDue += amt;
               periodUnpaidCount++;
             }
           }
 
-          if (isDueInPeriod && (st === 'PENDING' || ['RET', 'RET NEFT', 'RET PASS'].includes(st))) {
+          if (isDueInPeriod && !isPaidStatus(st)) {
             periodSchedule.push({
               loanId: l.id,
               customerName: l.customerName,
@@ -376,12 +395,12 @@ export const DashboardView: React.FC = () => {
         loans.forEach((l) => {
           const lStart = parseDateString(l.startDate);
           if (lStart && lStart.getTime() >= mStart && lStart.getTime() <= mEnd) {
-            disbursed += Number(l.totalAmount) || 0;
+            disbursed += l.isOpeningBalanceOnly ? 0 : Number(l.totalAmount) || 0;
           }
           (l.installments || []).forEach((ins) => {
-            const rDate = parseDateString(ins.recdDate) || parseDateString(ins.dueDate);
+            const rDate = parseDateString(ins.recdDate);
             const st = String(ins.status || '').toUpperCase();
-            if (rDate && rDate.getTime() >= mStart && rDate.getTime() <= mEnd && ['PASS', 'NEFT', 'CASH', 'PAID'].includes(st)) {
+            if (rDate && rDate.getTime() >= mStart && rDate.getTime() <= mEnd && isPaidStatus(st)) {
               collected += Number(ins.amountDue) || 0;
             }
           });
@@ -390,8 +409,8 @@ export const DashboardView: React.FC = () => {
 
       result.push({
         month: monthStr,
-        disbursed: disbursed || (i === 0 ? portfolioMetrics.totalDeployed : 0),
-        collected: collected || (i === 0 ? portfolioMetrics.totalRecovered : 0),
+        disbursed,
+        collected,
       });
     }
     return result;

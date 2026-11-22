@@ -18,9 +18,8 @@ import { formatINR } from '@/lib/utils/formatCurrency';
 import { Loan } from '@/lib/types';
 import { DateRangePicker } from '@/components/ui/DateRangePicker';
 import { CustomSelect } from '@/components/ui/CustomSelect';
+import { isPaidStatus as isPaid } from '@/lib/utils/statusMapping';
 
-const PAID_STATUSES = new Set(['PASS', 'NEFT', 'CASH', 'CLS', 'PAID']);
-const isPaid = (s: string) => PAID_STATUSES.has(String(s || '').trim().toUpperCase());
 const dateKey = (v: string) => String(v || '').slice(0, 10);
 const fmtDate = (v: string) => {
   if (!v) return '—';
@@ -109,6 +108,13 @@ function buildLoanLedger(loans: Loan[]): LoanLedgerRow[] {
       });
     }
 
+    const scheduledAmount = loan.isOpeningBalanceOnly
+      ? 0
+      : sorted.length > 0
+        ? sorted.reduce((sum, installment) => sum + Number(installment.amountDue || 0), 0)
+        : Number(loan.totalAmount || 0);
+    const closingSigned = openingSigned + scheduledAmount - Number(loan.totalCollected || 0);
+
     return {
       loanId: loan.id,
       codeNo: loan.codeNo || '',
@@ -125,8 +131,8 @@ function buildLoanLedger(loans: Loan[]): LoanLedgerRow[] {
       totalOutstanding: Number(loan.totalOutstanding || 0),
       openingDebit: opening.debit,
       openingCredit: opening.credit,
-      closingDebit: splitBalance(openingSigned + Number(loan.totalAmount || 0) - Number(loan.totalCollected || 0)).debit,
-      closingCredit: splitBalance(openingSigned + Number(loan.totalAmount || 0) - Number(loan.totalCollected || 0)).credit,
+      closingDebit: splitBalance(closingSigned).debit,
+      closingCredit: splitBalance(closingSigned).credit,
       installmentCount: entries.length,
       entries,
     };

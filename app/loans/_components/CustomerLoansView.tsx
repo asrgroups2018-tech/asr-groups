@@ -4,11 +4,11 @@ import React, { useMemo } from 'react';
 import { ArrowLeft, CalendarClock, ChevronRight, CreditCard, ReceiptText } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useApp } from '@/lib/store';
+import { isPaidStatus } from '@/lib/utils/statusMapping';
 import { Installment, Loan } from '@/lib/types';
 import { MoneyDisplay } from '@/components/ui/MoneyDisplay';
 import { StatusPill } from '@/components/ui/StatusPill';
 
-const PAID_STATUSES = new Set(['PASS', 'NEFT', 'CASH', 'PAID', 'CLS', 'CS', 'SETTLED', 'CLOSED']);
 
 const formatDate = (value?: string | null) => {
   if (!value) return '—';
@@ -19,7 +19,7 @@ const formatDate = (value?: string | null) => {
 
 const nextUnpaidInstallment = (loans: Loan[]) => loans
   .flatMap((loan) => loan.installments.map((installment) => ({ loan, installment })))
-  .filter(({ installment }) => installment.dueDate && !PAID_STATUSES.has(String(installment.status).toUpperCase()))
+  .filter(({ installment }) => installment.dueDate && !isPaidStatus(installment.status))
   .sort((a, b) => a.installment.dueDate.localeCompare(b.installment.dueDate))[0];
 
 export const CustomerLoansView: React.FC<{ loanId?: string }> = ({ loanId }) => {
@@ -34,7 +34,7 @@ export const CustomerLoansView: React.FC<{ loanId?: string }> = ({ loanId }) => 
   const nextReminder = useMemo(() => nextUnpaidInstallment(visibleLoans), [visibleLoans]);
   const totalAmount = visibleLoans.reduce((sum, loan) => sum + Number(loan.totalAmount || 0), 0);
   const totalPaid = visibleLoans.reduce((sum, loan) => sum + Number(loan.totalCollected || 0), 0);
-  const outstanding = Math.max(0, totalAmount - totalPaid);
+  const outstanding = visibleLoans.reduce((sum, loan) => sum + Number(loan.totalOutstanding || 0), 0);
 
   if (isLoading && loans.length === 0) return <div className="space-y-5 animate-pulse"><div className="h-36 rounded-3xl bg-slate-200" /><div className="grid gap-3 md:grid-cols-3"><div className="h-28 rounded-2xl bg-slate-200" /><div className="h-28 rounded-2xl bg-slate-200" /><div className="h-28 rounded-2xl bg-slate-200" /></div><div className="h-72 rounded-3xl bg-slate-200" /></div>;
   if (loanId && visibleLoans.length === 0) return <div className="rounded-3xl border border-slate-200 bg-white p-10 text-center shadow-sm"><CreditCard className="mx-auto h-10 w-10 text-slate-300" /><h2 className="mt-3 text-base font-bold text-slate-900">Loan record not found</h2><p className="mt-1 text-xs text-slate-500">This loan is not assigned to your account.</p><button onClick={() => router.push('/loans')} className="mt-5 rounded-xl bg-[#701A35] px-4 py-2.5 text-xs font-bold text-white">Return to Loans</button></div>;

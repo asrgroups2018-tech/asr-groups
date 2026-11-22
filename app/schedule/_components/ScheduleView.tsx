@@ -26,6 +26,7 @@ import { FloatingPopover } from '@/components/ui/FloatingPopover';
 import { exportLoansToExcel, exportLoansToPDF } from '@/lib/utils/exportLoansLedger';
 import { getDerivedLoanStatus } from '@/app/loans/_components/LoansListView';
 import { getAuthorizedLoansForExport, requestLoanExportAccess } from '@/lib/exportAuthorization';
+import { isPaidStatus } from '@/lib/utils/statusMapping';
 
 function parseToDate(dStr: string | null | undefined): Date | null {
   if (!dStr) return null;
@@ -122,7 +123,7 @@ export const ScheduleView: React.FC = () => {
         const normLoan = String(loan.status || '').trim().toUpperCase();
         const normFilter = statusFilter.toUpperCase();
         if (normFilter === 'CLEARED') {
-          const isCleared = ['CLEARED', 'CLOSED', 'PAID', 'PASS', 'SETTLED'].includes(normLoan) || (loan.totalCollected || 0) >= loan.totalAmount;
+          const isCleared = isPaidStatus(normLoan) || (loan.totalAmount > 0 && (loan.totalCollected || 0) >= loan.totalAmount);
           if (!isCleared) return false;
         } else if (normFilter === 'PENDING') {
           const isPending = ['PENDING', 'ACTIVE', 'ON TRACK', 'DRAFT'].includes(normLoan);
@@ -175,7 +176,7 @@ export const ScheduleView: React.FC = () => {
       totalCapital += l.totalAmount || 0;
       (l.installments || []).forEach((inst) => {
         totalCycles += 1;
-        const isPaid = ['CLEARED', 'NEFT', 'RTGS', 'CASH', 'PASS', 'CLS', 'PAID', 'CLOSED', 'SETTLED', 'Paid'].includes(inst.status?.trim().toUpperCase());
+        const isPaid = isPaidStatus(inst.status);
         if (isPaid) {
           paidCycles += 1;
         } else {
@@ -455,13 +456,13 @@ export const ScheduleView: React.FC = () => {
             {filteredLoans.map((loan) => {
               const isExpanded = expandedLoanIds.has(loan.id);
               const insts = loan.installments || [];
-              const paidCount = insts.filter((i) => ['CLEARED', 'NEFT', 'RTGS', 'CASH', 'PASS', 'CLS', 'CS', 'PAID', 'CLOSED', 'SETTLED', 'Paid'].includes(i.status?.trim().toUpperCase())).length;
+              const paidCount = insts.filter((i) => isPaidStatus(i.status)).length;
               const totalCycles = insts.length;
               const percentPaid = totalCycles > 0 ? Math.round((paidCount / totalCycles) * 100) : 0;
               const nextPending = insts.find((i) => ['PENDING', 'ACTIVE', 'DRAFT'].includes(i.status?.trim().toUpperCase()));
 
               const isLoanPaid =
-                ['CLEARED', 'NEFT', 'RTGS', 'CASH', 'PASS', 'PAID', 'CLOSED', 'SETTLED'].includes(String(loan.status || '').trim().toUpperCase()) ||
+                isPaidStatus(loan.status) ||
                 (loan.totalCollected || 0) >= loan.totalAmount;
 
               return (
@@ -585,7 +586,7 @@ export const ScheduleView: React.FC = () => {
                               </thead>
                               <tbody className="divide-y divide-slate-100 font-mono">
                                 {insts.map((row) => {
-                                  const isPaid = ['CLEARED', 'NEFT', 'RTGS', 'CASH', 'PASS', 'CLS', 'CS', 'PAID', 'CLOSED', 'SETTLED', 'Paid'].includes(row.status?.trim().toUpperCase());
+                                  const isPaid = isPaidStatus(row.status);
                                   return (
                                     <tr
                                       key={row.id || row.seqNo}

@@ -70,9 +70,11 @@ export const ExpenseRegister: React.FC<{ dateRange: DateRange; period: Period; p
 
       const totalAmount = Number(loan.totalAmount || 0);
       const interestAmount = Number(loan.interestAmount || 0);
-      const disbursedAmount = loan.disbursedAmount != null
-        ? Number(loan.disbursedAmount)
-        : Math.max(0, totalAmount - interestAmount);
+      const disbursedAmount = loan.isOpeningBalanceOnly
+        ? 0
+        : loan.disbursedAmount != null
+          ? Number(loan.disbursedAmount)
+          : Math.max(0, totalAmount - interestAmount);
 
       // Company splits
       const compCells: { name: string; amount: number }[] = [];

@@ -15,9 +15,7 @@ import { useApp } from '@/lib/store';
 import { APP_BRAND } from '@/lib/branding';
 import { formatINR } from '@/lib/utils/formatCurrency';
 import { Loan } from '@/lib/types';
-
-const PAID_STATUSES = new Set(['PASS', 'NEFT', 'CASH', 'CLS', 'PAID']);
-const isPaid = (s: string) => PAID_STATUSES.has(String(s || '').trim().toUpperCase());
+import { isBounceStatus as isBounced, isPaidStatus as isPaid } from '@/lib/utils/statusMapping';
 
 const safeFileName = (v: string) =>
   v.replace(/[^a-z0-9_-]+/gi, '_').replace(/^_+|_+$/g, '').toLowerCase() || 'report';
@@ -36,14 +34,12 @@ interface AreaRow {
   collectionRate: number;   // totalCollected / totalDue * 100
 }
 
-const BOUNCE_STATUSES = new Set(['RET', 'RET NEFT', 'RET PASS', 'BOUNCE', 'RETURNED']);
-const isBounced = (s: string) => BOUNCE_STATUSES.has(String(s || '').trim().toUpperCase());
-
 function buildAreaData(loans: Loan[]): AreaRow[] {
   const map = new Map<string, {
     loanIds: Set<string>;
     customerIds: Set<string>;
     totalPortfolio: number;
+    totalOutstanding: number;
     totalDue: number;
     totalCollected: number;
     totalBounced: number;
@@ -53,12 +49,13 @@ function buildAreaData(loans: Loan[]): AreaRow[] {
   for (const loan of loans) {
     const area = (loan.place || 'Unknown').trim().toUpperCase() || 'UNKNOWN';
     if (!map.has(area)) {
-      map.set(area, { loanIds: new Set(), customerIds: new Set(), totalPortfolio: 0, totalDue: 0, totalCollected: 0, totalBounced: 0, bouncedAmount: 0 });
+      map.set(area, { loanIds: new Set(), customerIds: new Set(), totalPortfolio: 0, totalOutstanding: 0, totalDue: 0, totalCollected: 0, totalBounced: 0, bouncedAmount: 0 });
     }
     const row = map.get(area)!;
     row.loanIds.add(loan.id);
     row.customerIds.add(loan.customerId);
-    row.totalPortfolio += Number(loan.totalAmount || 0);
+    row.totalPortfolio += loan.isOpeningBalanceOnly ? 0 : Number(loan.totalAmount || 0);
+    row.totalOutstanding += Number(loan.totalOutstanding || 0);
 
     for (const inst of loan.installments || []) {
       const due = Number(inst.amountDue || 0);
@@ -76,7 +73,7 @@ function buildAreaData(loans: Loan[]): AreaRow[] {
       totalPortfolio: d.totalPortfolio,
       totalDue: d.totalDue,
       totalCollected: d.totalCollected,
-      totalOutstanding: Math.max(0, d.totalDue - d.totalCollected),
+      totalOutstanding: d.totalOutstanding,
       totalBounced: d.totalBounced,
       bouncedAmount: d.bouncedAmount,
       collectionRate: d.totalDue > 0 ? (d.totalCollected / d.totalDue) * 100 : 0,
