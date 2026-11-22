@@ -56,6 +56,7 @@ export interface User {
   sessions: UserSession[];
   isCustomer: boolean;
   customerId?: string;
+  partnerCompanyId?: string;
 }
 
 export type AuditActor = Pick<User, 'id' | 'name' | 'primaryRoleId'> & {
@@ -357,6 +358,39 @@ export interface Company {
   outstandingAmount?: number; // Total principal/interest still due to this company
   activeLoansCount?: number;
   createdAt: string;
+}
+
+export interface PartnerPortalTransaction {
+  date: string;
+  dueDate?: string;
+  receivedDate?: string;
+  category: 'Capital allocated' | 'Scheduled return';
+  expectedAmount: number;
+  receivedAmount: number;
+  status: string;
+}
+
+export interface PartnerPortalMonth {
+  month: string;
+  capitalAllocated: number;
+  scheduledReturn: number;
+  receivedReturn: number;
+}
+
+export interface PartnerPortalData {
+  company: { name: string; shortCode: string };
+  openingBalance: number;
+  totalFunded: number;
+  capitalDeployed: number;
+  totalScheduledReturn: number;
+  totalReceivedReturn: number;
+  remainingScheduledReturn: number;
+  capitalSharePercent: number;
+  recoveryPercent: number;
+  projectedProfitLoss: number;
+  projectedProfitLossPercent: number;
+  transactions: PartnerPortalTransaction[];
+  monthly: PartnerPortalMonth[];
 }
 
 // 3. Loan Overall Contribution Ratio

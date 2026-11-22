@@ -33,9 +33,10 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const isCustomerAccount = Array.isArray(body.assignedRoleIds) && body.assignedRoleIds.length === 1 && Number(body.assignedRoleIds[0]) === CUSTOMER_ROLE_ID;
-    if (!body.name || (!body.email && (!isCustomerAccount || !body.customerId)) || !body.assignedRoleIds?.length) {
+    const isPartnerAccount = typeof body.partnerCompanyId === 'string' && body.partnerCompanyId.trim().length > 0;
+    if (!body.name || (!body.email && (!isCustomerAccount || !body.customerId)) || (!body.assignedRoleIds?.length && !isPartnerAccount)) {
       return NextResponse.json(
-        { success: false, error: 'Name, email, and at least one role are required.' },
+        { success: false, error: 'Name, sign-in details, and an account type are required.' },
         { status: 400 }
       );
     }
@@ -53,7 +54,7 @@ export async function POST(request: NextRequest) {
       actorRoleId: auth.user.primaryRoleId,
       action: 'Created User',
       target: `${newUser.name} (${newUser.id})`,
-      afterVal: JSON.stringify({ email: newUser.email, roles: newUser.assignedRoleIds }),
+      afterVal: JSON.stringify({ email: newUser.email, roles: newUser.assignedRoleIds, partnerCompanyId: newUser.partnerCompanyId }),
       isSensitive: true,
     });
     return NextResponse.json({ success: true, data: toPublicUser(newUser) }, { status: 201 });

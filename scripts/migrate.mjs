@@ -65,8 +65,15 @@ async function runMigration() {
     two_factor_enabled INTEGER NOT NULL DEFAULT 0,
     suspend_reason TEXT,
     sessions TEXT DEFAULT '[]',
-    is_customer INTEGER NOT NULL DEFAULT 0
+    is_customer INTEGER NOT NULL DEFAULT 0,
+    partner_company_id TEXT
   );`);
+  try {
+    await client.execute('ALTER TABLE users ADD COLUMN partner_company_id TEXT');
+  } catch {
+    // The company binding column already exists.
+  }
+  await client.execute('CREATE INDEX IF NOT EXISTS idx_users_partner_company ON users(partner_company_id)');
   await client.execute(`CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);`);
   await client.execute(`CREATE INDEX IF NOT EXISTS idx_users_status ON users(status);`);
   await client.execute(`CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);`);

@@ -64,6 +64,7 @@ export async function POST(request: NextRequest) {
       success: true,
       data: {
         token,
+        redirectTo: user.partnerCompanyId ? '/partner' : '/dashboard',
         user: {
           id: user.id,
           name: user.name,

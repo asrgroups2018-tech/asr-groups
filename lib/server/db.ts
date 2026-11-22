@@ -8,6 +8,7 @@ import * as adminOps from './administration';
 import * as accessRequestOps from './accessRequests';
 import * as chequeOps from './cheques';
 import * as requestOps from './requests';
+import * as partnerPortalOps from './partnerPortal';
 
 export * from './customers';
 export * from './companies';
@@ -31,6 +32,7 @@ export const db = {
   // Companies
   getCompanies: companyOps.getCompanies,
   getCompanyById: companyOps.getCompanyById,
+  getPartnerPortalData: partnerPortalOps.getPartnerPortalData,
   createCompany: companyOps.createCompany,
   updateCompanyOpeningBalance: companyOps.updateCompanyOpeningBalance,
   deleteCompany: companyOps.deleteCompany,

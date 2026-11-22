@@ -11,7 +11,6 @@ export async function proxy(request: NextRequest) {
   if (
     pathname.startsWith('/_next') ||
     isPublicAsset(pathname) ||
-    pathname === '/' ||
     pathname === '/login' ||
     pathname === '/api/auth/login' ||
     pathname === '/api/auth/logout' ||
@@ -45,6 +44,7 @@ export async function proxy(request: NextRequest) {
   }
 
   if (!user) {
+    if (pathname === '/') return NextResponse.next();
     if (pathname.startsWith('/api/')) {
       return NextResponse.json({ success: false, error: 'Authentication required.' }, { status: 401 });
     }
@@ -52,6 +52,15 @@ export async function proxy(request: NextRequest) {
     const loginUrl = new URL('/login', request.url);
     loginUrl.searchParams.set('next', `${pathname}${request.nextUrl.search}`);
     return NextResponse.redirect(loginUrl);
+  }
+
+  if (user.partnerCompanyId) {
+    if (pathname === '/partner') return NextResponse.next();
+    if (pathname === '/api/partner/portal' && request.method === 'GET') return NextResponse.next();
+    if (pathname.startsWith('/api/')) {
+      return NextResponse.json({ success: false, error: 'This account can only access its assigned company portal.' }, { status: 403 });
+    }
+    return NextResponse.redirect(new URL('/partner', request.url));
   }
 
   const isAdministratorRoute =

@@ -15,7 +15,7 @@ import { StatusPill } from '@/components/ui/StatusPill';
 import { MoneyDisplay } from '@/components/ui/MoneyDisplay';
 import { getDerivedLoanStatus } from '@/app/loans/_components/LoansListView';
 
-export const CustomerDetailsView: React.FC = () => {
+export const CustomerDetailsView: React.FC<{ customerId?: string }> = ({ customerId: routeCustomerId }) => {
   const router = useRouter();
   const {
     customers,
@@ -27,12 +27,19 @@ export const CustomerDetailsView: React.FC = () => {
     isLoading,
   } = useApp();
 
-  const cleanSelectedId = String(selectedCustomerId || '').trim().toLowerCase();
+  const rawCustomerId = routeCustomerId ?? selectedCustomerId ?? '';
+  let decodedCustomerId = String(rawCustomerId);
+  try {
+    decodedCustomerId = decodeURIComponent(decodedCustomerId);
+  } catch {
+    // Keep the original ID if the route contains a literal percent sign.
+  }
+  const cleanSelectedId = decodedCustomerId.trim().toLowerCase();
   const customer = customers.find(
     (c) =>
-      c.id.toLowerCase() === cleanSelectedId ||
-      c.name.toLowerCase() === cleanSelectedId ||
-      (c.codeNo && c.codeNo.toLowerCase() === cleanSelectedId)
+      c.id.trim().toLowerCase() === cleanSelectedId ||
+      c.name.trim().toLowerCase() === cleanSelectedId ||
+      (c.codeNo && c.codeNo.trim().toLowerCase() === cleanSelectedId)
   );
 
   if (!customer) {

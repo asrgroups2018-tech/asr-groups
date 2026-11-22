@@ -31,6 +31,15 @@ export async function authorizeRequest(
     };
   }
 
+  if (user.partnerCompanyId) {
+    const isPartnerPortalRead = request.nextUrl.pathname === '/api/partner/portal' && request.method === 'GET';
+    if (isPartnerPortalRead) return { ok: true, user };
+    return {
+      ok: false,
+      response: NextResponse.json({ success: false, error: 'This account can only access its assigned company portal.' }, { status: 403 }),
+    };
+  }
+
   if (!module || !action) return { ok: true, user };
 
   if (module === 'admin' && !isSuperAdmin(user)) {

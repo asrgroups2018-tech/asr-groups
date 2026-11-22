@@ -108,6 +108,7 @@ export function mapUserRow(row: any): User {
     sessions: parseJson<UserSession[]>(row.sessions, []),
     isCustomer: Boolean(row.is_customer) || Number(row.primary_role_id) === CUSTOMER_ROLE_ID,
     customerId: row.customer_id ? String(row.customer_id) : undefined,
+    partnerCompanyId: row.partner_company_id ? String(row.partner_company_id) : undefined,
   };
 }
 
@@ -335,8 +336,18 @@ export async function createUser(user: Omit<User, 'id' | 'createdAt' | 'lastLogi
   const newId = `USR-${1000 + totalCount + 1}`;
   const now = new Date().toISOString().slice(0, 16).replace('T', ' ');
 
-  const isAdmin = user.assignedRoleIds.includes(0) || user.assignedRoleIds.includes(1);
-  const isCustomer = user.assignedRoleIds.length === 1 && user.assignedRoleIds[0] === CUSTOMER_ROLE_ID;
+  const partnerCompanyId = user.partnerCompanyId?.trim() || undefined;
+  let assignedRoleIds = user.assignedRoleIds;
+  let primaryRoleId = user.primaryRoleId;
+  if (partnerCompanyId) {
+    const companyResult = await client.execute({ sql: 'SELECT id FROM companies WHERE id = ? AND is_outside_party = 1 AND (is_active IS NULL OR is_active != 0) LIMIT 1', args: [partnerCompanyId] });
+    if (companyResult.rows.length === 0) throw new Error('Choose an active outside-party company before creating this account.');
+    const partnerRole = await ensureCompanyPartnerRole(client);
+    assignedRoleIds = [partnerRole.id];
+    primaryRoleId = partnerRole.id;
+  }
+  const isAdmin = !partnerCompanyId && (assignedRoleIds.includes(0) || assignedRoleIds.includes(1));
+  const isCustomer = !partnerCompanyId && assignedRoleIds.length === 1 && assignedRoleIds[0] === CUSTOMER_ROLE_ID;
   if (isCustomer) {
     if (!user.customerId) throw new Error('Select an existing customer before creating a customer login.');
     const customerResult = await client.execute({ sql: 'SELECT id, code_no FROM customers WHERE id = ? LIMIT 1', args: [user.customerId] });
@@ -349,18 +360,21 @@ export async function createUser(user: Omit<User, 'id' | 'createdAt' | 'lastLogi
     : undefined;
   const newUser: User = {
     ...user,
+    assignedRoleIds,
+    primaryRoleId,
     id: newId,
     phone: user.phone || '',
     department: user.department || '',
     designation: user.designation || '',
-    username: isAdmin ? undefined : (customerAccountId || user.username || user.name.toLowerCase().replace(/[^a-z0-9]/g, '.')),
-    loginMethod: isAdmin ? 'email' : 'username',
+    username: isAdmin || partnerCompanyId ? undefined : (customerAccountId || user.username || user.name.toLowerCase().replace(/[^a-z0-9]/g, '.')),
+    loginMethod: isAdmin || partnerCompanyId ? 'email' : 'username',
     tempPassword: user.tempPassword || randomBytes(18).toString('base64url'),
     createdAt: now,
     lastLogin: 'Never',
     sessions: [],
     isCustomer,
     customerId: isCustomer ? user.customerId : undefined,
+    partnerCompanyId,
   };
 
   const passwordToStore = newUser.tempPassword ? hashPasswordValue(newUser.tempPassword) : null;
@@ -370,8 +384,8 @@ export async function createUser(user: Omit<User, 'id' | 'createdAt' | 'lastLogi
       id, name, username, email, phone, temp_password, login_method, avatar, initials,
       assigned_role_ids, primary_role_id, status, department, designation, joined_date,
       created_at, last_login, address, emergency_contact, two_factor_enabled, suspend_reason,
-      sessions, is_customer, customer_id
-    ) VALUES (?, ?, ?, ?, COALESCE(?, ''), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      sessions, is_customer, customer_id, partner_company_id
+    ) VALUES (?, ?, ?, ?, COALESCE(?, ''), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     args: [
       newUser.id,
       newUser.name,
@@ -397,6 +411,7 @@ export async function createUser(user: Omit<User, 'id' | 'createdAt' | 'lastLogi
       JSON.stringify(newUser.sessions),
       newUser.isCustomer ? 1 : 0,
       newUser.customerId || null,
+      newUser.partnerCompanyId || null,
     ],
   });
 
@@ -411,7 +426,17 @@ export async function updateUser(id: string, updates: Partial<User>): Promise<Us
   if (!existing) return null;
 
   const updated = { ...existing, ...updates };
-  const isCustomer = updated.assignedRoleIds.length === 1 && updated.assignedRoleIds[0] === CUSTOMER_ROLE_ID;
+  const partnerCompanyId = updated.partnerCompanyId?.trim() || undefined;
+  if (partnerCompanyId) {
+    const companyResult = await client.execute({ sql: 'SELECT id FROM companies WHERE id = ? AND is_outside_party = 1 AND (is_active IS NULL OR is_active != 0) LIMIT 1', args: [partnerCompanyId] });
+    if (companyResult.rows.length === 0) throw new Error('The selected active outside-party company is no longer available.');
+    const partnerRole = await ensureCompanyPartnerRole(client);
+    updated.assignedRoleIds = [partnerRole.id];
+    updated.primaryRoleId = partnerRole.id;
+    updated.isCustomer = false;
+    updated.customerId = undefined;
+  }
+  const isCustomer = !partnerCompanyId && updated.assignedRoleIds.length === 1 && updated.assignedRoleIds[0] === CUSTOMER_ROLE_ID;
   if (isCustomer) {
     if (!updated.customerId) throw new Error('A customer login must remain mapped to an existing customer.');
     const customerResult = await client.execute({ sql: 'SELECT id FROM customers WHERE id = ? LIMIT 1', args: [updated.customerId] });
@@ -425,7 +450,8 @@ export async function updateUser(id: string, updates: Partial<User>): Promise<Us
     updates.primaryRoleId !== undefined ||
     updates.assignedRoleIds !== undefined ||
     updates.isCustomer !== undefined ||
-    updates.customerId !== undefined;
+    updates.customerId !== undefined ||
+    updates.partnerCompanyId !== undefined;
   const passwordToStore = updated.tempPassword
     ? updated.tempPassword.startsWith('scrypt$')
       ? updated.tempPassword
@@ -437,7 +463,7 @@ export async function updateUser(id: string, updates: Partial<User>): Promise<Us
       name = ?, username = ?, email = ?, phone = ?, temp_password = ?, login_method = ?,
       avatar = ?, initials = ?, assigned_role_ids = ?, primary_role_id = ?, status = ?,
       department = ?, designation = ?, joined_date = ?, address = ?, emergency_contact = ?,
-      two_factor_enabled = ?, suspend_reason = ?, sessions = ?, is_customer = ?, customer_id = ?
+      two_factor_enabled = ?, suspend_reason = ?, sessions = ?, is_customer = ?, customer_id = ?, partner_company_id = ?
     WHERE id = ?`,
     args: [
       updated.name,
@@ -461,6 +487,7 @@ export async function updateUser(id: string, updates: Partial<User>): Promise<Us
       JSON.stringify(updated.sessions),
       isCustomer ? 1 : 0,
       isCustomer ? updated.customerId || null : null,
+      partnerCompanyId || null,
       id,
     ],
   });
@@ -480,6 +507,20 @@ export async function updateUser(id: string, updates: Partial<User>): Promise<Us
   }
 
   return updated;
+}
+
+async function ensureCompanyPartnerRole(client: ReturnType<typeof getTursoClient>): Promise<Role> {
+  const existing = await client.execute({ sql: 'SELECT * FROM roles WHERE code = ? LIMIT 1', args: ['COMPANY_PARTNER'] });
+  if (existing.rows.length) return mapRoleRow(existing.rows[0]);
+  await client.execute({
+    sql: `INSERT OR IGNORE INTO roles (id, name, code, description, color_name, bg_class, text_class, border_class, hex_color, is_system_protected, user_count, hierarchy_level)
+          SELECT COALESCE(MAX(id) + 1, 0), ?, ?, ?, ?, ?, ?, ?, ?, 1, 0, ?
+          FROM roles WHERE NOT EXISTS (SELECT 1 FROM roles WHERE code = ?)`,
+    args: ['Company Partner', 'COMPANY_PARTNER', 'Company-scoped account for viewing only its assigned funding and return information.', 'slate', 'bg-slate-100', 'text-slate-700', 'border-slate-300', '#475569', 7, 'COMPANY_PARTNER'],
+  });
+  const created = await client.execute({ sql: 'SELECT * FROM roles WHERE code = ? LIMIT 1', args: ['COMPANY_PARTNER'] });
+  if (!created.rows.length) throw new Error('Unable to create the company partner access role.');
+  return mapRoleRow(created.rows[0]);
 }
 
 export async function deleteUser(id: string): Promise<boolean> {

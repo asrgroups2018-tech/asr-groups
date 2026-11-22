@@ -169,7 +169,8 @@ export const SCHEMA_STATEMENTS = [
     suspend_reason TEXT,
     sessions TEXT DEFAULT '[]',
     is_customer INTEGER NOT NULL DEFAULT 0,
-    customer_id TEXT REFERENCES customers(id)
+    customer_id TEXT REFERENCES customers(id),
+    partner_company_id TEXT REFERENCES companies(id)
   );`,
   `CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);`,
   `CREATE INDEX IF NOT EXISTS idx_users_status ON users(status);`,
@@ -431,6 +432,7 @@ export function initializeSchema(client: Client): Promise<void> {
       // Add columns introduced after the original schema was deployed.
       // Each statement is intentionally idempotent for existing Turso/SQLite databases.
       for (const statement of [
+        'ALTER TABLE users ADD COLUMN partner_company_id TEXT REFERENCES companies(id)',
         'ALTER TABLE customers ADD COLUMN code_no TEXT',
         'ALTER TABLE customers ADD COLUMN closing_balance REAL NOT NULL DEFAULT 0',
         'ALTER TABLE approval_requests ADD COLUMN requester_email TEXT',
@@ -462,6 +464,7 @@ export function initializeSchema(client: Client): Promise<void> {
           // The column already exists.
         }
       }
+      await client.execute('CREATE INDEX IF NOT EXISTS idx_users_partner_company ON users(partner_company_id)');
 
       // This index must be created after the idempotent column migrations
       // above because older databases do not have payment_through yet.

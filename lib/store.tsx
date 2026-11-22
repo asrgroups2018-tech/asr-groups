@@ -336,7 +336,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isSavingReceipt, setIsSavingReceipt] = useState<boolean>(false);
-  const loadedDataScopeRef = React.useRef<'core' | 'full' | null>(null);
+  const loadedDataScopeRef = React.useRef<'core' | 'full' | 'partner' | null>(null);
 
   const resetSessionData = useCallback(() => {
     // These collections are session-scoped. Never allow records loaded for a
@@ -473,6 +473,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return;
     }
 
+    if (authenticatedUser.partnerCompanyId) {
+      setUsers([]);
+      setCustomers([]);
+      setCompanies([]);
+      setLoans([]);
+      setCheques([]);
+      setReceipts([]);
+      setDashboardData(null);
+      loadedDataScopeRef.current = 'partner';
+      setIsLoading(false);
+      return;
+    }
+
     const isCustomerSession = authenticatedUser.isCustomer || authenticatedUser.primaryRoleId === CUSTOMER_ROLE_ID;
     const isSuperAdminSession = authenticatedUser.assignedRoleIds.includes(0);
     const loadAdminData = isSuperAdminSession && pathname.startsWith('/administration');
@@ -542,9 +555,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
     const needsAdminData = authenticatedUser.assignedRoleIds.includes(0) && pathname.startsWith('/administration');
     const needsDashboardData = pathname === '/dashboard' && hasModulePermission('dashboard');
-    const hasRequiredData =
-      (loadedDataScopeRef.current === 'full' || (!needsAdminData && loadedDataScopeRef.current === 'core')) &&
-      (!needsDashboardData || dashboardData !== null);
+    const hasRequiredData = authenticatedUser.partnerCompanyId
+      ? loadedDataScopeRef.current === 'partner'
+      : (loadedDataScopeRef.current === 'full' || (!needsAdminData && loadedDataScopeRef.current === 'core')) &&
+        (!needsDashboardData || dashboardData !== null);
     if (!hasRequiredData) {
       refreshAll(true);
     }

@@ -15,6 +15,7 @@ interface LoginCredentials {
 
 interface LoginResponse {
   token: string;
+  redirectTo?: string;
   user: { id: string; name: string; role: string };
 }
 
@@ -115,9 +116,11 @@ export default function LoginPage() {
 
       setSuccess(true);
       const requestedPath = new URLSearchParams(window.location.search).get("next");
-      const target = requestedPath && requestedPath.startsWith("/") && !requestedPath.startsWith("//")
-        ? requestedPath
-        : "/dashboard";
+      const target = res.redirectTo === "/partner"
+        ? "/partner"
+        : requestedPath && requestedPath.startsWith("/") && !requestedPath.startsWith("//")
+          ? requestedPath
+          : res.redirectTo || "/dashboard";
       router.replace(target);
     } catch (err: unknown) {
       if (err instanceof DOMException && err.name === "AbortError") {
