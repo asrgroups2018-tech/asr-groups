@@ -340,8 +340,8 @@ export async function createUser(user: Omit<User, 'id' | 'createdAt' | 'lastLogi
   let assignedRoleIds = user.assignedRoleIds;
   let primaryRoleId = user.primaryRoleId;
   if (partnerCompanyId) {
-    const companyResult = await client.execute({ sql: 'SELECT id FROM companies WHERE id = ? AND is_outside_party = 1 AND (is_active IS NULL OR is_active != 0) LIMIT 1', args: [partnerCompanyId] });
-    if (companyResult.rows.length === 0) throw new Error('Choose an active outside-party company before creating this account.');
+    const companyResult = await client.execute({ sql: 'SELECT id FROM companies WHERE id = ? AND (is_active IS NULL OR is_active != 0) LIMIT 1', args: [partnerCompanyId] });
+    if (companyResult.rows.length === 0) throw new Error('Choose an active company before creating this account.');
     const partnerRole = await ensureCompanyPartnerRole(client);
     assignedRoleIds = [partnerRole.id];
     primaryRoleId = partnerRole.id;
@@ -428,8 +428,8 @@ export async function updateUser(id: string, updates: Partial<User>): Promise<Us
   const updated = { ...existing, ...updates };
   const partnerCompanyId = updated.partnerCompanyId?.trim() || undefined;
   if (partnerCompanyId) {
-    const companyResult = await client.execute({ sql: 'SELECT id FROM companies WHERE id = ? AND is_outside_party = 1 AND (is_active IS NULL OR is_active != 0) LIMIT 1', args: [partnerCompanyId] });
-    if (companyResult.rows.length === 0) throw new Error('The selected active outside-party company is no longer available.');
+    const companyResult = await client.execute({ sql: 'SELECT id FROM companies WHERE id = ? AND (is_active IS NULL OR is_active != 0) LIMIT 1', args: [partnerCompanyId] });
+    if (companyResult.rows.length === 0) throw new Error('The selected active company is no longer available.');
     const partnerRole = await ensureCompanyPartnerRole(client);
     updated.assignedRoleIds = [partnerRole.id];
     updated.primaryRoleId = partnerRole.id;
