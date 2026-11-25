@@ -83,7 +83,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpenMobile, onCloseMobile })
 
   const allNavItems: NavItem[] = [
     { id: 'dashboard', href: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard className="w-4 h-4" /> },
-    { id: 'partner', href: '/partner', label: 'Company Account', icon: <Landmark className="w-4 h-4" /> },
+    ...(currentActor.partnerCompanyId ? [{ id: 'partner', href: '/partner', label: 'Company Account', icon: <Landmark className="w-4 h-4" /> }] : []),
     { id: 'loans', href: '/loans', label: 'Loans', icon: <CreditCard className="w-4 h-4" /> },
     { id: 'customers', href: '/customers', label: 'Customers', icon: <Users className="w-4 h-4" /> },
     { id: 'companies', href: '/companies', label: 'Companies', icon: <Building2 className="w-4 h-4" /> },

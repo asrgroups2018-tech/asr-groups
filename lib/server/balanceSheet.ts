@@ -16,7 +16,7 @@ async function ensureDbInitialized() {
 function normalizeEntry(value: unknown, index: number): BalanceSheetEntry {
   const item = (value && typeof value === 'object' ? value : {}) as Record<string, unknown>;
   const side: BalanceSheetSide = item.side === 'assets' ? 'assets' : 'liabilities';
-  const sourceKey = ['PORTFOLIO_FUNDING', 'CUSTOMER_RECEIVABLES', 'COLLECTIONS'].includes(String(item.sourceKey))
+  const sourceKey = ['PORTFOLIO_FUNDING', 'CUSTOMER_RECEIVABLES', 'COLLECTIONS', 'CALCULATED'].includes(String(item.sourceKey))
     ? String(item.sourceKey) as BalanceSheetEntry['sourceKey']
     : 'MANUAL';
   return {
@@ -100,7 +100,7 @@ async function ensureMainDocument(): Promise<void> {
   });
 }
 
-function mapReportRow(row: any): BalanceSheetDocument {
+function mapReportRow(row: Record<string, unknown>): BalanceSheetDocument {
   let entries: unknown[] = [];
   try { entries = JSON.parse(String(row.entries || '[]')); } catch { entries = []; }
   const document = addSourceKeys(normalizeDocument({ id: row.id, title: row.title, asOfDate: row.as_of_date, entries }, String(row.id)));

@@ -19,6 +19,9 @@ import { useApp } from '@/lib/store';
 import { BalanceSheetDocument, BalanceSheetEntry, BalanceSheetSide, sumBalanceSheetSide } from '@/lib/balanceSheet';
 import { formatINR } from '@/lib/utils/formatCurrency';
 import { numberToIndianWords } from '@/lib/utils/numberToWords';
+import { AccountingLine, buildReportAccounting } from '@/lib/reportAccounting';
+import { ManualReceipt } from '@/lib/types';
+import { ReportPeriodBar, useReportPeriod } from './ReportPeriodBar';
 
 const SIDE_LABELS: Record<BalanceSheetSide, string> = {
   liabilities: 'Liabilities',
@@ -51,16 +54,36 @@ function groupEntries(entries: BalanceSheetEntry[], side: BalanceSheetSide) {
   return Array.from(groups.entries());
 }
 
+function mergeLiveBalanceSheet(document: BalanceSheetDocument, accounting: ReturnType<typeof buildReportAccounting>): BalanceSheetDocument {
+  // Only entries explicitly marked manual survive the live overlay. This
+  // removes legacy calculated IDs as well as old capital/receivable rows,
+  // preventing stale values from being counted alongside the current period.
+  const manualEntries = document.entries.filter((entry) => !entry.sourceKey || entry.sourceKey === 'MANUAL');
+  const generatedEntries: BalanceSheetEntry[] = [...accounting.balanceSheetLiabilities, ...accounting.balanceSheetAssets].map((line: AccountingLine) => ({
+    id: line.id,
+    side: line.side,
+    groupName: line.groupName,
+    label: line.label,
+    amount: line.amount,
+    sortOrder: line.sortOrder,
+    sourceKey: line.sourceKey,
+  }));
+  return { ...document, asOfDate: accounting.period.toDate, entries: [...manualEntries, ...generatedEntries] };
+}
+
 export const BalanceSheet: React.FC = () => {
-  const { showToast } = useApp();
-  const [document, setDocument] = useState<BalanceSheetDocument | null>(null);
+  const { showToast, loans, companies } = useApp();
+  const [savedDocument, setSavedDocument] = useState<BalanceSheetDocument | null>(null);
   const [documents, setDocuments] = useState<BalanceSheetDocument[]>([]);
+  const [manualReceipts, setManualReceipts] = useState<ManualReceipt[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
   const [isCreatingBalanceSheet, setIsCreatingBalanceSheet] = useState(false);
   const [newBalanceSheetTitle, setNewBalanceSheetTitle] = useState('');
-  const [newBalanceSheetDate, setNewBalanceSheetDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const period = useReportPeriod();
+  const accounting = useMemo(() => buildReportAccounting(loans, companies, manualReceipts, period), [companies, loans, manualReceipts, period]);
+  const document = useMemo(() => savedDocument ? mergeLiveBalanceSheet(savedDocument, accounting) : null, [accounting, savedDocument]);
 
   const load = useCallback(async (documentId?: string) => {
     setIsLoading(true);
@@ -68,7 +91,7 @@ export const BalanceSheet: React.FC = () => {
       const response = await fetch(`/api/reports/balance-sheet${documentId ? `?id=${encodeURIComponent(documentId)}` : ''}`, { cache: 'no-store' });
       const json = await response.json().catch(() => ({}));
       if (!response.ok || !json.success) throw new Error(json.error || 'Unable to load balance sheet.');
-      setDocument(json.data);
+      setSavedDocument(json.data);
       setDocuments(json.documents || (json.data ? [json.data] : []));
       setIsDirty(false);
     } catch (error) {
@@ -77,6 +100,21 @@ export const BalanceSheet: React.FC = () => {
       setIsLoading(false);
     }
   }, [showToast]);
+
+  const loadManualReceipts = useCallback(async () => {
+    try {
+      const response = await fetch('/api/manual-receipts', { cache: 'no-store' });
+      const json = await response.json().catch(() => ({}));
+      if (response.ok && json.success) setManualReceipts(json.data || []);
+    } catch {
+      // Loan and installment data remains available if optional receipts fail.
+    }
+  }, []);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => void loadManualReceipts(), 0);
+    return () => window.clearTimeout(timer);
+  }, [loadManualReceipts]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => void load(), 0);
@@ -90,7 +128,7 @@ export const BalanceSheet: React.FC = () => {
       const response = await fetch('/api/reports/balance-sheet', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, asOfDate: newBalanceSheetDate }),
+        body: JSON.stringify({ title, asOfDate: period.toDate }),
       });
       const json = await response.json();
       if (!response.ok || !json.success) throw new Error(json.error || 'Unable to create balance sheet.');
@@ -111,7 +149,7 @@ export const BalanceSheet: React.FC = () => {
   }, [document]);
 
   const editDocument = (update: (current: BalanceSheetDocument) => BalanceSheetDocument) => {
-    setDocument((current) => current ? update(current) : current);
+    setSavedDocument((current) => current ? update(current) : current);
     setIsDirty(true);
   };
 
@@ -160,7 +198,7 @@ export const BalanceSheet: React.FC = () => {
       const response = await fetch('/api/reports/balance-sheet', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(document),
+        body: JSON.stringify({ ...document, asOfDate: period.toDate }),
       });
       const json = await response.json().catch(() => ({}));
       if (json.queued) {
@@ -168,7 +206,7 @@ export const BalanceSheet: React.FC = () => {
         return;
       }
       if (!response.ok || !json.success) throw new Error(json.error || 'Unable to save balance sheet.');
-      setDocument(json.data);
+      setSavedDocument(json.data);
       setIsDirty(false);
       showToast('Balance sheet saved', 'Your editable Tally statement was updated.', 'success');
     } catch (error) {
@@ -288,16 +326,7 @@ export const BalanceSheet: React.FC = () => {
                 aria-label="Balance sheet title"
                 className="min-w-0 flex-1 border-b-2 border-transparent bg-transparent text-2xl font-bold tracking-tight text-[#24131B] outline-none hover:border-[#E7DFD2] focus:border-[#C5A059]"
               />
-              <label className="flex shrink-0 items-center gap-2 text-xs font-semibold text-slate-500">
-                As at
-                <input
-                  type="date"
-                  value={document.asOfDate}
-                  onChange={(event) => editDocument((current) => ({ ...current, asOfDate: event.target.value }))}
-                  aria-label="Balance sheet date"
-                  className="rounded-lg border border-slate-200 bg-[#FCFBF9] px-2.5 py-2 text-xs font-semibold text-slate-700 outline-none focus:border-[#C5A059]"
-                />
-              </label>
+              <span className="shrink-0 rounded-lg border border-[#D9D2C7] bg-[#FCFBF9] px-2.5 py-2 text-xs font-semibold text-slate-600">As at {formatAsOfDate(period.toDate)}</span>
             </div>
             <p className="mt-2 max-w-3xl text-sm text-slate-500">Editable Tally-style statement. Click any group, ledger or amount to change it; totals and balance status update instantly.</p>
           </div>
@@ -311,7 +340,7 @@ export const BalanceSheet: React.FC = () => {
         </div>
         {isCreatingBalanceSheet && <div className="mt-5 flex flex-col gap-2 rounded-2xl border border-[#E7D3A6] bg-[#FFF9EC] p-3 sm:flex-row sm:items-end">
           <label className="flex-1 text-[10px] font-bold uppercase tracking-wide text-[#701A35]">Report name<input value={newBalanceSheetTitle} onChange={(event) => setNewBalanceSheetTitle(event.target.value)} placeholder="e.g. October 2026 Balance Sheet" className="mt-1 h-9 w-full rounded-lg border border-[#E7D3A6] bg-white px-2.5 text-xs font-semibold text-slate-800 outline-none focus:border-[#C5A059]" /></label>
-          <label className="text-[10px] font-bold uppercase tracking-wide text-[#701A35]">As at<input type="date" value={newBalanceSheetDate} onChange={(event) => setNewBalanceSheetDate(event.target.value)} className="mt-1 h-9 rounded-lg border border-[#E7D3A6] bg-white px-2.5 text-xs font-semibold text-slate-800 outline-none focus:border-[#C5A059]" /></label>
+          <span className="rounded-lg border border-[#E7D3A6] bg-white px-3 py-2 text-xs font-semibold text-[#701A35]">As at {formatAsOfDate(period.toDate)}</span>
           <button type="button" onClick={() => void createNewBalanceSheet()} disabled={!newBalanceSheetTitle.trim()} className="h-9 rounded-lg bg-[#701A35] px-3 text-xs font-bold text-white disabled:opacity-50">Create</button>
         </div>}
         <div className="mt-6 grid grid-cols-1 gap-2 border-t border-[#EEE8DE] pt-5 sm:grid-cols-3">
@@ -321,6 +350,8 @@ export const BalanceSheet: React.FC = () => {
         </div>
         {isDirty && <p className="mt-3 text-right text-[11px] font-semibold text-amber-700">Unsaved edits · Ctrl/Cmd + S to save</p>}
       </section>
+
+      <ReportPeriodBar />
 
       <section className="grid gap-5 xl:grid-cols-2">
         {(['liabilities', 'assets'] as BalanceSheetSide[]).map((side) => (
@@ -372,10 +403,10 @@ function BalanceSide({
   const accent = side === 'assets' ? { header: 'bg-[#245B9B]', soft: 'bg-blue-50/40', text: 'text-[#245B9B]' } : { header: 'bg-[#701A35]', soft: 'bg-[#FBF4F7]', text: 'text-[#701A35]' };
 
   return (
-    <section className="overflow-hidden rounded-3xl border border-[#E7DFD2] bg-white shadow-[0_12px_32px_rgba(58,34,22,0.04)]">
-      <div className={`flex items-center justify-between px-4 py-3.5 text-white ${accent.header}`}>
-        <div><h2 className="text-sm font-bold uppercase tracking-[0.12em]">{SIDE_LABELS[side]}</h2><p className="mt-0.5 text-[10px] text-white/75">Particulars · Ledger accounts · Editable</p></div>
-        <button type="button" onClick={onAddGroup} className="inline-flex items-center gap-1 rounded-lg border border-white/30 px-2.5 py-1.5 text-[10px] font-bold hover:bg-white/10"><Plus className="h-3.5 w-3.5" /> Add group</button>
+    <section className="overflow-hidden border border-[#B8B0A4] bg-white shadow-sm">
+      <div className="flex items-center justify-between border-b border-[#B8B0A4] bg-[#F8F6F2] px-4 py-3 text-slate-900">
+        <div><h2 className="text-sm font-bold uppercase tracking-[0.12em]">{SIDE_LABELS[side]}</h2><p className="mt-0.5 text-[10px] text-slate-500">Particulars · Live accounts · Editable ledgers</p></div>
+        <button type="button" onClick={onAddGroup} className="inline-flex items-center gap-1 rounded-md border border-[#A07A39] px-2.5 py-1.5 text-[10px] font-bold text-[#701A35] hover:bg-[#FFF8E8]"><Plus className="h-3.5 w-3.5" /> Add group</button>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full min-w-[430px] border-collapse text-xs">
@@ -390,9 +421,9 @@ function BalanceSide({
                   <td />
                 </tr>
                 {groupEntriesForSide.map((entry) => <tr key={entry.id} className="border-b border-slate-100 transition-colors hover:bg-[#FCFAF7]">
-                  <td className="px-4 py-2.5"><input value={entry.label} onFocus={(event) => event.currentTarget.select()} onChange={(event) => onUpdateEntry(entry.id, { label: event.target.value })} aria-label={`${groupName} ledger name`} className="w-full bg-transparent text-xs font-semibold text-slate-700 outline-none placeholder:text-slate-300 focus:rounded-md focus:bg-[var(--surface-raised)] focus:ring-1 focus:ring-[#C5A059]" placeholder="Ledger name" /></td>
+                  <td className="px-4 py-2.5"><input value={entry.label} readOnly={Boolean(entry.sourceKey && entry.sourceKey !== 'MANUAL')} onFocus={(event) => event.currentTarget.select()} onChange={(event) => onUpdateEntry(entry.id, { label: event.target.value })} aria-label={`${groupName} ledger name`} className={`w-full bg-transparent text-xs font-semibold outline-none placeholder:text-slate-300 focus:rounded-md focus:bg-[var(--surface-raised)] focus:ring-1 focus:ring-[#C5A059] ${entry.sourceKey && entry.sourceKey !== 'MANUAL' ? 'cursor-not-allowed text-slate-500' : 'text-slate-700'}`} placeholder="Ledger name" /></td>
                   <td className="px-4 py-2.5"><input type="number" min="0" step="0.01" value={entry.amount} readOnly={Boolean(entry.sourceKey && entry.sourceKey !== 'MANUAL')} onFocus={(event) => event.currentTarget.select()} onChange={(event) => onUpdateEntry(entry.id, { amount: Math.max(0, Number(event.target.value) || 0) })} aria-label={`${entry.label} amount`} title={entry.sourceKey && entry.sourceKey !== 'MANUAL' ? 'Calculated from loan and collection data' : 'Manual ledger amount'} className={`w-full rounded-md bg-transparent px-2 py-1 text-right text-xs font-bold tabular-nums outline-none focus:ring-1 focus:ring-[#C5A059] ${entry.sourceKey && entry.sourceKey !== 'MANUAL' ? 'cursor-not-allowed text-slate-500' : 'text-slate-800 hover:bg-white focus:bg-[var(--surface-raised)]'}`} /></td>
-                  <td className="px-2 py-2.5 text-center"><button type="button" onClick={() => onRemoveEntry(entry.id)} aria-label={`Delete ${entry.label}`} title="Delete ledger" className="rounded-md p-1.5 text-slate-300 hover:bg-rose-50 hover:text-rose-600"><Trash2 className="h-3.5 w-3.5" /></button></td>
+                  <td className="px-2 py-2.5 text-center">{entry.sourceKey && entry.sourceKey !== 'MANUAL' ? <span className="text-[9px] font-semibold text-slate-400">Live</span> : <button type="button" onClick={() => onRemoveEntry(entry.id)} aria-label={`Delete ${entry.label}`} title="Delete ledger" className="rounded-md p-1.5 text-slate-300 hover:bg-rose-50 hover:text-rose-600"><Trash2 className="h-3.5 w-3.5" /></button>}</td>
                 </tr>)}
                 <tr><td colSpan={3} className="px-4 py-2"><button type="button" onClick={() => onAddEntry(groupName)} className={`inline-flex items-center gap-1 text-[10px] font-bold ${accent.text} hover:underline`}><Plus className="h-3 w-3" /> Add ledger under {groupName}</button></td></tr>
               </React.Fragment>;

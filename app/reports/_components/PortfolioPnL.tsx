@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   TrendingUp,
   FileSpreadsheet,
@@ -18,9 +18,11 @@ import * as XLSX from 'xlsx';
 import { useApp } from '@/lib/store';
 import { APP_BRAND } from '@/lib/branding';
 import { formatINR } from '@/lib/utils/formatCurrency';
-import { Loan, Company } from '@/lib/types';
+import { Company, Loan, ManualReceipt } from '@/lib/types';
 import { CustomSelect } from '@/components/ui/CustomSelect';
-import { isPaidStatus as isPaid } from '@/lib/utils/statusMapping';
+import { buildReportAccounting, getLoanInterest, getLoanPrincipal, ReportPeriod } from '@/lib/reportAccounting';
+import { ReportPeriodBar, useReportPeriod } from './ReportPeriodBar';
+import { isPaidStatus } from '@/lib/utils/statusMapping';
 
 const dateKey = (v: string) => String(v || '').slice(0, 10);
 const safeFileName = (v: string) =>
@@ -51,6 +53,7 @@ interface PnLSummary {
   // Rates
   recoveryRate: number;           // grossCollections / totalPortfolio * 100
   interestYield: number;          // interestIncome / principalDeployed * 100 (if data available)
+  accounting: ReturnType<typeof buildReportAccounting>;
 }
 
 interface MonthlyPnL {
@@ -68,78 +71,53 @@ interface CompanyPnL {
   companyName: string;
   companyCode: string;
   isOutsideParty: boolean;
-  totalFunded: number;            // from loan splits
+  totalFunded: number;            // principal share from loan splits
+  totalScheduled: number;         // repayable share from loan splits
   totalCollected: number;         // from installment splits
   outstanding: number;
   recoveryRate: number;
 }
 
-function buildPnL(loans: Loan[]): PnLSummary {
-  let grossCollections = 0;
-  let interestIncome = 0;
-  let principalDeployed = 0;
-  let totalPortfolio = 0;
+function buildPnL(loans: Loan[], companies: Company[], receipts: ManualReceipt[], period: ReportPeriod): PnLSummary {
+  const accounting = buildReportAccounting(loans, companies, receipts, period);
+  const interestIncome = accounting.directIncome.reduce((sum, line) => sum + line.amount, 0);
+  const principalDeployed = accounting.principalFunded;
+  const totalPortfolio = accounting.totalRepayable;
   let activeLoans = 0;
   let closedLoans = 0;
   let overdueLoans = 0;
 
-  for (const loan of loans) {
-    const loanPortfolio = loan.isOpeningBalanceOnly ? 0 : Number(loan.totalAmount || 0);
-    totalPortfolio += loanPortfolio;
-
-    // disbursedAmount = actual cash out, fallback to totalAmount - interestAmount
-    const interest = Number(loan.interestAmount || 0);
-    const disbursed = Number(loan.disbursedAmount || 0);
-    const deployed = loan.isOpeningBalanceOnly
-      ? 0
-      : disbursed > 0 ? disbursed : Math.max(0, Number(loan.totalAmount || 0) - interest);
-    principalDeployed += deployed;
-    if (!loan.isOpeningBalanceOnly) interestIncome += interest;
-
-    // Collect paid installments
-    for (const inst of loan.installments || []) {
-      if (isPaid(inst.status)) {
-        grossCollections += Number(inst.amountDue || 0);
-      }
-    }
-
+  const reportLoans = loans.filter((loan) => dateKey(loan.startDate || loan.createdAt) <= period.toDate);
+  for (const loan of reportLoans) {
     const st = String(loan.status || '').toLowerCase();
     if (st === 'closed') closedLoans++;
     else if (st === 'overdue') overdueLoans++;
     else activeLoans++;
   }
 
-  const totalOutstanding = loans.reduce((sum, loan) => {
-    const value = loan.totalOutstanding;
-    if (value !== undefined && value !== null) return sum + Number(value || 0);
-    const scheduled = loan.isOpeningBalanceOnly ? 0 : Number(loan.totalAmount || 0);
-    const opening = Number(loan.openingBalance || 0) * (loan.openingBalanceType === 'CREDIT' ? -1 : 1);
-    const recovered = (loan.installments || []).reduce(
-      (total, installment) => total + (isPaid(installment.status) ? Number(installment.amountDue || 0) : 0),
-      0
-    );
-    return sum + Math.max(0, opening + scheduled - recovered);
-  }, 0);
+  const grossCollections = accounting.totalCollected;
+  const totalOutstanding = accounting.receivables;
   const recoveryRate = totalPortfolio > 0 ? (grossCollections / totalPortfolio) * 100 : 0;
   const interestYield = principalDeployed > 0 ? (interestIncome / principalDeployed) * 100 : 0;
 
   return {
     grossCollections,
     interestIncome,
-    totalIncome: grossCollections,
+    totalIncome: accounting.directIncome.reduce((sum, line) => sum + line.amount, 0) + accounting.indirectIncome.reduce((sum, line) => sum + line.amount, 0),
     principalDeployed,
     totalPortfolio,
     totalOutstanding,
-    totalLoans: loans.length,
+    totalLoans: reportLoans.length,
     activeLoans,
     closedLoans,
     overdueLoans,
     recoveryRate,
     interestYield,
+    accounting,
   };
 }
 
-function buildMonthlyPnL(loans: Loan[]): MonthlyPnL[] {
+function buildMonthlyPnL(loans: Loan[], period: ReportPeriod): MonthlyPnL[] {
   // Month → collections by recdDate
   const collByMonth = new Map<string, number>();
   // Month → deployed/interest by loan startDate
@@ -147,9 +125,10 @@ function buildMonthlyPnL(loans: Loan[]): MonthlyPnL[] {
 
   for (const loan of loans) {
     const startMonth = dateKey(loan.startDate || '').slice(0, 7);
-    if (startMonth) {
+    const startDate = dateKey(loan.startDate || loan.createdAt);
+    if (startMonth && startDate >= period.fromDate && startDate <= period.toDate) {
       const existing = deployByMonth.get(startMonth) || { deployed: 0, interest: 0, disbursed: 0, portfolio: 0 };
-      const interest = Number(loan.interestAmount || 0);
+      const interest = getLoanInterest(loan);
       const disbursed = Number(loan.disbursedAmount || 0);
       existing.interest += loan.isOpeningBalanceOnly ? 0 : interest;
       existing.disbursed += loan.isOpeningBalanceOnly
@@ -160,9 +139,10 @@ function buildMonthlyPnL(loans: Loan[]): MonthlyPnL[] {
     }
 
     for (const inst of loan.installments || []) {
-      if (!isPaid(inst.status)) continue;
-      const recdMonth = dateKey(inst.recdDate || '').slice(0, 7);
-      if (recdMonth) {
+      if (!isPaidStatus(inst.status)) continue;
+      const recdDate = dateKey(inst.recdDate || '');
+      const recdMonth = recdDate.slice(0, 7);
+      if (recdMonth && recdDate >= period.fromDate && recdDate <= period.toDate) {
         collByMonth.set(recdMonth, (collByMonth.get(recdMonth) || 0) + Number(inst.amountDue || 0));
       }
     }
@@ -188,7 +168,7 @@ function buildMonthlyPnL(loans: Loan[]): MonthlyPnL[] {
     });
 }
 
-function buildCompanyPnL(loans: Loan[], companies: Company[]): CompanyPnL[] {
+function buildCompanyPnL(loans: Loan[], companies: Company[], period: ReportPeriod): CompanyPnL[] {
   const map = new Map<string, CompanyPnL>();
 
   // Pre-populate from companies
@@ -199,6 +179,7 @@ function buildCompanyPnL(loans: Loan[], companies: Company[]): CompanyPnL[] {
       companyCode: comp.shortCode,
       isOutsideParty: comp.isOutsideParty,
       totalFunded: 0,
+      totalScheduled: 0,
       totalCollected: 0,
       outstanding: 0,
       recoveryRate: 0,
@@ -206,17 +187,22 @@ function buildCompanyPnL(loans: Loan[], companies: Company[]): CompanyPnL[] {
   }
 
   for (const loan of loans) {
+    if (dateKey(loan.startDate || loan.createdAt) > period.toDate) continue;
     // Loan-level company splits (funded amounts)
     for (const split of loan.splits || []) {
       const entry = map.get(split.companyId);
       if (entry) {
-        entry.totalFunded += Number(split.splitAmount || 0);
+        const scheduledShare = Number(split.splitAmount || 0);
+        const repayable = Number(loan.totalAmount || 0);
+        const principalShare = repayable > 0 ? (getLoanPrincipal(loan) * scheduledShare) / repayable : 0;
+        entry.totalFunded += principalShare;
+        entry.totalScheduled += scheduledShare;
       }
     }
 
     // Installment-level splits (collected amounts)
     for (const inst of loan.installments || []) {
-      if (!isPaid(inst.status)) continue;
+      if (!isPaidStatus(inst.status) || dateKey(inst.recdDate || inst.dueDate || '') > period.toDate) continue;
       for (const [code, amount] of Object.entries(inst.companySplits || {})) {
         // Find company by code
         const comp = companies.find((c) => c.shortCode.toUpperCase() === code.toUpperCase());
@@ -231,13 +217,29 @@ function buildCompanyPnL(loans: Loan[], companies: Company[]): CompanyPnL[] {
   }
 
   return Array.from(map.values())
-    .filter((e) => e.totalFunded > 0 || e.totalCollected > 0)
+    .filter((e) => e.totalFunded > 0 || e.totalCollected > 0 || e.totalScheduled > 0)
     .map((e) => ({
       ...e,
-      outstanding: Math.max(0, e.totalFunded - e.totalCollected),
-      recoveryRate: e.totalFunded > 0 ? (e.totalCollected / e.totalFunded) * 100 : 0,
+      outstanding: Math.max(0, e.totalScheduled - e.totalCollected),
+      recoveryRate: e.totalScheduled > 0 ? (e.totalCollected / e.totalScheduled) * 100 : 0,
     }))
     .sort((a, b) => b.totalFunded - a.totalFunded);
+}
+
+function tallyPnLTotals(accounting: ReturnType<typeof buildReportAccounting>) {
+  const directIncome = accounting.directIncome.reduce((sum, line) => sum + line.amount, 0);
+  const directExpenses = accounting.directExpenses.reduce((sum, line) => sum + line.amount, 0);
+  const indirectIncome = accounting.indirectIncome.reduce((sum, line) => sum + line.amount, 0);
+  const indirectExpenses = accounting.indirectExpenses.reduce((sum, line) => sum + line.amount, 0);
+  const netTransfer = Math.abs(accounting.netProfit);
+
+  // Tally shows Gross Profit c/o and b/f as internal transfers. They remain
+  // visible, but the bottom Total is the operating-side total shown in the
+  // reference: expenses plus net profit versus incomes plus net loss.
+  return {
+    debitTotal: directExpenses + indirectExpenses + (accounting.netProfit >= 0 ? netTransfer : 0),
+    creditTotal: directIncome + indirectIncome + (accounting.netProfit < 0 ? netTransfer : 0),
+  };
 }
 
 const rateColor = (r: number) => {
@@ -254,14 +256,31 @@ const rateBarColor = (r: number) => {
 };
 
 export const PortfolioPnL: React.FC = () => {
-  const { loans, companies, isLoading, showToast, systemSettings } = useApp();
+  const { loans, companies, isLoading, showToast } = useApp();
   const [showMonthly, setShowMonthly] = useState(true);
   const [showCompany, setShowCompany] = useState(true);
   const [yearFilter, setYearFilter] = useState('all');
+  const [manualReceipts, setManualReceipts] = useState<ManualReceipt[]>([]);
+  const period = useReportPeriod();
 
-  const pnl = useMemo(() => buildPnL(loans), [loans]);
-  const allMonthly = useMemo(() => buildMonthlyPnL(loans), [loans]);
-  const companyPnL = useMemo(() => buildCompanyPnL(loans, companies), [loans, companies]);
+  const loadManualReceipts = useCallback(async () => {
+    try {
+      const response = await fetch('/api/manual-receipts', { cache: 'no-store' });
+      const json = await response.json().catch(() => ({}));
+      if (response.ok && json.success) setManualReceipts(json.data || []);
+    } catch {
+      // Receipt data is optional; the loan ledger remains the source of truth.
+    }
+  }, []);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => void loadManualReceipts(), 0);
+    return () => window.clearTimeout(timer);
+  }, [loadManualReceipts]);
+
+  const pnl = useMemo(() => buildPnL(loans, companies, manualReceipts, period), [companies, loans, manualReceipts, period]);
+  const allMonthly = useMemo(() => buildMonthlyPnL(loans, period), [loans, period]);
+  const companyPnL = useMemo(() => buildCompanyPnL(loans, companies, period), [loans, companies, period]);
 
   const availableYears = useMemo(
     () => Array.from(new Set(allMonthly.map((r) => r.monthKey.slice(0, 4)))).sort().reverse(),
@@ -287,39 +306,47 @@ export const PortfolioPnL: React.FC = () => {
     doc.setFont('helvetica', 'bold'); doc.setFontSize(16); doc.setTextColor(255, 255, 255);
     doc.text(`${companyName.toUpperCase()} · PORTFOLIO P&L SUMMARY`, 32, 28);
     doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(238, 216, 161);
-    doc.text(`As of ${today} · ${loans.length} loans`, 32, 44);
+    doc.text(`${formatStatementDate(period.fromDate)} to ${formatStatementDate(period.toDate)} · ${loans.length} loans`, 32, 44);
 
-    // Summary table
+    const debitRows = [
+      ...pnl.accounting.directExpenses.map((line) => [line.label, pdfMoney(line.amount)]),
+      ...(pnl.accounting.grossProfit >= 0
+        ? [['Gross Profit c/o', pdfMoney(pnl.accounting.grossProfit)]]
+        : [['Gross Loss b/f', pdfMoney(Math.abs(pnl.accounting.grossProfit))]]),
+      ...pnl.accounting.indirectExpenses.map((line) => [line.label, pdfMoney(line.amount)]),
+      ...(pnl.accounting.netProfit >= 0 ? [['Net Profit', pdfMoney(pnl.accounting.netProfit)]] : []),
+    ];
+    const creditRows = [
+      ...pnl.accounting.directIncome.map((line) => [line.label, pdfMoney(line.amount)]),
+      ...(pnl.accounting.grossProfit >= 0 ? [['Gross Profit b/f', pdfMoney(pnl.accounting.grossProfit)]] : []),
+      ...pnl.accounting.indirectIncome.map((line) => [line.label, pdfMoney(line.amount)]),
+      ...(pnl.accounting.netProfit < 0 ? [['Net Loss', pdfMoney(Math.abs(pnl.accounting.netProfit))]] : []),
+    ];
+    const pnlRows = Array.from({ length: Math.max(debitRows.length, creditRows.length) }, (_, index) => [
+      debitRows[index]?.[0] || '', debitRows[index]?.[1] || '', creditRows[index]?.[0] || '', creditRows[index]?.[1] || '',
+    ]);
     autoTable(doc, {
       startY: 82,
-      head: [['Metric', 'Amount / Value']],
-      body: [
-        ['Total Portfolio (Repayable)', pdfMoney(pnl.totalPortfolio)],
-        ['Principal Deployed', pdfMoney(pnl.principalDeployed)],
-        ['Interest Income (where recorded)', pdfMoney(pnl.interestIncome)],
-        ['Gross Collections (Received)', pdfMoney(pnl.grossCollections)],
-        ['Outstanding Balance', pdfMoney(pnl.totalOutstanding)],
-        ['Recovery Rate', `${pnl.recoveryRate.toFixed(2)}%`],
-        ['Total Loans', String(pnl.totalLoans)],
-        ['Active Loans', String(pnl.activeLoans)],
-        ['Closed Loans', String(pnl.closedLoans)],
-        ['Overdue Loans', String(pnl.overdueLoans)],
-      ],
+      head: [['Debit particulars', 'Debit', 'Credit particulars', 'Credit']],
+      body: pnlRows,
+      foot: [['TOTAL', pdfMoney(tallyPnLTotals(pnl.accounting).debitTotal), 'TOTAL', pdfMoney(tallyPnLTotals(pnl.accounting).creditTotal)]],
       theme: 'striped',
       headStyles: { fillColor: [112, 26, 53], textColor: [255, 255, 255], fontSize: 9, fontStyle: 'bold' },
       bodyStyles: { fontSize: 9, cellPadding: 6 },
-      margin: { left: 32, right: pw / 2 + 10, bottom: 34 },
+      margin: { left: 32, right: 32, bottom: 34 },
+      columnStyles: { 1: { halign: 'right' }, 3: { halign: 'right' } },
     });
 
     // Company table
     if (companyPnL.length) {
       autoTable(doc, {
         startY: 82,
-        head: [['Company', 'Type', 'Funded', 'Collected', 'Outstanding', 'Recovery %']],
+        head: [['Company', 'Type', 'Principal', 'Scheduled', 'Collected', 'Outstanding', 'Recovery %']],
         body: companyPnL.map((c) => [
           `${c.companyName} (${c.companyCode})`,
           c.isOutsideParty ? 'Outside Party' : 'ASR Own',
           pdfMoney(c.totalFunded),
+          pdfMoney(c.totalScheduled),
           pdfMoney(c.totalCollected),
           pdfMoney(c.outstanding),
           `${c.recoveryRate.toFixed(1)}%`,
@@ -333,7 +360,7 @@ export const PortfolioPnL: React.FC = () => {
 
     // Monthly table
     if (monthly.length) {
-      const lastY = ((doc as any).lastAutoTable?.finalY || 300) + 24;
+      const lastY = ((doc as jsPDF & { lastAutoTable?: { finalY?: number } }).lastAutoTable?.finalY || 300) + 24;
       autoTable(doc, {
         startY: lastY,
         head: [['Month', 'Portfolio Deployed', 'Disbursed (Cash Out)', 'Interest Booked', 'Collected (Cash In)', 'Net Cash Flow']],
@@ -368,8 +395,11 @@ export const PortfolioPnL: React.FC = () => {
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet([
       { 'Metric': 'Total Portfolio (Repayable)', 'Value': pnl.totalPortfolio },
       { 'Metric': 'Principal Deployed', 'Value': pnl.principalDeployed },
-      { 'Metric': 'Interest Income (where recorded)', 'Value': pnl.interestIncome },
-      { 'Metric': 'Gross Collections (Received)', 'Value': pnl.grossCollections },
+      { 'Metric': 'Direct Income · Interest Received', 'Value': pnl.interestIncome },
+      { 'Metric': 'Indirect Income', 'Value': pnl.accounting.indirectIncome.reduce((sum, line) => sum + line.amount, 0) },
+      { 'Metric': 'Indirect Expenses', 'Value': pnl.accounting.indirectExpenses.reduce((sum, line) => sum + line.amount, 0) },
+      { 'Metric': 'Net Profit / (Loss)', 'Value': pnl.accounting.netProfit },
+      { 'Metric': 'Gross Collections (Balance Sheet)', 'Value': pnl.grossCollections },
       { 'Metric': 'Outstanding Balance', 'Value': pnl.totalOutstanding },
       { 'Metric': 'Recovery Rate (%)', 'Value': pnl.recoveryRate.toFixed(2) },
       { 'Metric': 'Total Loans', 'Value': pnl.totalLoans },
@@ -398,7 +428,8 @@ export const PortfolioPnL: React.FC = () => {
           'Company': c.companyName,
           'Code': c.companyCode,
           'Type': c.isOutsideParty ? 'Outside Party' : 'ASR Own',
-          'Total Funded': c.totalFunded,
+          'Principal Funded': c.totalFunded,
+          'Scheduled Return': c.totalScheduled,
           'Total Collected': c.totalCollected,
           'Outstanding': c.outstanding,
           'Recovery Rate (%)': c.recoveryRate.toFixed(2),
@@ -453,43 +484,17 @@ export const PortfolioPnL: React.FC = () => {
         </div>
       </section>
 
+      <ReportPeriodBar />
+
       {/* P&L Statement Block */}
-      <section className="rounded-3xl border border-[#E7DFD2] bg-white shadow-[0_12px_32px_rgba(58,34,22,0.04)] overflow-hidden">
-        <div className="grid md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-[#E7DFD2]">
-          {/* Income Side */}
-          <div className="p-5 sm:p-6">
-            <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-emerald-700 mb-3">Income Side (Cr)</p>
-            <div className="space-y-3">
-              <PnLLine label="Gross Collections Received" value={pnl.grossCollections} bold />
-              {pnl.interestIncome > 0 && <PnLLine label="Interest Income (booked)" value={pnl.interestIncome} sub />}
-              <div className="border-t border-dashed border-slate-200 pt-2">
-                <PnLLine label="Total Income" value={pnl.grossCollections} bold highlight="green" />
-              </div>
-            </div>
-          </div>
-          {/* Capital / Deployed Side */}
-          <div className="p-5 sm:p-6">
-            <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#A07A39] mb-3">Portfolio Overview (Reference)</p>
-            <div className="space-y-3">
-              <PnLLine label="Total Portfolio (All Loans)" value={pnl.totalPortfolio} bold />
-              <PnLLine label="Principal Deployed (Cash Out)" value={pnl.principalDeployed} sub />
-              <div className="border-t border-dashed border-slate-200 pt-2">
-                <PnLLine label="Outstanding Receivable" value={pnl.totalOutstanding} bold highlight="blue" />
-              </div>
-              <div className="rounded-xl border border-emerald-200 bg-emerald-50/40 px-3 py-2 mt-2">
-                <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-[0.1em]">Recovery Rate</span>
-                <div className="mt-1.5 flex items-center gap-2">
-                  <div className="flex-1 h-2 rounded-full bg-slate-100 overflow-hidden">
-                    <div className={`h-full rounded-full ${rateBarColor(pnl.recoveryRate)}`}
-                      style={{ width: `${Math.min(pnl.recoveryRate, 100)}%` }} />
-                  </div>
-                  <span className={`text-sm font-bold ${rateColor(pnl.recoveryRate)}`}>
-                    {pnl.recoveryRate.toFixed(2)}%
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
+      <TallyPnLStatement accounting={pnl.accounting} companyName={companyName} />
+
+      <section className="rounded-2xl border border-[#D9D2C7] bg-white p-4 shadow-sm">
+        <div className="grid gap-3 sm:grid-cols-4">
+          <ReconciliationMetric label="Principal funded" value={pnl.principalDeployed} />
+          <ReconciliationMetric label="Total collected" value={pnl.grossCollections} />
+          <ReconciliationMetric label="Receivables" value={pnl.totalOutstanding} />
+          <ReconciliationMetric label="Net profit / (loss)" value={pnl.accounting.netProfit} tone={pnl.accounting.netProfit >= 0 ? 'positive' : 'negative'} />
         </div>
       </section>
 
@@ -513,7 +518,8 @@ export const PortfolioPnL: React.FC = () => {
                   <tr className="border-b border-slate-200 bg-[#F8F6F2] text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">
                     <th className="w-[26%] px-4 py-3 text-left">Company</th>
                     <th className="w-[10%] px-4 py-3 text-left">Type</th>
-                    <th className="w-[16%] px-4 py-3 text-right">Funded</th>
+                    <th className="w-[14%] px-4 py-3 text-right">Principal</th>
+                    <th className="w-[14%] px-4 py-3 text-right">Scheduled</th>
                     <th className="w-[16%] px-4 py-3 text-right">Collected</th>
                     <th className="w-[16%] px-4 py-3 text-right">Outstanding</th>
                     <th className="w-[16%] px-4 py-3">Recovery %</th>
@@ -536,6 +542,7 @@ export const PortfolioPnL: React.FC = () => {
                         </span>
                       </td>
                       <td className="px-4 py-3 text-right font-semibold text-slate-700">{formatINR(c.totalFunded)}</td>
+                      <td className="px-4 py-3 text-right font-semibold text-slate-700">{formatINR(c.totalScheduled)}</td>
                       <td className="px-4 py-3 text-right font-semibold text-emerald-700">{formatINR(c.totalCollected)}</td>
                       <td className="px-4 py-3 text-right font-semibold text-[#245B9B]">{formatINR(c.outstanding)}</td>
                       <td className="px-4 py-4">
@@ -642,18 +649,83 @@ function PnLCard({ icon, label, value, tone }: { icon: React.ReactNode; label: s
   );
 }
 
-function PnLLine({ label, value, bold, sub, highlight }: {
-  label: string; value: number; bold?: boolean; sub?: boolean; highlight?: 'green' | 'blue';
-}) {
-  const valClass = highlight === 'green' ? 'text-emerald-700' : highlight === 'blue' ? 'text-[#245B9B]' : 'text-slate-800';
+function TallyPnLStatement({ accounting, companyName }: { accounting: ReturnType<typeof buildReportAccounting>; companyName: string }) {
+  const { debitTotal, creditTotal } = tallyPnLTotals(accounting);
+  const isBalanced = Math.abs(creditTotal - debitTotal) < 0.01;
+  const periodLabel = `${formatStatementDate(accounting.period.fromDate)} to ${formatStatementDate(accounting.period.toDate)}`;
+
   return (
-    <div className={`flex items-center justify-between gap-2 ${sub ? 'pl-3 opacity-80' : ''}`}>
-      <span className={`text-[11px] ${bold ? 'font-bold text-slate-700' : 'font-medium text-slate-500'}`}>
-        {sub && '↳ '}{label}
-      </span>
-      <span className={`text-[12px] tabular-nums ${bold ? `font-bold ${valClass}` : 'font-semibold text-slate-700'}`}>
-        {formatINR(value)}
-      </span>
+    <section className="overflow-hidden border border-[#B8B0A4] bg-white shadow-sm">
+      <div className="border-b border-[#B8B0A4] px-4 py-3 text-center">
+        <h2 className="text-sm font-bold uppercase tracking-[0.16em] text-slate-900">{companyName}</h2>
+        <p className="mt-0.5 text-xs font-semibold text-slate-600">Profit &amp; Loss Account</p>
+        <p className="text-[11px] text-slate-500">{periodLabel}</p>
+      </div>
+      <div className="grid divide-y divide-[#B8B0A4] md:grid-cols-2 md:divide-x md:divide-y-0">
+        <TallyPnLColumn
+          title="Particulars"
+          side="Dr"
+          rows={[
+            ...(accounting.directExpenses.length ? [{ kind: 'group' as const, label: 'Direct Expenses' }, ...accounting.directExpenses.map((line) => ({ kind: 'line' as const, label: line.label, amount: line.amount }))] : []),
+            accounting.grossProfit >= 0
+              ? { kind: 'transfer' as const, label: 'Gross Profit c/o', amount: accounting.grossProfit }
+              : { kind: 'transfer' as const, label: 'Gross Loss b/f', amount: Math.abs(accounting.grossProfit) },
+            ...(accounting.indirectExpenses.length ? [{ kind: 'group' as const, label: 'Indirect Expenses' }, ...accounting.indirectExpenses.map((line) => ({ kind: 'line' as const, label: line.label, amount: line.amount }))] : []),
+            ...(accounting.netProfit >= 0 ? [{ kind: 'result' as const, label: 'Net Profit', amount: accounting.netProfit }] : []),
+            ...(accounting.netProfit < 0 ? [{ kind: 'result' as const, label: 'Net Loss', amount: Math.abs(accounting.netProfit) }] : []),
+          ]}
+          total={debitTotal}
+          accent="debit"
+        />
+        <TallyPnLColumn
+          title="Particulars"
+          side="Cr"
+          rows={[
+            ...(accounting.directIncome.length ? [{ kind: 'group' as const, label: 'Direct Incomes' }, ...accounting.directIncome.map((line) => ({ kind: 'line' as const, label: line.label, amount: line.amount }))] : []),
+            ...(accounting.grossProfit >= 0 ? [{ kind: 'transfer' as const, label: 'Gross Profit b/f', amount: accounting.grossProfit }] : []),
+            ...(accounting.indirectIncome.length ? [{ kind: 'group' as const, label: 'Indirect Incomes' }, ...accounting.indirectIncome.map((line) => ({ kind: 'line' as const, label: line.label, amount: line.amount }))] : []),
+            ...(accounting.netProfit < 0 ? [{ kind: 'result' as const, label: 'Net Loss', amount: Math.abs(accounting.netProfit) }] : []),
+          ]}
+          total={creditTotal}
+          accent="credit"
+        />
+      </div>
+      <div className={`flex items-center justify-between border-t border-[#B8B0A4] px-4 py-2.5 text-xs font-bold ${isBalanced ? 'bg-[#F7FAF6] text-emerald-800' : 'bg-rose-50 text-rose-800'}`}>
+        <span>{isBalanced ? 'P&L totals agree' : 'P&L difference requires review'}</span>
+        <span>{formatINR(Math.abs(creditTotal - debitTotal))}</span>
+      </div>
+    </section>
+  );
+}
+
+type TallyPnLRow = { kind: 'group' | 'line' | 'transfer' | 'result'; label: string; amount?: number };
+
+function TallyPnLColumn({ title, side, rows, total, accent }: { title: string; side: 'Dr' | 'Cr'; rows: TallyPnLRow[]; total: number; accent: 'debit' | 'credit' }) {
+  return (
+    <div>
+      <div className={`flex items-center justify-between border-b border-[#B8B0A4] px-4 py-2 text-[10px] font-bold uppercase tracking-[0.14em] ${accent === 'credit' ? 'bg-[#FFF8E6]' : 'bg-[#FAF8F4]'}`}>
+        <span>{title}</span><span>{side}</span>
+      </div>
+      <div className="min-h-[290px]">
+        {rows.length === 0 ? <p className="px-4 py-10 text-xs italic text-slate-400">No entries recorded for this period.</p> : rows.map((row, index) => (
+          <div key={`${row.kind}-${row.label}-${index}`} className={`flex items-center justify-between gap-3 px-4 py-1.5 text-xs ${row.kind === 'group' ? 'border-y border-[#D9D2C7] bg-[#F8F6F2] font-bold text-slate-800' : row.kind === 'result' ? 'border-t border-[#8B8175] font-bold text-slate-900' : row.kind === 'transfer' ? 'font-bold text-slate-900' : 'pl-7 text-slate-700'}`}>
+            <span>{row.kind === 'line' ? row.label : row.label}</span>
+            {row.amount !== undefined && <span className="whitespace-nowrap text-right tabular-nums">{formatINR(row.amount)}</span>}
+          </div>
+        ))}
+      </div>
+      <div className="flex items-center justify-between border-t-2 border-[#80766A] bg-[#F3EFE7] px-4 py-2.5 text-xs font-bold text-slate-900">
+        <span>Total</span><span className="tabular-nums">{formatINR(total)}</span>
+      </div>
     </div>
   );
+}
+
+function ReconciliationMetric({ label, value, tone = 'neutral' }: { label: string; value: number; tone?: 'neutral' | 'positive' | 'negative' }) {
+  return <div className="rounded-lg border border-[#E0D8CB] bg-[#FCFBF8] px-3 py-2"><span className="block text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">{label}</span><strong className={`mt-1 block text-sm tabular-nums ${tone === 'positive' ? 'text-emerald-700' : tone === 'negative' ? 'text-rose-700' : 'text-slate-800'}`}>{formatINR(value)}</strong></div>;
+}
+
+function formatStatementDate(value: string) {
+  const date = new Date(`${value}T00:00:00`);
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 }

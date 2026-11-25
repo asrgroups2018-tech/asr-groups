@@ -12,7 +12,7 @@ export interface BalanceSheetEntry {
   openingBalance?: number;
   openingBalanceType?: 'DEBIT' | 'CREDIT';
   sortOrder: number;
-  sourceKey?: 'PORTFOLIO_FUNDING' | 'CUSTOMER_RECEIVABLES' | 'COLLECTIONS' | 'MANUAL';
+  sourceKey?: 'PORTFOLIO_FUNDING' | 'CUSTOMER_RECEIVABLES' | 'COLLECTIONS' | 'CALCULATED' | 'MANUAL';
 }
 
 export interface BalanceSheetDocument {

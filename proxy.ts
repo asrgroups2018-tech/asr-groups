@@ -63,6 +63,10 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL('/partner', request.url));
   }
 
+  if (pathname === '/partner' || pathname.startsWith('/partner/')) {
+    return NextResponse.redirect(new URL('/dashboard', request.url));
+  }
+
   const isAdministratorRoute =
     pathname === '/administration' ||
     pathname.startsWith('/administration/') ||
