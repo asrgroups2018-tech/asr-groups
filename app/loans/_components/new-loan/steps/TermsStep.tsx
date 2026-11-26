@@ -5,6 +5,7 @@ import { Calendar, IndianRupee } from 'lucide-react';
 import { MoneyDisplay } from '@/components/ui/MoneyDisplay';
 import { AmountInput } from '@/components/ui/AmountInput';
 import { DatePicker } from '@/components/ui/DatePicker';
+import { DatabaseSelect } from '@/components/ui/DatabaseSelect';
 import { RepaymentFrequency } from '@/lib/types';
 import { DraftNumberInput } from '@/components/ui/DraftNumberInput';
 
@@ -30,10 +31,10 @@ interface TermsStepProps {
   setInstallmentCount: (count: number) => void;
   startDate: string;
   setStartDate: (date: string) => void;
-  depositDate?: string;
-  setDepositDate?: (date: string) => void;
-  paymentThrough?: string;
-  setPaymentThrough?: (value: string) => void;
+  depositDate: string;
+  setDepositDate: (date: string) => void;
+  paymentThrough: string;
+  setPaymentThrough: (value: string) => void;
 }
 
 export const TermsStep: React.FC<TermsStepProps> = ({
@@ -58,6 +59,10 @@ export const TermsStep: React.FC<TermsStepProps> = ({
   setInstallmentCount,
   startDate,
   setStartDate,
+  depositDate,
+  setDepositDate,
+  paymentThrough,
+  setPaymentThrough,
 }) => {
   const frequencyOptions: { label: string; value: RepaymentFrequency; subtitle?: string }[] = [
     { label: 'Monthly', value: 'Monthly' },
@@ -348,6 +353,41 @@ export const TermsStep: React.FC<TermsStepProps> = ({
                 ? 'installment'
                 : 'month'}
             </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Payment Details */}
+      <div className="bg-[#240F1D] p-5 rounded-xl border border-[#3D1A2C] space-y-4">
+        <h3 className="text-sm font-bold text-[#EED8A1] font-serif">Payment Details</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+          <div>
+            <label className="block text-xs font-mono uppercase text-slate-300 font-bold mb-1.5">
+              Payment Through
+            </label>
+            <DatabaseSelect
+              optionType="PAYMENT_THROUGH"
+              value={paymentThrough}
+              onChange={setPaymentThrough}
+              placeholder="Select payment method..."
+              className="w-full bg-[#160810] text-slate-100"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-mono uppercase text-slate-300 font-bold mb-1.5">
+              Payment Date
+            </label>
+            <DatePicker
+              value={depositDate || null}
+              onChange={setDepositDate}
+              theme="dark"
+              size="md"
+              placeholder="Select payment date..."
+              className="w-full"
+              buttonClassName="w-full h-10"
+              showPresets={false}
+            />
           </div>
         </div>
       </div>

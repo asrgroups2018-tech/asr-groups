@@ -53,6 +53,11 @@ interface EditableInstallmentRow {
   companyValues: Record<string, number>;
 }
 
+interface PaymentThroughOption {
+  value: string;
+  label: string;
+}
+
 function formatToIso(dStr: string | null | undefined): string {
   if (!dStr) return '';
   const trimmed = dStr.trim();
@@ -293,6 +298,29 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
   // Spreadsheet Rows
   const [rows, setRows] = useState<EditableInstallmentRow[]>([]);
   const [isSaving, setIsSaving] = useState(false);
+  const [paymentThroughOptions, setPaymentThroughOptions] = useState<PaymentThroughOption[]>([]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    let cancelled = false;
+
+    const loadPaymentThroughOptions = async () => {
+      try {
+        const response = await fetch('/api/admin/dropdown-options?type=PAYMENT_THROUGH', { cache: 'no-store' });
+        const json = await response.json() as { success?: boolean; data?: PaymentThroughOption[] };
+        if (!cancelled && response.ok && json.success) {
+          setPaymentThroughOptions(json.data || []);
+        }
+      } catch {
+        // Keep the current values usable if the options endpoint is unavailable.
+      }
+    };
+
+    void loadPaymentThroughOptions();
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen]);
 
   const handleFrequencyChange = (value: string) => {
     const nextFrequency = value as RepaymentFrequency;
@@ -689,7 +717,7 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
     setRows((prev) => prev.map((row, rowIndex) => {
       if (rowIndex !== index) return row;
       if (value.toUpperCase() !== 'CHEQUE') {
-        return { ...row, paymentThrough: value, chqNo: '', depositDate: '', registerCode: '', borrowerCode: '' };
+        return { ...row, paymentThrough: value, chqNo: '', registerCode: '', borrowerCode: '' };
       }
       return { ...row, paymentThrough: value };
     }));
@@ -1226,6 +1254,8 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
                 <th className="p-2 w-[110px] text-right font-bold text-amber-950 bg-amber-100/80">Amount Due (₹)</th>
                 <th className="p-2 w-[90px] text-center">Status</th>
                 <th className="p-2 w-[110px]">Recd Date</th>
+                <th className="p-2 w-[120px]">Payment Through</th>
+                <th className="p-2 w-[110px]">Payment Date</th>
 
                 {/* Dynamic Funding Company Headers */}
                 {visibleCompanyColumns.map((col) => {
@@ -1378,6 +1408,34 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
                       />
                     </td>
 
+                    {/* Payment Through */}
+                    <td className={`p-1 ${isRowPaid ? 'bg-emerald-100/90' : ''}`}>
+                      <CustomSelect
+                        value={row.paymentThrough}
+                        options={paymentThroughOptions}
+                        onChange={(value) => handlePaymentThroughChange(idx, value)}
+                        placeholder="Select"
+                        size="sm"
+                        noTruncate
+                        buttonClassName="h-8 w-full rounded-md border-slate-300 bg-white px-2 text-[11px] text-slate-800"
+                        menuClassName="min-w-[9rem]"
+                      />
+                    </td>
+
+                    {/* Payment Date */}
+                    <td className={`p-1 ${isRowPaid ? 'bg-emerald-100/90' : ''}`}>
+                      <DatePicker
+                        value={row.depositDate}
+                        onChange={(date) => handleCellChange(idx, 'depositDate', date)}
+                        theme={theme}
+                        size="sm"
+                        compact={true}
+                        placeholder="—"
+                        buttonClassName={`w-full text-xs ${isRowPaid ? 'bg-emerald-50/90 text-emerald-950 font-bold border-emerald-300' : ''}`}
+                        showPresets={false}
+                      />
+                    </td>
+
                     {/* Dynamic Funding Company Cells */}
                     {visibleCompanyColumns.map((col) => {
                       const isSelected = activeCompanyKeys.has(col.key);
@@ -1494,6 +1552,8 @@ export const EditLoanExcelModal: React.FC<EditLoanExcelModalProps> = ({
                 <td className="p-2.5 text-center text-emerald-800 font-bold bg-emerald-50/60">
                   {paidRowsCount} Paid
                 </td>
+                <td className="p-2.5" />
+                <td className="p-2.5" />
                 <td className="p-2.5" />
 
                 {/* Dynamic Funding Company Column Totals */}

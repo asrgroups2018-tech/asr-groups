@@ -397,7 +397,6 @@ export const NewLoanModal: React.FC<NewLoanModalProps> = ({ isOpen, onClose }) =
     setPaymentThrough(val);
     if (val.toUpperCase() !== 'CHEQUE') {
       setChequeNumber('');
-      setDepositDate('');
       setRegisterCode('');
       setBorrowerCode('');
       setChequeRows((prev) => prev.map((row) => ({ ...row, chequeNumber: '', depositDate: '', isUsed: false })));
