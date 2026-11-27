@@ -19,12 +19,13 @@ function normalizeEntry(value: unknown, index: number): BalanceSheetEntry {
   const sourceKey = ['PORTFOLIO_FUNDING', 'CUSTOMER_RECEIVABLES', 'COLLECTIONS', 'CALCULATED'].includes(String(item.sourceKey))
     ? String(item.sourceKey) as BalanceSheetEntry['sourceKey']
     : 'MANUAL';
+  const rawAmount = Number(item.amount) || 0;
   return {
     id: String(item.id || `entry-${index + 1}`),
     side,
     groupName: String(item.groupName || 'Other Accounts').trim().slice(0, 120) || 'Other Accounts',
     label: String(item.label || 'New Ledger').trim().slice(0, 160) || 'New Ledger',
-    amount: Math.max(0, Number(item.amount) || 0),
+    amount: sourceKey === 'CALCULATED' ? rawAmount : Math.max(0, rawAmount),
     openingBalance: Math.max(0, Number(item.openingBalance) || 0),
     openingBalanceType: String(item.openingBalanceType || 'DEBIT').toUpperCase() === 'CREDIT' ? 'CREDIT' : 'DEBIT',
     sortOrder: Number.isFinite(Number(item.sortOrder)) ? Number(item.sortOrder) : index + 1,
@@ -49,6 +50,16 @@ function addSourceKeys(document: BalanceSheetDocument): BalanceSheetDocument {
     'liability-capital-funding': 'PORTFOLIO_FUNDING',
     'asset-loans-advances': 'CUSTOMER_RECEIVABLES',
     'asset-cash-bank': 'COLLECTIONS',
+    'liability-profit-loss': 'CALCULATED',
+    'asset-opening-receivables': 'CALCULATED',
+    'asset-capital-debit': 'CALCULATED',
+    'asset-profit-debit': 'CALCULATED',
+    'asset-profit-opening-debit': 'CALCULATED',
+    'liability-profit-opening': 'CALCULATED',
+    'liability-profit-current': 'CALCULATED',
+    'liability-opening-adjustment': 'CALCULATED',
+    'liability-customer-credit': 'CALCULATED',
+    'liability-bank-overdraft': 'CALCULATED',
   };
   return {
     ...document,
@@ -58,7 +69,10 @@ function addSourceKeys(document: BalanceSheetDocument): BalanceSheetDocument {
 
 function recalculateLinkedEntries(document: BalanceSheetDocument, loans: Awaited<ReturnType<typeof getLoans>>): BalanceSheetDocument {
   const generated = buildDefaultBalanceSheet(loans, document.asOfDate);
-  const generatedBySource = new Map(generated.entries.filter((entry) => entry.sourceKey && entry.sourceKey !== 'MANUAL').map((entry) => [entry.sourceKey, entry]));
+  const linkedSources: BalanceSheetEntry['sourceKey'][] = ['PORTFOLIO_FUNDING', 'CUSTOMER_RECEIVABLES', 'COLLECTIONS'];
+  const generatedBySource = new Map(generated.entries
+    .filter((entry) => entry.sourceKey && linkedSources.includes(entry.sourceKey))
+    .map((entry) => [entry.sourceKey, entry]));
   return {
     ...document,
     entries: document.entries.map((entry) => {

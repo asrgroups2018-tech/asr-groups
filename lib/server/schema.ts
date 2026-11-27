@@ -300,6 +300,7 @@ export const SCHEMA_STATEMENTS = [
   `CREATE TABLE IF NOT EXISTS manual_receipts (
     id TEXT PRIMARY KEY,
     receipt_number TEXT NOT NULL UNIQUE,
+    loan_id TEXT REFERENCES loans(id),
     account_number TEXT NOT NULL DEFAULT '',
     transaction_date TEXT NOT NULL,
     transaction_amount REAL NOT NULL DEFAULT 0,
@@ -457,6 +458,7 @@ export function initializeSchema(client: Client): Promise<void> {
         'ALTER TABLE installments ADD COLUMN deposit_date TEXT',
         'ALTER TABLE installments ADD COLUMN register_code TEXT',
         'ALTER TABLE installments ADD COLUMN borrower_code TEXT',
+        'ALTER TABLE manual_receipts ADD COLUMN loan_id TEXT REFERENCES loans(id)',
       ]) {
         try {
           await client.execute(statement);
@@ -465,6 +467,7 @@ export function initializeSchema(client: Client): Promise<void> {
         }
       }
       await client.execute('CREATE INDEX IF NOT EXISTS idx_users_partner_company ON users(partner_company_id)');
+      await client.execute('CREATE INDEX IF NOT EXISTS idx_manual_receipts_loan ON manual_receipts(loan_id)');
 
       // This index must be created after the idempotent column migrations
       // above because older databases do not have payment_through yet.

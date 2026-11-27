@@ -423,6 +423,7 @@ export const CashReceiptBook: React.FC = () => {
       <CreateReceiptModal
         isOpen={isCreateReceiptOpen}
         onClose={() => setIsCreateReceiptOpen(false)}
+        loans={loans}
         onSaved={(receipt) => setManualReceipts((current) => [receipt, ...current.filter((item) => item.id !== receipt.id)])}
       />
 

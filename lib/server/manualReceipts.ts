@@ -17,7 +17,7 @@ export const MANUAL_RECEIPT_PAYMENT_MODES: readonly ManualReceiptPaymentMode[] =
 
 type ManualReceiptInput = Pick<
   ManualReceipt,
-  'accountNumber' | 'transactionDate' | 'transactionAmount' | 'debitCredit' | 'paymentMode' |
+  'loanId' | 'accountNumber' | 'transactionDate' | 'transactionAmount' | 'debitCredit' | 'paymentMode' |
   'chequeNumber' | 'transactionDescription' | 'transactionId' | 'remarks'
 > & { receiptNumber?: string };
 
@@ -35,6 +35,7 @@ function mapManualReceiptRow(row: Record<string, unknown>): ManualReceipt {
   return {
     id: String(row.id || ''),
     receiptNumber: String(row.receipt_number || ''),
+    loanId: row.loan_id ? String(row.loan_id) : null,
     accountNumber: String(row.account_number || ''),
     transactionDate: String(row.transaction_date || ''),
     transactionAmount: Number(row.transaction_amount || 0),
@@ -84,6 +85,7 @@ function normalizeManualReceiptInput(data: ManualReceiptInput) {
   if (paymentMode === 'CHEQUE' && !chequeNumber) throw new Error('Cheque number is required for cheque payments.');
 
   return {
+    loanId: String(data.loanId || '').trim() || null,
     accountNumber,
     transactionDate,
     transactionAmount,
@@ -130,13 +132,14 @@ export async function createManualReceipt(
 
   await getTursoClient().execute({
     sql: `INSERT INTO manual_receipts (
-      id, receipt_number, account_number, transaction_date, transaction_amount,
+      id, receipt_number, loan_id, account_number, transaction_date, transaction_amount,
       debit_credit, payment_mode, cheque_number, transaction_description,
       transaction_id, remarks, created_by_id, created_by_name, created_by_email, created_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     args: [
       id,
       receiptNumber,
+      normalized.loanId,
       accountNumber,
       transactionDate,
       transactionAmount,
@@ -156,6 +159,7 @@ export async function createManualReceipt(
   const receipt: ManualReceipt = {
     id,
     receiptNumber,
+    loanId: normalized.loanId,
     accountNumber,
     transactionDate,
     transactionAmount,
@@ -195,10 +199,11 @@ export async function updateManualReceipt(id: string, data: ManualReceiptInput, 
   const normalized = normalizeManualReceiptInput(data);
   await getTursoClient().execute({
     sql: `UPDATE manual_receipts SET
-      account_number = ?, transaction_date = ?, transaction_amount = ?, debit_credit = ?,
+      loan_id = ?, account_number = ?, transaction_date = ?, transaction_amount = ?, debit_credit = ?,
       payment_mode = ?, cheque_number = ?, transaction_description = ?, transaction_id = ?, remarks = ?
       WHERE id = ?`,
     args: [
+      normalized.loanId,
       normalized.accountNumber,
       normalized.transactionDate,
       normalized.transactionAmount,

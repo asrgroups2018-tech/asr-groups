@@ -544,6 +544,7 @@ export type ManualReceiptDebitCredit = 'DEBIT' | 'CREDIT';
 export interface ManualReceipt {
   id: string;
   receiptNumber: string;
+  loanId?: string | null;
   accountNumber: string;
   transactionDate: string;
   transactionAmount: number;

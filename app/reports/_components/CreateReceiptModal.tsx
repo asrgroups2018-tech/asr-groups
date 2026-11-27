@@ -12,12 +12,14 @@ import {
   ManualReceipt,
   ManualReceiptDebitCredit,
   ManualReceiptPaymentMode,
+  Loan,
 } from '@/lib/types';
 
 interface CreateReceiptModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSaved: (receipt: ManualReceipt) => void;
+  loans: Loan[];
 }
 
 type ReceiptFormState = Omit<ManualReceipt, 'id' | 'createdAt' | 'createdBy'>;
@@ -36,6 +38,7 @@ const PAYMENT_MODE_OPTIONS: Array<{ value: ManualReceiptPaymentMode; label: stri
 
 const EMPTY_FORM: ReceiptFormState = {
   receiptNumber: '',
+  loanId: '',
   accountNumber: '',
   transactionDate: getTodayIsoDate(),
   transactionAmount: 0,
@@ -349,7 +352,7 @@ export async function downloadManualReceiptImage(receipt: ManualReceipt, orienta
   downloadBlob(blob, `${safeReceiptFileName(receipt)}_${orientation}.png`);
 }
 
-export const CreateReceiptModal: React.FC<CreateReceiptModalProps> = ({ isOpen, onClose, onSaved }) => {
+export const CreateReceiptModal: React.FC<CreateReceiptModalProps> = ({ isOpen, onClose, onSaved, loans }) => {
   const { showToast } = useApp();
   const [form, setForm] = useState<ReceiptFormState>(EMPTY_FORM);
   const [savedReceipt, setSavedReceipt] = useState<ManualReceipt | null>(null);
@@ -455,6 +458,15 @@ export const CreateReceiptModal: React.FC<CreateReceiptModalProps> = ({ isOpen, 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <ReceiptField label="Account number">
                   <input value={form.accountNumber} onChange={(event) => updateField('accountNumber', event.target.value)} placeholder="Enter account number" className={INPUT_CLASS} />
+                </ReceiptField>
+                <ReceiptField label="Customer loan (optional)">
+                  <select value={form.loanId || ''} onChange={(event) => updateField('loanId', event.target.value || null)} className={SELECT_CLASS}>
+                    <option value="">General cash / bank receipt</option>
+                    {loans
+                      .filter((loan) => !loan.isOpeningBalanceOnly)
+                      .sort((a, b) => a.customerName.localeCompare(b.customerName) || a.id.localeCompare(b.id))
+                      .map((loan) => <option key={loan.id} value={loan.id}>{loan.customerName} · {loan.codeNo || loan.id}</option>)}
+                  </select>
                 </ReceiptField>
                 <ReceiptField label="Transaction date" required>
                   <input type="date" value={form.transactionDate} onChange={(event) => updateField('transactionDate', event.target.value)} className={INPUT_CLASS} required />

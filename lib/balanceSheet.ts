@@ -1,5 +1,6 @@
 import { Loan } from '@/lib/types';
 import { isPaidStatus } from '@/lib/utils/statusMapping';
+import { getLoanPrincipal } from '@/lib/reportAccounting';
 
 export type BalanceSheetSide = 'liabilities' | 'assets';
 
@@ -39,7 +40,7 @@ const entry = (
   side,
   groupName,
   label,
-  amount: Math.max(0, Number(amount) || 0),
+  amount: sourceKey === 'CALCULATED' ? Number(amount) || 0 : Math.max(0, Number(amount) || 0),
   openingBalance: 0,
   openingBalanceType: 'DEBIT',
   sortOrder,
@@ -76,22 +77,50 @@ export function buildDefaultBalanceSheet(loans: Loan[], asOfDate = new Date().to
     0,
   );
   const receivables = Math.max(0, portfolio - collected);
-  const funding = receivables + collected;
+  const principalFunding = activeLoans.reduce((sum, loan) => sum + getLoanPrincipal(loan), 0);
+  const openingDebitBalance = activeLoans.reduce((sum, loan) => {
+    if (!loan.isOpeningBalanceOnly || loan.openingBalanceType === 'CREDIT') return sum;
+    return sum + Math.max(0, Number(loan.openingBalance) || 0);
+  }, 0);
+  const openingCreditBalance = activeLoans.reduce((sum, loan) => {
+    if (!loan.isOpeningBalanceOnly || loan.openingBalanceType !== 'CREDIT') return sum;
+    return sum + Math.max(0, Number(loan.openingBalance) || 0);
+  }, 0);
+  const normalPortfolio = activeLoans.reduce((sum, loan) => {
+    if (loan.isOpeningBalanceOnly) return sum;
+    const installmentTotal = (loan.installments || []).reduce(
+      (installmentSum, installment) => installmentSum + Math.max(0, Number(installment.amountDue) || 0),
+      0,
+    );
+    return sum + (installmentTotal > 0 ? installmentTotal : Math.max(0, Number(loan.totalAmount) || 0));
+  }, 0);
+  const profitOrLoss = normalPortfolio - principalFunding;
 
   return {
     id: undefined,
     title: 'Balance Sheet',
     asOfDate,
     entries: [
-      entry('liability-capital-funding', 'liabilities', 'Capital Account', 'Portfolio Funding', funding, 10, 'PORTFOLIO_FUNDING'),
+      entry('liability-capital-funding', 'liabilities', 'Capital Account', 'Portfolio Funding', principalFunding, 10, 'PORTFOLIO_FUNDING'),
       entry('liability-external-funding', 'liabilities', 'Loans (Liability)', 'External Funding', 0, 20),
       entry('liability-current-payables', 'liabilities', 'Current Liabilities', 'Pending Payouts', 0, 30),
       entry('liability-branches', 'liabilities', 'Branch / Divisions', 'Head Office', 0, 40),
-      entry('liability-profit-loss', 'liabilities', 'Profit & Loss A/c', 'Current Period Surplus', 0, 50),
+      ...(profitOrLoss >= 0
+        ? [entry('liability-profit-loss', 'liabilities', 'Profit & Loss A/c', 'Current Period Surplus', profitOrLoss, 50, 'CALCULATED')]
+        : []),
+      ...(openingDebitBalance > 0
+        ? [entry('liability-opening-adjustment', 'liabilities', 'Capital Account', 'Opening Balance Adjustment', openingDebitBalance, 25, 'CALCULATED')]
+        : []),
+      ...(openingCreditBalance > 0
+        ? [entry('liability-customer-credit', 'liabilities', 'Current Liabilities', 'Customer Credit Balances', openingCreditBalance, 41, 'CALCULATED')]
+        : []),
       entry('asset-fixed-assets', 'assets', 'Fixed Assets', 'Computer & Office Equipment', 0, 10),
       entry('asset-investments', 'assets', 'Investments', 'Business Investments', 0, 20),
       entry('asset-loans-advances', 'assets', 'Loans & Advances', 'Customer Receivables', receivables, 10, 'CUSTOMER_RECEIVABLES'),
-      entry('asset-cash-bank', 'assets', 'Current Assets', 'Cash & Bank (Collections)', collected, 20, 'COLLECTIONS'),
+      ...(profitOrLoss < 0
+        ? [entry('asset-profit-debit', 'assets', 'Profit & Loss A/c', 'Debit Balance', Math.abs(profitOrLoss), 30, 'CALCULATED')]
+        : []),
+      entry('asset-cash-bank', 'assets', 'Current Assets', 'Cash & Bank (Collections)', collected + openingCreditBalance, 20, 'COLLECTIONS'),
     ],
   };
 }
@@ -99,6 +128,6 @@ export function buildDefaultBalanceSheet(loans: Loan[], asOfDate = new Date().to
 export function sumBalanceSheetSide(entries: BalanceSheetEntry[], side: BalanceSheetSide): number {
   return entries
     .filter((item) => item.side === side)
-    .reduce((sum, item) => sum + Math.max(0, Number(item.amount) || 0), 0);
+    .reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
 }
 

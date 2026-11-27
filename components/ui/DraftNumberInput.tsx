@@ -10,6 +10,7 @@ interface DraftNumberInputProps {
   registerRef?: (element: HTMLInputElement | null) => void;
   placeholder?: string;
   className?: string;
+  ariaLabel?: string;
 }
 
 /** Edits locally and commits only when the user leaves the cell or presses Enter. */
@@ -20,6 +21,7 @@ export const DraftNumberInput = React.memo<DraftNumberInputProps>(({
   registerRef,
   placeholder,
   className = '',
+  ariaLabel,
 }) => {
   const [draft, setDraft] = useState(() => (value > 0 ? formatIndianCommas(value) : ''));
   const isFocused = useRef(false);
@@ -44,6 +46,7 @@ export const DraftNumberInput = React.memo<DraftNumberInputProps>(({
       inputMode="decimal"
       value={draft}
       placeholder={placeholder}
+      aria-label={ariaLabel}
       onFocus={() => {
         isFocused.current = true;
       }}
@@ -60,3 +63,5 @@ export const DraftNumberInput = React.memo<DraftNumberInputProps>(({
     />
   );
 });
+
+DraftNumberInput.displayName = 'DraftNumberInput';
